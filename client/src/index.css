@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes scan {
+  0% {
+    clip-path: inset(0 0 95% 0);
+  }
+  50% {
+    clip-path: inset(0);
+  }
+  100% {
+    clip-path: inset(95% 0 0 0);
+  }
+}
+
+/* .animate-scan {
+  animation: scan 3s ease-in-out infinite;    } */
