@@ -7,8 +7,8 @@ import ConsumerLayout from "../layout/ConsumerLayout";
 
 // Public Pages
 import LandingPage from "../pages/LandingPage";
-import AboutPage from "../pages/Home/AboutPage";
-import FeaturePage from "../pages/Home/FeaturePage";
+import AboutPage from "../pages/home/AboutPage";
+import FeaturePage from "../pages/home/FeaturePage";
 import LoginPage from "../pages/auth/LoginPage";
 
 // Consumer Pages
