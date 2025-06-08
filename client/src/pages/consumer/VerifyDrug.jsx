@@ -54,7 +54,7 @@ const VerifyDrug = () => {
 
   return (
     <motion.div
-      className="max-w-5xl mx-auto space-y-8"
+      className="max-w-5xl min-h-screen mx-auto space-y-8"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -276,46 +276,90 @@ const VerifyDrug = () => {
             </div>
           </Card>
         </motion.div>
-      )}
-
-      {/* QR Scanner Modal */}
+      )}      {/* QR Scanner Modal */}
       <Modal
         isOpen={showScanner}
         onClose={() => setShowScanner(false)}
         title="Scan QR Code"
       >
-        <div className="p-6">
-          <p className="mb-6 text-center text-gray-600">
-            Position the QR code within the frame to scan
-          </p>
-          <div className="relative max-w-sm mx-auto mb-6 overflow-hidden border-2 border-dashed aspect-square rounded-2xl border-primary-300 bg-gray-50">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <p className="text-gray-500">Camera feed would appear here</p>
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col items-center space-y-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100">
+              <Scan className="w-6 h-6 text-primary-600" />
             </div>
-            <div className="absolute inset-0 border-2 opacity-50 border-primary-500 "></div>
-          </div>
-          <div className="flex justify-end space-x-4">
-            <Button
-              variant="secondary"
-              onClick={() => setShowScanner(false)}
-              className="px-6"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                setShowScanner(false);
-                setSerialNumber("SCANNED123");
-                handleVerify();
-              }}
-              className="px-6"
-            >
-              Verify
-            </Button>
+            
+            <p className="text-sm text-center text-gray-600 sm:text-base">
+              Center the QR code within the frame to verify your medication
+            </p>
+
+            <div className="relative w-full max-w-[280px] sm:max-w-[300px] mx-auto aspect-square">
+              {/* Scanner Container */}
+              <div className="absolute inset-0 overflow-hidden rounded-2xl bg-black/5 backdrop-blur-sm">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <p className="text-sm text-gray-500">Camera feed would appear here</p>
+                </div>
+
+                {/* Scanning Animation */}
+                <div className="absolute inset-0 scanning-line"></div>
+
+                {/* Corner Markers */}
+                <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-primary-500"></div>
+                <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-primary-500"></div>
+                <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-primary-500"></div>
+                <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-primary-500"></div>
+
+                {/* Status Indicator */}
+                <div className="absolute inset-x-0 bottom-0 p-4 text-center bg-gradient-to-t from-black/30 to-transparent">
+                  <p className="text-sm font-medium text-white">Scanning...</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-center w-full gap-3 sm:flex-row">
+              <Button
+                variant="secondary"
+                onClick={() => setShowScanner(false)}
+                className="w-full px-6 sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setShowScanner(false);
+                  setSerialNumber("SCANNED123");
+                  handleVerify();
+                }}
+                className="w-full px-6 sm:w-auto"
+              >
+                Manual Entry
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>
+
+      <style jsx>{`
+        .scanning-line {
+          position: absolute;
+          width: 100%;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, #4f46e5, transparent);
+          animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+          0% {
+            top: 0;
+          }
+          50% {
+            top: 100%;
+          }
+          100% {
+            top: 0;
+          }
+        }
+      `}</style>
     </motion.div>
   );
 };

@@ -133,10 +133,10 @@ const Navbar = () => {
       name: "Platform",
       link: "#platform",
       dropdown: [
-        { name: "For Manufacturers", link: "/manufacturers" },
+        { name: "For Manufacturers", link: "/manufacturer/dashboard" },
         { name: "For Distributors", link: "/distributors" },
         { name: "For Pharmacies", link: "/pharmacies" },
-        { name: "For Patients", link: "/patients" },
+        { name: "For Patients", link: "/consumer" },
       ],
     },
     { name: "Features", link: "/feature" },
@@ -235,14 +235,20 @@ const Navbar = () => {
           {/* Desktop Connect Wallet Button */}
           <div className="hidden lg:flex lg:items-center lg:space-x-4">
             <button
-              className="px-4 py-2 font-medium text-gray-700 transition-all duration-200 rounded-lg hover:text-blue-600 hover:bg-blue-50/50"
-              onClick={() => navigate("/login")}
+              className="w-full px-6 py-2.5 font-semibold text-white transition-all duration-300 transform rounded-full shadow-lg bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-800 hover:shadow-xl hover:scale-105"
+              onClick={() => {
+                navigate("/verify-product");
+                setIsOpen(false);
+              }}
             >
-              Sign In
+              <div className="flex items-center justify-center">
+                <Wallet size={20} className="mr-2" />
+                <span>Verify</span>
+              </div>
             </button>
 
             <button
-              className={`relative px-4 py-2.5 overflow-hidden font-semibold transition-all duration-300 transform rounded-full shadow-lg group ${
+              className={`relative px-4 py-2.5 overflow-hidden flex-shrink-0 font-semibold transition-all duration-300 transform rounded-full shadow-lg group ${
                 isConnected
                   ? "bg-gray-800 hover:bg-gray-700"
                   : "bg-gradient-to-r from-gray-800 to-gray-700 hover:from-gray-700 hover:to-gray-800"
