@@ -5,6 +5,7 @@ import { Routes, Route } from "react-router-dom";
 import PublicLayout from "../layout/PublicLayout";
 import ConsumerLayout from "../layout/ConsumerLayout";
 import ManufacturerLayout from "../layout/ManufacturerLayout";
+import DistributorLayout from "../layout/DistributorLayout";
 
 // Public Pages
 import LandingPage from "../pages/LandingPage";
@@ -23,6 +24,9 @@ import RegisterProduct from "../pages/manufacturer/RegisterProduct";
 import ProductsList from "../pages/manufacturer/ProductsList";
 import TrackProducts from "../pages/manufacturer/TrackProducts";
 import QRCodeManager from "../pages/manufacturer/QRCodeManager";
+
+// Distributor Pages
+import DistributorDashboard from "../pages/distributor/DistributorDashboard";
 
 
 const AppRoutes = () => {
@@ -59,6 +63,16 @@ const AppRoutes = () => {
         <Route path="track/:serialNumber" element={<TrackProducts />} />
         <Route path="qr-codes" element={<QRCodeManager />} />
         <Route path="settings" element={<div />} />
+      </Route>
+
+      {/* Distributor Routes */}
+      <Route path="/distributor" element={<DistributorLayout />}>
+        <Route index element={<DistributorDashboard />} />
+        <Route path="dashboard" element={<DistributorDashboard />} />
+        <Route path="verify" element={<VerifyDrug />} />
+        <Route path="track" element={<TrackProducts />} />
+        <Route path="track/:serialNumber" element={<TrackProducts />} />
+        <Route path="shipments" element={<DistributorDashboard />} />
       </Route>
     </Routes>
   );

@@ -339,7 +339,7 @@ const VerifyDrug = () => {
         </div>
       </Modal>
 
-      <style jsx>{`
+      {/* <style jsx>{`
         .scanning-line {
           position: absolute;
           width: 100%;
@@ -359,7 +359,7 @@ const VerifyDrug = () => {
             top: 0;
           }
         }
-      `}</style>
+      `}</style> */}
     </motion.div>
   );
 };

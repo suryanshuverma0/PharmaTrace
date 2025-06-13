@@ -134,7 +134,7 @@ const Navbar = () => {
       link: "#platform",
       dropdown: [
         { name: "For Manufacturers", link: "/manufacturer/dashboard" },
-        { name: "For Distributors", link: "/distributors" },
+        { name: "For Distributors", link: "/distributor/dashboard" },
         { name: "For Pharmacies", link: "/pharmacies" },
         { name: "For Patients", link: "/consumer" },
       ],
