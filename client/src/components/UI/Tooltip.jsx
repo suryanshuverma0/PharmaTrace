@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export const Tooltip = ({ children, content, position = 'top' }) => {
+ const Tooltip = ({ children, content, position = 'top' }) => {
   const [isVisible, setIsVisible] = useState(false);
   
   const positions = {
@@ -27,3 +27,7 @@ export const Tooltip = ({ children, content, position = 'top' }) => {
     </div>
   );
 };
+
+
+export { Tooltip };
+export default Tooltip;

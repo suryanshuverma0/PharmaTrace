@@ -1,7 +1,7 @@
 import React from 'react';
 import { Upload } from 'lucide-react';
 
-export const FileUpload = ({ 
+ const FileUpload = ({ 
   onFileSelect, 
   accept, 
   multiple = false, 
@@ -36,3 +36,6 @@ export const FileUpload = ({
     </div>
   );
 };
+
+export {FileUpload}
+export default FileUpload;

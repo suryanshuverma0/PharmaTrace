@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router";
+import ConnectWalletModal from "../components/modals/ConnectWalletModal";
+import RegisterWalletModal from "../components/modals/RegisterWalletModal";
 
 // Custom SVG Logo Component
 export const PharmaChainLogo = ({ className = "w-12 h-12" }) => (
@@ -180,16 +182,6 @@ const LandingPage = () => {
       description:
         "Automated compliance and verification through intelligent blockchain smart contracts that ensure regulatory adherence",
     },
-    // {
-    //   icon: (
-    //     <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    //       <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" strokeWidth="2" fill="none"/>
-    //       <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="2" fill="none"/>
-    //     </svg>
-    //   ),
-    //   title: "Real-time Tracking",
-    //   description: "Monitor pharmaceutical products throughout the entire supply chain with real-time location and status updates"
-    // },
     {
       icon: (
         <svg
@@ -423,7 +415,9 @@ const LandingPage = () => {
                 className="px-6 py-3 text-lg font-semibold text-white transition-all duration-300 border-2 border-white rounded-full hover:bg-white hover:text-blue-600"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={()=>{navigate("/about")}}
+                onClick={() => {
+                  navigate("/about");
+                }}
               >
                 Learn More
               </motion.button>
@@ -431,36 +425,6 @@ const LandingPage = () => {
           </motion.div>
         </div>
       </section>
-
-      {/* About Section */}
-      {/* <section className="py-24 bg-gray-50">
-        <div className="px-6 mx-auto max-w-7xl lg:px-8">
-          <motion.div 
-            className="max-w-4xl mx-auto text-center"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={containerVariants}
-          >
-            <motion.h2 
-              className="text-4xl font-bold tracking-tight text-gray-900 sm:text-[45px]"
-              variants={itemVariants}
-            >
-              About PharmaChain
-            </motion.h2>
-            <motion.p 
-              className="mt-8 text-xl leading-8 text-gray-600"
-              variants={itemVariants}
-            >
-              PharmaChain leverages cutting-edge blockchain technology to create an immutable, 
-              transparent record of pharmaceutical products from manufacture to patient. Our platform 
-              ensures drug authenticity, prevents counterfeiting, and enables real-time tracking 
-              throughout the supply chain, ultimately improving patient safety and trust in the 
-              pharmaceutical industry.
-            </motion.p>
-          </motion.div>
-        </div>
-      </section> */}
 
       {/* Features Section */}
       <section className="py-24 bg-white">
@@ -571,7 +535,7 @@ const LandingPage = () => {
       </section>
 
       {/* Connect Wallet Section */}
-      <ConnectWalletCTASection/>
+      <ConnectWalletCTASection />
       {/* Footer */}
     </div>
   );
@@ -580,6 +544,23 @@ const LandingPage = () => {
 export default LandingPage;
 
 export const ConnectWalletCTASection = () => {
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+
+  const handleConnectClick = () => {
+    setIsConnectModalOpen(true);
+  };
+
+  const switchToRegister = () => {
+    setIsConnectModalOpen(false);
+    setIsRegisterModalOpen(true);
+  };
+
+  const switchToConnect = () => {
+    setIsRegisterModalOpen(false);
+    setIsConnectModalOpen(true);
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -602,7 +583,7 @@ export const ConnectWalletCTASection = () => {
       },
     },
   };
-  
+
   return (
     <section className="relative py-24 overflow-hidden bg-gradient-to-r from-blue-600 to-blue-800">
       <div className="absolute inset-0">
@@ -662,6 +643,7 @@ export const ConnectWalletCTASection = () => {
               className="inline-flex items-center px-5 py-3 text-lg font-semibold text-blue-600 transition-all duration-300 bg-white rounded-full shadow-xl hover:bg-blue-50 hover:shadow-2xl"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleConnectClick}
             >
               <svg
                 className="w-6 h-6 mr-3"
@@ -681,6 +663,18 @@ export const ConnectWalletCTASection = () => {
           </motion.div>
         </motion.div>
       </div>
+
+      <ConnectWalletModal
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        onRegisterClick={switchToRegister}
+      />
+
+      <RegisterWalletModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onConnectClick={switchToConnect}
+      />
     </section>
   );
 };

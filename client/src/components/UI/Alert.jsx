@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, AlertCircle, Info, X } from 'lucide-react';
 
-export const Alert = ({ 
+const Alert = ({ 
   type = 'info', 
   title, 
   children, 
@@ -40,17 +40,24 @@ export const Alert = ({
   };
   
   const config = types[type];
-  
+
+  // Determine what content to show as message:
+  // If children exists, show children,
+  // else if title exists and children don't, show title as message,
+  // else fallback text.
+  const messageContent = children || (title ? <span>{title}</span> : <span>Alert</span>);
+
   return (
     <div className={`${config.bg} ${config.border} border rounded-lg p-4 ${className}`}>
       <div className="flex">
         <div className="flex-shrink-0">{config.icon}</div>
         <div className="flex-1 ml-3">
-          {title && (
+          {/* Show title only if children is present (to avoid duplication with messageContent above) */}
+          {children && title && (
             <h3 className={`text-sm font-medium ${config.title}`}>{title}</h3>
           )}
-          <div className={`text-sm ${config.text} ${title ? 'mt-2' : ''}`}>
-            {children}
+          <div className={`text-sm ${config.text} ${title && children ? 'mt-2' : ''}`}>
+            {messageContent}
           </div>
         </div>
         {onClose && (
@@ -58,6 +65,7 @@ export const Alert = ({
             <button
               onClick={onClose}
               className={`inline-flex rounded-md p-1.5 ${config.text} hover:bg-opacity-20 hover:bg-gray-600`}
+              aria-label="Close alert"
             >
               <X className="w-5 h-5" />
             </button>
@@ -67,3 +75,6 @@ export const Alert = ({
     </div>
   );
 };
+
+export { Alert };       
+export default Alert;

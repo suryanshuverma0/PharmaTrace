@@ -12,6 +12,7 @@ import LandingPage from "../pages/LandingPage";
 import AboutPage from "../pages/home/AboutPage";
 import FeaturePage from "../pages/home/FeaturePage";
 import LoginPage from "../pages/auth/LoginPage";
+import AccountActivation from "../pages/auth/AccountActivation";
 
 // Consumer Pages
 import ConsumerDashboard from "../pages/consumer/ConsumerDashboard";
@@ -27,7 +28,7 @@ import QRCodeManager from "../pages/manufacturer/QRCodeManager";
 
 // Distributor Pages
 import DistributorDashboard from "../pages/distributor/DistributorDashboard";
-
+import RegisterPage from "../pages/auth/RegisterPage";
 
 const AppRoutes = () => {
   return (
@@ -38,12 +39,12 @@ const AppRoutes = () => {
         <Route path="about" element={<AboutPage />} />
         <Route path="feature" element={<FeaturePage />} />
         <Route path="login" element={<LoginPage />} />
+        <Route path="activate-account" element={<AccountActivation />} />
+        <Route path="connect" element={<RegisterPage />} />
+
         <Route path="verify-product" element={<VerifyDrug />} />
         <Route path="consumer/journey/:drugId" element={<JourneyDetails />} />
-
-
       </Route>
-
       {/* Consumer Routes */}
       <Route path="/consumer" element={<ConsumerLayout />}>
         <Route index element={<ConsumerDashboard />} />
@@ -53,7 +54,8 @@ const AppRoutes = () => {
         <Route path="vault" element={<div></div>} />
         <Route path="history" element={<div></div>} />
         <Route path="settings" element={<div></div>} />
-      </Route>      {/* Manufacturer Routes */}
+      </Route>{" "}
+      {/* Manufacturer Routes */}
       <Route path="/manufacturer" element={<ManufacturerLayout />}>
         <Route index element={<ManufacturerDashboard />} />
         <Route path="dashboard" element={<ManufacturerDashboard />} />
@@ -64,7 +66,6 @@ const AppRoutes = () => {
         <Route path="qr-codes" element={<QRCodeManager />} />
         <Route path="settings" element={<div />} />
       </Route>
-
       {/* Distributor Routes */}
       <Route path="/distributor" element={<DistributorLayout />}>
         <Route index element={<DistributorDashboard />} />

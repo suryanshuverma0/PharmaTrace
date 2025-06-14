@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 
-export const Input = ({ 
+ const Input = ({ 
   label, 
   error, 
   type = 'text', 
@@ -66,3 +66,6 @@ export const Input = ({
     </div>
   );
 };
+
+export { Input };
+export default Input;

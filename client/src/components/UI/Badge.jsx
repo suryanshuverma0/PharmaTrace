@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const Badge = ({ 
+const Badge = ({ 
   children, 
   variant = 'default', 
   size = 'md',
@@ -26,3 +26,6 @@ export const Badge = ({
     </span>
   );
 };
+
+export { Badge };       
+export default Badge;   

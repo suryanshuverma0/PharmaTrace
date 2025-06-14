@@ -13,7 +13,7 @@ import {
   X
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { Button } from '../UI/Button';
+import  Button from '../UI/Button';
 
 const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
   const location = useLocation();

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-export const Button = ({ 
+ const Button = ({ 
   children, 
   variant = 'primary', 
   size = 'md', 
@@ -45,3 +45,6 @@ export const Button = ({
     </button>
   );
 };
+
+export { Button };
+export default Button;

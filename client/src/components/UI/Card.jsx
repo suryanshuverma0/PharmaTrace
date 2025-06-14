@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const Card = ({ 
+ const Card = ({ 
   children, 
   title, 
   subtitle,
@@ -26,3 +26,6 @@ export const Card = ({
     </div>
   );
 };
+
+export { Card };
+export default Card;
