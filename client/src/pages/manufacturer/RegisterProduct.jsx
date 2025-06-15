@@ -3,102 +3,84 @@ import { motion } from 'framer-motion';
 import { 
   PackagePlus, 
   CalendarDays, 
-  MapPin, 
-  BadgeCheck, 
+  Building,
+  BadgeCheck,
   Download,
   Printer,
   CheckCircle,
   Copy
 } from 'lucide-react';
 import { generateQRCode, downloadQRCode } from '../../utils/qrCodeUtils';
-import { Card } from '../../components/UI/Card';
-import { Input } from '../../components/UI/Input';
-import { Button } from '../../components/UI/Button';
-import { Select } from '../../components/UI/Select';
+import Card from '../../components/UI/Card';
+import Input from '../../components/UI/Input';
+import Button from '../../components/UI/Button';
+import Select from '../../components/UI/Select';
+import Alert from '../../components/UI/Alert';
 
-const RegisterProduct = () => {  const [formData, setFormData] = useState({
+const RegisterProduct = () => {
+  const [formData, setFormData] = useState({
     productName: '',
     serialNumber: '',
     batchNumber: '',
     manufactureDate: '',
     expiryDate: '',
-    ingredients: '',
+    manufacturerName: '',
+    manufacturerLicense: '',
     productionLocation: '',
-    storageRequirements: '',
-    regulatoryApprovalId: '',
+    drugCode: '',
     dosageForm: '',
     strength: '',
-    packagingType: '',
-    manufacturerName: 'PharmaCorp Inc.',
-    manufacturerLicense: '',
-    shelfLife: '',
-    storageInstructions: '',
-    composition: '',
-    categoryType: '',
-    description: ''
+    storageCondition: '',
+    approvalCertificateId: '',
+    manufacturerCountry: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [generatedQR, setGeneratedQR] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [txHash, setTxHash] = useState('');
+  const [digitalFingerprint, setDigitalFingerprint] = useState('');
 
-  const dosageForms = [
-    'Tablet', 'Capsule', 'Injection', 'Syrup', 'Cream', 'Ointment',
-    'Gel', 'Drops', 'Inhaler', 'Powder', 'Suspension'
-  ];
-
-  const categories = [
-    'Antibiotics', 'Analgesics', 'Antidiabetics', 'Cardiovascular',
-    'Respiratory', 'Antiviral', 'Vaccines', 'Hormones', 'Supplements'
-  ];
-
-  const packagingTypes = [
-    'Blister Pack', 'Bottle', 'Vial', 'Ampoule', 'Tube',
-    'Sachet', 'Strip', 'Container', 'Prefilled Syringe'
-  ];
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError('');
 
     try {
+      // API call to register product
+      const response = await fetch('/api/products/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to register product');
+      }
+
+      // Set blockchain transaction data
+      setTxHash(data.txHash);
+      setDigitalFingerprint(data.digitalFingerprint);
+
       // Generate QR code
       const qrDataUrl = await generateQRCode({
         ...formData,
-        registrationDate: new Date().toISOString(),
-        manufacturer: formData.manufacturerName
+        txHash: data.txHash,
+        digitalFingerprint: data.digitalFingerprint,
+        registrationDate: new Date().toISOString()
       });
-
-      // Simulate blockchain registration
-      await new Promise(resolve => setTimeout(resolve, 2000));
 
       setGeneratedQR(qrDataUrl);
+      setSuccess(true);
       setShowQRModal(true);
-
-      // Reset form after successful submission
-      setFormData({
-        productName: '',
-        serialNumber: '',
-        batchNumber: '',
-        manufactureDate: '',
-        expiryDate: '',
-        ingredients: '',
-        productionLocation: '',
-        storageRequirements: '',
-        regulatoryApprovalId: '',
-        dosageForm: '',
-        strength: '',
-        packagingType: '',
-        manufacturerName: 'PharmaCorp Inc.',
-        manufacturerLicense: '',
-        shelfLife: '',
-        storageInstructions: '',
-        composition: '',
-        categoryType: '',
-        description: ''
-      });
-    } catch (error) {
-      console.error('Error registering product:', error);
-      // You would typically show an error message to the user here
+    } catch (err) {
+      setError(err.message || 'An error occurred while registering the product');
     } finally {
       setIsSubmitting(false);
     }
@@ -113,11 +95,11 @@ const RegisterProduct = () => {  const [formData, setFormData] = useState({
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center"
+        className="text-center mb-8"
       >
         <h1 className="text-3xl font-bold text-gray-900">Register New Product</h1>
         <p className="mt-3 text-lg text-gray-600">
@@ -125,18 +107,27 @@ const RegisterProduct = () => {  const [formData, setFormData] = useState({
         </p>
       </motion.div>
 
+      {error && (
+        <Alert
+          type="error"
+          message={error}
+          onClose={() => setError('')}
+          className="mb-6"
+        />
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="max-w-4xl mx-auto mt-8"
+        className="max-w-4xl mx-auto"
       >
         <Card className="overflow-hidden">
           <form onSubmit={handleSubmit} className="p-6 space-y-8">
             {/* Basic Information */}
             <div className="space-y-6">
-              <div className="flex items-center space-x-2 text-lg font-semibold text-gray-900">
-                <PackagePlus className="w-5 h-5 text-blue-600" />
+              <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                <PackagePlus className="w-5 h-5 text-primary-600" />
                 <h3>Basic Information</h3>
               </div>
               <div className="grid gap-6 md:grid-cols-2">
@@ -145,7 +136,6 @@ const RegisterProduct = () => {  const [formData, setFormData] = useState({
                   name="productName"
                   value={formData.productName}
                   onChange={handleChange}
-                  placeholder="Enter product name"
                   required
                 />
                 <Input
@@ -153,7 +143,6 @@ const RegisterProduct = () => {  const [formData, setFormData] = useState({
                   name="serialNumber"
                   value={formData.serialNumber}
                   onChange={handleChange}
-                  placeholder="Auto-generated or manual entry"
                   required
                 />
                 <Input
@@ -161,78 +150,21 @@ const RegisterProduct = () => {  const [formData, setFormData] = useState({
                   name="batchNumber"
                   value={formData.batchNumber}
                   onChange={handleChange}
-                  placeholder="Enter batch number"
                   required
                 />
-                <Select
-                  label="Category"
-                  name="categoryType"
-                  value={formData.categoryType}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select category</option>
-                  {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-
-            {/* Product Details */}
-            <div className="space-y-6">
-              <div className="flex items-center space-x-2 text-lg font-semibold text-gray-900">
-                <BadgeCheck className="w-5 h-5 text-blue-600" />
-                <h3>Product Details</h3>
-              </div>
-              <div className="grid gap-6 md:grid-cols-2">
-                <Select
-                  label="Dosage Form"
-                  name="dosageForm"
-                  value={formData.dosageForm}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select dosage form</option>
-                  {dosageForms.map(form => (
-                    <option key={form} value={form}>{form}</option>
-                  ))}
-                </Select>
                 <Input
-                  label="Strength"
-                  name="strength"
-                  value={formData.strength}
+                  label="Drug Code"
+                  name="drugCode"
+                  value={formData.drugCode}
                   onChange={handleChange}
-                  placeholder="e.g., 500mg, 10ml"
-                  required
-                />
-                <Select
-                  label="Packaging Type"
-                  name="packagingType"
-                  value={formData.packagingType}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select packaging type</option>
-                  {packagingTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </Select>
-                <Input
-                  label="Shelf Life"
-                  name="shelfLife"
-                  value={formData.shelfLife}
-                  onChange={handleChange}
-                  placeholder="e.g., 24 months"
-                  required
                 />
               </div>
             </div>
 
-            {/* Dates and Storage */}
+            {/* Manufacturing Details */}
             <div className="space-y-6">
-              <div className="flex items-center space-x-2 text-lg font-semibold text-gray-900">
-                <CalendarDays className="w-5 h-5 text-blue-600" />
+              <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                <Building className="w-5 h-5 text-primary-600" />
                 <h3>Manufacturing Details</h3>
               </div>
               <div className="grid gap-6 md:grid-cols-2">
@@ -264,7 +196,6 @@ const RegisterProduct = () => {  const [formData, setFormData] = useState({
                   name="manufacturerLicense"
                   value={formData.manufacturerLicense}
                   onChange={handleChange}
-                  placeholder="Enter license number"
                   required
                 />
                 <Input
@@ -272,64 +203,65 @@ const RegisterProduct = () => {  const [formData, setFormData] = useState({
                   name="productionLocation"
                   value={formData.productionLocation}
                   onChange={handleChange}
-                  placeholder="Enter production facility location"
-                  icon={<MapPin className="w-5 h-5" />}
                   required
                 />
                 <Input
-                  label="Regulatory Approval ID"
-                  name="regulatoryApprovalId"
-                  value={formData.regulatoryApprovalId}
+                  label="Manufacturer Country"
+                  name="manufacturerCountry"
+                  value={formData.manufacturerCountry}
                   onChange={handleChange}
-                  placeholder="Enter FDA/regulatory approval number"
                   required
                 />
               </div>
             </div>
 
-            {/* Additional Details */}
+            {/* Product Specifications */}
             <div className="space-y-6">
-              <div className="flex items-center space-x-2 text-lg font-semibold text-gray-900">
-                <BadgeCheck className="w-5 h-5 text-blue-600" />
-                <h3>Additional Information</h3>
+              <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                <BadgeCheck className="w-5 h-5 text-primary-600" />
+                <h3>Product Specifications</h3>
               </div>
-              <div className="grid gap-6">
+              <div className="grid gap-6 md:grid-cols-2">
                 <Input
-                  label="Composition"
-                  name="composition"
-                  value={formData.composition}
+                  label="Dosage Form"
+                  name="dosageForm"
+                  value={formData.dosageForm}
                   onChange={handleChange}
-                  placeholder="Enter detailed composition"
                   required
                 />
                 <Input
-                  label="Storage Instructions"
-                  name="storageInstructions"
-                  value={formData.storageInstructions}
+                  label="Strength"
+                  name="strength"
+                  value={formData.strength}
                   onChange={handleChange}
-                  placeholder="Enter storage requirements and instructions"
                   required
                 />
-                <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  rows="4"
-                  name="description"
-                  value={formData.description}
+                <Input
+                  label="Storage Condition"
+                  name="storageCondition"
+                  value={formData.storageCondition}
                   onChange={handleChange}
-                  placeholder="Enter additional product description or notes"
+                  required
+                />
+                <Input
+                  label="Approval Certificate ID"
+                  name="approvalCertificateId"
+                  value={formData.approvalCertificateId}
+                  onChange={handleChange}
+                  required
                 />
               </div>
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end pt-6 mt-6 border-t border-gray-100">
+            <div className="flex justify-end pt-6">
               <Button
                 type="submit"
                 variant="primary"
-                className="w-full px-8 py-3 sm:w-auto"
-                loading={isSubmitting}
+                className="w-full sm:w-auto"
+                disabled={isSubmitting}
               >
-                Register Product
+                {isSubmitting ? 'Registering...' : 'Register Product'}
               </Button>
             </div>
           </form>
@@ -347,9 +279,18 @@ const RegisterProduct = () => {  const [formData, setFormData] = useState({
               <h3 className="mb-2 text-xl font-semibold text-gray-900">
                 Product Registered Successfully
               </h3>
-              <p className="mb-6 text-center text-gray-600">
-                The product has been registered on the blockchain and a QR code has been generated.
-              </p>
+              
+              {/* Blockchain Details */}
+              <div className="w-full mb-4 p-4 bg-gray-50 rounded-lg">
+                <div className="mb-2">
+                  <p className="text-sm text-gray-600">Transaction Hash</p>
+                  <p className="text-sm font-mono break-all">{txHash}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Digital Fingerprint</p>
+                  <p className="text-sm font-mono break-all">{digitalFingerprint}</p>
+                </div>
+              </div>
               
               {/* QR Code Display */}
               <div className="p-4 mb-6 bg-white border rounded-lg">
@@ -374,25 +315,33 @@ const RegisterProduct = () => {  const [formData, setFormData] = useState({
                   <Printer className="w-5 h-5" />
                   Print QR
                 </Button>
-                <Button
-                  variant="secondary"
-                  className="flex items-center gap-2"
-                  onClick={() => {
-                    navigator.clipboard.writeText(generatedQR);
-                    // You might want to show a toast notification here
-                  }}
-                >
-                  <Copy className="w-5 h-5" />
-                  Copy URL
-                </Button>
               </div>
 
               <Button
                 variant="primary"
                 className="w-full mt-6"
-                onClick={() => setShowQRModal(false)}
+                onClick={() => {
+                  setShowQRModal(false);
+                  // Reset form after closing modal
+                  setFormData({
+                    productName: '',
+                    serialNumber: '',
+                    batchNumber: '',
+                    manufactureDate: '',
+                    expiryDate: '',
+                    manufacturerName: '',
+                    manufacturerLicense: '',
+                    productionLocation: '',
+                    drugCode: '',
+                    dosageForm: '',
+                    strength: '',
+                    storageCondition: '',
+                    approvalCertificateId: '',
+                    manufacturerCountry: '',
+                  });
+                }}
               >
-                Close
+                Register Another Product
               </Button>
             </div>
           </div>
