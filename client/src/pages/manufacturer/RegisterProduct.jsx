@@ -1,86 +1,111 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  PackagePlus, 
-  CalendarDays, 
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  PackagePlus,
+  CalendarDays,
   Building,
   BadgeCheck,
   Download,
   Printer,
   CheckCircle,
-  Copy
-} from 'lucide-react';
-import { generateQRCode, downloadQRCode } from '../../utils/qrCodeUtils';
-import Card from '../../components/UI/Card';
-import Input from '../../components/UI/Input';
-import Button from '../../components/UI/Button';
-import Select from '../../components/UI/Select';
-import Alert from '../../components/UI/Alert';
+  Copy,
+} from "lucide-react";
+import { generateQRCode, downloadQRCode } from "../../utils/qrCodeUtils";
+import Card from "../../components/UI/Card";
+import Input from "../../components/UI/Input";
+import Button from "../../components/UI/Button";
+import Select from "../../components/UI/Select";
+import Alert from "../../components/UI/Alert";
+import apiClient from "../../services/api/api";
 
 const RegisterProduct = () => {
   const [formData, setFormData] = useState({
-    productName: '',
-    serialNumber: '',
-    batchNumber: '',
-    manufactureDate: '',
-    expiryDate: '',
-    manufacturerName: '',
-    manufacturerLicense: '',
-    productionLocation: '',
-    drugCode: '',
-    dosageForm: '',
-    strength: '',
-    storageCondition: '',
-    approvalCertificateId: '',
-    manufacturerCountry: '',
+    name: "",
+    serialNumber: "",
+    batchNumber: "",
+    manufactureDate: "",
+    expiryDate: "",
+    manufacturerName: "",
+    manufacturerLicense: "",
+    productionLocation: "",
+    drugCode: "",
+    dosageForm: "",
+    strength: "",
+    storageCondition: "",
+    approvalCertificateId: "",
+    manufacturerCountry: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [generatedQR, setGeneratedQR] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
-  const [txHash, setTxHash] = useState('');
-  const [digitalFingerprint, setDigitalFingerprint] = useState('');
+  const [txHash, setTxHash] = useState("");
+  const [digitalFingerprint, setDigitalFingerprint] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError('');
+    setError("");
 
     try {
+      // Format dates to ISO string
+      const formattedData = {
+        name: formData.name, 
+        serialNumber: formData.serialNumber,
+        batchNumber: formData.batchNumber,
+        manufactureDate: new Date(formData.manufactureDate).toISOString(),
+        expiryDate: new Date(formData.expiryDate).toISOString(),
+        manufacturerName: formData.manufacturerName,
+        manufacturerLicense: formData.manufacturerLicense,
+        productionLocation: formData.productionLocation,
+        drugCode: formData.drugCode,
+        dosageForm: formData.dosageForm,
+        strength: formData.strength,
+        storageCondition: formData.storageCondition,
+        approvalCertificateId: formData.approvalCertificateId,
+        manufacturerCountry: formData.manufacturerCountry,
+      };
+
       // API call to register product
-      const response = await fetch('/api/products/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await apiClient.post(
+        "/products/register/",
+        formattedData
+      );
 
-      const data = await response.json();
+      if (response.status === 201) {
+        const data = response.data;
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to register product');
+        // Set blockchain transaction data
+        setTxHash(data?.txHash);
+        setDigitalFingerprint(data.digitalFingerprint);
+
+        // Generate QR code with all the product data
+        const qrData = {
+          ...formData,
+          txHash: data?.txHash,
+          digitalFingerprint: data.digitalFingerprint,
+          registrationTimestamp: data.registrationTimestamp,
+          manufacturerAddress: data.manufacturerAddress,
+          contractAddress: data.contractAddress,
+          productId: data.productId,
+        };
+
+        const qrDataUrl = await generateQRCode(JSON.stringify(qrData));
+        setGeneratedQR(qrDataUrl);
+        setSuccess(true);
+        setShowQRModal(true);
+      } else {
+        throw new Error(response.data.message || "Failed to register product");
       }
-
-      // Set blockchain transaction data
-      setTxHash(data.txHash);
-      setDigitalFingerprint(data.digitalFingerprint);
-
-      // Generate QR code
-      const qrDataUrl = await generateQRCode({
-        ...formData,
-        txHash: data.txHash,
-        digitalFingerprint: data.digitalFingerprint,
-        registrationDate: new Date().toISOString()
-      });
-
-      setGeneratedQR(qrDataUrl);
-      setSuccess(true);
-      setShowQRModal(true);
     } catch (err) {
-      setError(err.message || 'An error occurred while registering the product');
+      console.error("Registration error:", err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "An error occurred while registering the product"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -88,9 +113,9 @@ const RegisterProduct = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -99,9 +124,11 @@ const RegisterProduct = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="mb-8 text-center"
       >
-        <h1 className="text-3xl font-bold text-gray-900">Register New Product</h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Register New Product
+        </h1>
         <p className="mt-3 text-lg text-gray-600">
           Add a new pharmaceutical product to the blockchain ledger
         </p>
@@ -111,7 +138,7 @@ const RegisterProduct = () => {
         <Alert
           type="error"
           message={error}
-          onClose={() => setError('')}
+          onClose={() => setError("")}
           className="mb-6"
         />
       )}
@@ -133,8 +160,8 @@ const RegisterProduct = () => {
               <div className="grid gap-6 md:grid-cols-2">
                 <Input
                   label="Product Name"
-                  name="productName"
-                  value={formData.productName}
+                  name="name"
+                  value={formData.name}
                   onChange={handleChange}
                   required
                 />
@@ -261,7 +288,7 @@ const RegisterProduct = () => {
                 className="w-full sm:w-auto"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Registering...' : 'Register Product'}
+                {isSubmitting ? "Registering..." : "Register Product"}
               </Button>
             </div>
           </form>
@@ -279,22 +306,28 @@ const RegisterProduct = () => {
               <h3 className="mb-2 text-xl font-semibold text-gray-900">
                 Product Registered Successfully
               </h3>
-              
+
               {/* Blockchain Details */}
-              <div className="w-full mb-4 p-4 bg-gray-50 rounded-lg">
+              <div className="w-full p-4 mb-4 rounded-lg bg-gray-50">
                 <div className="mb-2">
                   <p className="text-sm text-gray-600">Transaction Hash</p>
-                  <p className="text-sm font-mono break-all">{txHash}</p>
+                  <p className="font-mono text-sm break-all">{txHash}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Digital Fingerprint</p>
-                  <p className="text-sm font-mono break-all">{digitalFingerprint}</p>
+                  <p className="font-mono text-sm break-all">
+                    {digitalFingerprint}
+                  </p>
                 </div>
               </div>
-              
+
               {/* QR Code Display */}
               <div className="p-4 mb-6 bg-white border rounded-lg">
-                <img src={generatedQR} alt="Product QR Code" className="w-48 h-48 mx-auto" />
+                <img
+                  src={generatedQR}
+                  alt="Product QR Code"
+                  className="w-48 h-48 mx-auto"
+                />
               </div>
 
               {/* Action Buttons */}
@@ -302,7 +335,12 @@ const RegisterProduct = () => {
                 <Button
                   variant="secondary"
                   className="flex items-center gap-2"
-                  onClick={() => downloadQRCode(generatedQR, `QR-${formData.serialNumber}.png`)}
+                  onClick={() =>
+                    downloadQRCode(
+                      generatedQR,
+                      `QR-${formData.serialNumber}.png`
+                    )
+                  }
                 >
                   <Download className="w-5 h-5" />
                   Download QR
@@ -324,20 +362,20 @@ const RegisterProduct = () => {
                   setShowQRModal(false);
                   // Reset form after closing modal
                   setFormData({
-                    productName: '',
-                    serialNumber: '',
-                    batchNumber: '',
-                    manufactureDate: '',
-                    expiryDate: '',
-                    manufacturerName: '',
-                    manufacturerLicense: '',
-                    productionLocation: '',
-                    drugCode: '',
-                    dosageForm: '',
-                    strength: '',
-                    storageCondition: '',
-                    approvalCertificateId: '',
-                    manufacturerCountry: '',
+                    name: "",
+                    serialNumber: "",
+                    batchNumber: "",
+                    manufactureDate: "",
+                    expiryDate: "",
+                    manufacturerName: "",
+                    manufacturerLicense: "",
+                    productionLocation: "",
+                    drugCode: "",
+                    dosageForm: "",
+                    strength: "",
+                    storageCondition: "",
+                    approvalCertificateId: "",
+                    manufacturerCountry: "",
                   });
                 }}
               >

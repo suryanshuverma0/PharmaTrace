@@ -1,32 +1,31 @@
+// utils/blockchain.js
 require('dotenv').config();
 const { ethers } = require("ethers");
 
-// Import your contract ABI
-const contractABI = require("../abis/ProductContract.json").abi;
+// Use the same ABI as checkProduct.js
+const contractABI = require("../../blockchain/artifacts/contracts/ProductRegistry.sol/ProductRegistry.json").abi;
 
 console.log("Setting up blockchain connection...");
 console.log("RPC URL:", process.env.BLOCKCHAIN_RPC);
 console.log("Contract Address:", process.env.CONTRACT_ADDRESS);
 
-// Create provider with explicit connection
-const provider = new ethers.JsonRpcProvider(process.env.BLOCKCHAIN_RPC);
+// Disable ENS resolution
+const provider = new ethers.JsonRpcProvider(process.env.BLOCKCHAIN_RPC, undefined, {
+  ensNetwork: undefined,
+});
 
-// Create signer
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 console.log("Signer address:", signer.address);
 
-// Create contract instance
 const contract = new ethers.Contract(
-  process.env.CONTRACT_ADDRESS, 
-  contractABI, 
+  process.env.CONTRACT_ADDRESS,
+  contractABI,
   signer
 );
 
-// Test connection on startup
 async function testConnection() {
   try {
     console.log("Testing blockchain connection...");
-    
     const network = await provider.getNetwork();
     console.log("✅ Connected to network:", network.chainId.toString());
     
@@ -36,16 +35,14 @@ async function testConnection() {
     const code = await provider.getCode(process.env.CONTRACT_ADDRESS);
     console.log("✅ Contract deployed:", code !== "0x");
     
-    // Test a simple contract call
-    const testProduct = await contract.products("SN123456");
-    console.log("✅ Contract call successful, product name:", testProduct[0]);
+    const testProduct = await contract.products("SNBLK32"); // Test with known serial number
+    console.log("✅ Contract call successful, product data:", testProduct);
     
   } catch (error) {
     console.error("❌ Blockchain connection test failed:", error.message);
   }
 }
 
-// Test connection when module loads (with a small delay)
 setTimeout(testConnection, 1000);
 
 module.exports = { contract, signer, provider };

@@ -6,7 +6,7 @@ async function main() {
   const ProductRegistry = await ethers.getContractFactory("ProductRegistry");
   const contract = ProductRegistry.attach(contractAddress);
 
-  const serialNumber = "SN123456";
+  const serialNumber = "SNBLK32";
 
   const product = await contract.products(serialNumber);
   console.log(product);
