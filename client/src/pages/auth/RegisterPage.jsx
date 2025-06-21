@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 
 const RegisterPage = () => {
-  const { connectWallet, registerUserWithRole, isLoading, user } = usereAuth();
+  const { connectWallet, registerUserWithRole, isLoading, user } = useAuth();
   const navigate = useNavigate();
 
   const [role, setRole] = useState('');

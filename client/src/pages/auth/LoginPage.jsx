@@ -78,7 +78,7 @@ const LoginPage = () => {
           variants={itemVariants}
           className="mt-2 text-sm text-center text-gray-600"
         >
-          Sign in to your PharmaChain account using MetaMask
+          Sign in to your PharmaTrace account using MetaMask
         </motion.p>
       </motion.div>
 

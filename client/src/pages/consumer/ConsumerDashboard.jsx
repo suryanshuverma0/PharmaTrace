@@ -16,6 +16,7 @@ import {
   Plus,
   MoreVertical
 } from 'lucide-react';
+import { siteConfig } from '../../constants/data';
 
 const ConsumerDashboard = () => {
   const [showScanModal, setShowScanModal] = useState(false);
@@ -79,7 +80,7 @@ const ConsumerDashboard = () => {
                   <Shield className="w-5 h-5 text-white" />
                 </div>
                 <h1 className="text-xl font-bold text-transparent bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text">
-                  PharmaChain
+                  {siteConfig?.siteName}
                 </h1>
               </div>
             </div>

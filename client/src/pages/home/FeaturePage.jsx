@@ -13,6 +13,7 @@ import {
   BarChart 
 } from 'lucide-react';
 import { ConnectWalletCTASection } from '../LandingPage';
+import { siteConfig } from '../../constants/data';
 
 const FeaturePage = () => {
   const containerVariants = {
@@ -116,8 +117,8 @@ const FeaturePage = () => {
             className="max-w-3xl mx-auto text-xl text-blue-100"
             variants={itemVariants}
           >
-            Discover the innovative features that make PharmaChain the leading solution 
-            for pharmaceutical supply chain management
+           {` Discover the innovative features that make ${siteConfig?.siteName} the leading solution 
+            for pharmaceutical supply chain management`}
           </motion.p>
         </motion.div>
       </section>

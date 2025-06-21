@@ -25,7 +25,7 @@ const Select = ({
       <button
         type="button"
         className={`
-          w-full px-3 py-2 bg-white border rounded-lg shadow-sm text-sm
+          w-full px-3 py-3.5 bg-white border rounded-lg shadow-sm text-sm
           ${error ? 'border-red-500' : 'border-gray-300'}
           ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'cursor-pointer'}
           focus:ring-2 focus:ring-blue-500 focus:border-blue-500

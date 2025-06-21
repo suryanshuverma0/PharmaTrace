@@ -1,0 +1,181 @@
+const mongoose = require('mongoose');
+
+const batchSchema = new mongoose.Schema({
+  manufacturerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User', 
+    required: true,
+  },
+
+  batchNumber: {
+    type: String,
+    required: true,
+    unique: true,  // unique per batch
+  },
+
+  manufactureDate: {
+    type: Date,
+    required: true,
+  },
+
+  expiryDate: {
+    type: Date,
+    required: true,
+  },
+
+  quantityProduced: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+
+  quantityAvailable: {
+    type: Number,
+    default: function () {
+      return this.quantityProduced;
+    },
+    min: 0,
+  },
+
+  dosageForm: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  strength: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  storageConditions: {
+    type: String,
+    default: '',
+  },
+
+  productionLocation: {
+    type: String,
+    default: '',
+  },
+
+  approvalCertId: {
+    type: String,
+    default: '',
+  },
+
+  digitalFingerprint: {
+    type: String,
+  },
+
+  // Blockchain-related fields
+  txHash: {
+    type: String,
+    index: true, // For faster blockchain transaction lookups
+  },
+
+  blockNumber: {
+    type: Number,
+    index: true,
+  },
+
+  blockHash: {
+    type: String,
+  },
+
+  gasUsed: {
+    type: String, // Store as string to handle large numbers
+  },
+
+  contractAddress: {
+    type: String,
+  },
+
+  manufacturerAddress: {
+    type: String, // Blockchain address of manufacturer
+  },
+
+  // Shipment tracking
+  shipmentStatus: {
+    type: String,
+    enum: ['Produced', 'In Transit', 'Delivered', 'Returned', 'Recalled'],
+    default: 'Produced',
+  },
+
+  shipmentHistory: [
+    {
+      timestamp: { type: Date, default: Date.now },
+      from: { type: String, required: true },
+      to: { type: String, required: true },
+      status: { type: String, required: true },
+      remarks: String,
+      txHash: String, // Track blockchain transactions for shipment updates
+    }
+  ],
+
+  // Blockchain verification status
+  blockchainVerified: {
+    type: Boolean,
+    default: false,
+  },
+
+  // Last blockchain sync timestamp
+  lastBlockchainSync: {
+    type: Date,
+    default: Date.now,
+  },
+
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// Indexes for better query performance
+batchSchema.index({ manufacturerId: 1, batchNumber: 1 });
+batchSchema.index({ txHash: 1 });
+batchSchema.index({ blockNumber: 1 });
+batchSchema.index({ manufacturerAddress: 1 });
+
+// Middleware to update `updatedAt` on save
+batchSchema.pre('save', function (next) {
+  this.updatedAt = Date.now();
+  
+  // Set blockchain verification status
+  if (this.txHash && this.blockNumber) {
+    this.blockchainVerified = true;
+    this.lastBlockchainSync = new Date();
+  }
+  
+  next();
+});
+
+// Virtual for blockchain verification status
+batchSchema.virtual('isOnBlockchain').get(function() {
+  return !!(this.txHash && this.blockNumber);
+});
+
+// Method to sync with blockchain
+batchSchema.methods.syncWithBlockchain = async function() {
+  // This method can be used to verify batch data against blockchain
+  // Implementation would depend on your specific blockchain setup
+  this.lastBlockchainSync = new Date();
+  return this.save();
+};
+
+// Static method to find batches by manufacturer address
+batchSchema.statics.findByManufacturerAddress = function(address) {
+  return this.find({ manufacturerAddress: address });
+};
+
+// Static method to find unverified batches
+batchSchema.statics.findUnverified = function() {
+  return this.find({ blockchainVerified: false });
+};
+
+module.exports = mongoose.model('Batch', batchSchema);

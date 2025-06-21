@@ -2,6 +2,17 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import MetaMaskService from "../services/blockchain/metamaskService";
 import { getUserRole, registerUser, loginUser } from "../services/api/authApi";
+import {jwtDecode} from 'jwt-decode';
+
+export function decodeToken(token) {
+  try {
+    return jwtDecode(token);
+  } catch (error) {
+    console.error('Invalid token:', error);
+    return null;
+  }
+}
+
 
 const AuthContext = createContext();
 
@@ -16,8 +27,12 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAccountRegistered, setisAccountRegistered] = useState(false);
+
   const [isConnected, setIsConnected] = useState(false);
+  const [checkAccountLoading, setCheckAccountLoading] = useState(true);
+  const [connectedAddress, setConnectedAddress] = useState(null);
 
   // Check if user is already connected on app load
   useEffect(() => {
@@ -32,33 +47,33 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
     }
   }, [isConnected]);
+  
+
+  useEffect(()=>{
+    const token = localStorage.getItem('token')
+    isAuthenticated && token && setUser(decodeToken(token))
+  }, [isAuthenticated])
 
   const checkConnection = async () => {
     try {
       const account = await MetaMaskService.getCurrentAccount();
       if (account) {
-        const userRole = await getUserRole(account);
-        if (userRole) {
-          setUser({
-            address: account,
-            role: userRole.role,
-            name: userRole.name,
-            isRegistered: true,
-          });
+        const user = await getUserRole(account);
+
+        if (user?.address === account) {
+          setConnectedAddress(user?.address || address)
+          setisAccountRegistered(true);
           setIsConnected(true);
         } else {
-          setUser({
-            address: account,
-            role: null,
-            isRegistered: false,
-          });
-          setIsConnected(true);
+          setisAccountRegistered(false);
+          setIsConnected(false);
+
         }
       }
     } catch (error) {
       console.error("Error checking connection:", error);
     } finally {
-      setIsLoading(false);
+      setCheckAccountLoading(false);
     }
   };
 
@@ -67,31 +82,15 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(true);
       const result = await MetaMaskService.connect();
 
+      
+
       if (result.success) {
-        const userRole = await getUserRole(result.account);
-
-        if (userRole) {
-          setUser({
-            address: result.account,
-            role: userRole.role,
-            name: userRole.name,
-            isRegistered: true,
-          });
-        } else {
-          setUser({
-            address: result.account,
-            role: null,
-            isRegistered: false,
-          });
-        }
-
-        setIsConnected(true);
+        setConnectedAddress(result?.account)
         return { success: true, account: result.account };
       } else {
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error("Error connecting wallet:", error);
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
@@ -99,16 +98,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   const disconnectWallet = () => {
-    MetaMaskService.disconnect();
+    // MetaMaskService.disconnect();
     setUser(null);
     setIsConnected(false);
     setIsAuthenticated(false);
     localStorage.removeItem("token");
-  }
+  };
 
   const registerUserWithRole = async (userData) => {
     try {
       setIsLoading(true);
+      if (!connectedAddress) {
+        const connectResult = await connectWallet();
+        if (!connectResult.success) {
+          return { success: false, error: connectResult.error };
+        }
+      }
 
       // Generate a message to sign for verification
       const message = `Register as ${userData.role} - ${
@@ -117,10 +122,10 @@ export const AuthProvider = ({ children }) => {
       const signature = await MetaMaskService.signMessage(message);
 
       const registrationData = {
-        ...userData,
-        address: user.address,
+        address: connectedAddress,
         signature,
         message,
+        ...userData,
       };
 
       const result = await registerUser(registrationData);
@@ -130,6 +135,9 @@ export const AuthProvider = ({ children }) => {
           ...user,
           role: userData.role,
           name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          country: userData.country,
           isRegistered: true,
         });
         return { success: true };
@@ -137,29 +145,26 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error("Error registering user:", error);
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
     }
   };
 
-
-
   const login = async () => {
     try {
       setIsLoading(true);
 
-      if (!user.isRegistered) {
+      if (!isAccountRegistered) {
         return { success: false, error: "User not registered" };
       }
 
       // Generate a message to sign for login verification
-      const message = `Login - ${user.address} - ${Date.now()}`;
+      const message = `Login - ${connectedAddress} - ${Date.now()}`;
       const signature = await MetaMaskService.signMessage(message);
 
       const loginData = {
-        address: user.address,
+        address: connectedAddress,
         signature,
         message,
       };
@@ -167,14 +172,13 @@ export const AuthProvider = ({ children }) => {
       const result = await loginUser(loginData);
 
       if (result.success) {
-        localStorage.setItem("token", result.data.token);
+        localStorage.setItem("token", result?.data?.token);
         setIsAuthenticated(true);
-        return { success: true, role: user.role };
+        return { success: true, role: result?.data?.role };
       } else {
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error("Error logging in:", error);
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
@@ -209,15 +213,16 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     isLoading,
+    checkAccountLoading,
     isConnected,
     connectWallet,
     registerUserWithRole,
     login,
     logout,
     disconnectWallet,
-    checkConnection,
     isAuthenticated,
-    
+    isAccountRegistered
+
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

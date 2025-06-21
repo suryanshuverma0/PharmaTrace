@@ -15,6 +15,8 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import ConnectWalletModal from "../modals/ConnectWalletModal";
 import RegisterWalletModal from "../modals/RegisterWalletModal";
 import { useAuth } from "../../context/authContext";
+import { siteConfig } from "../../constants/data";
+import { useWalletModal } from "../../context/WalletModalContext";
 
 // Custom SVG Logo Component
 const PharmaChainLogo = ({ className = "w-12 h-12" }) => (
@@ -112,7 +114,7 @@ const ProfileDropdown = ({ user,  onDisconnect }) => {
   }, []);
 
   const navigateToDashboard = () => {
-    switch (user.role) {
+    switch (user?.role) {
       case "manufacturer":
         navigate("/manufacturer/dashboard");
         break;
@@ -143,7 +145,7 @@ const ProfileDropdown = ({ user,  onDisconnect }) => {
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100">
             <User className="w-5 h-5 text-primary-600" />
           </div>
-          <span className="hidden md:inline">{user.name || "Profile"}</span>
+          <span className="hidden md:inline">{user?.name || "Profile"}</span>
         </div>
         <ChevronDown
           className={`w-4 h-4 transition-transform ${
@@ -157,8 +159,8 @@ const ProfileDropdown = ({ user,  onDisconnect }) => {
           <div className="px-4 pb-2 text-sm text-gray-900 border-b">
             <div className="py-2 text-xs text-gray-500 ">Welcome!</div>
 
-            <div className="font-medium">{user.name}</div>
-            <div className="text-xs text-gray-500 truncate">{user.address}</div>
+            <div className="font-medium">{user?.name}</div>
+            <div className="text-xs text-gray-500 truncate">{user?.address}</div>
           </div>
 
           <button
@@ -200,17 +202,26 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const { user, isAuthenticated, disconnectWallet } =
     useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  const {
+      isConnectModalOpen,
+      closeConnectModal,
+      isRegisterModalOpen,
+      closeRegisterModal,
+      openRegisterModal,
+      openConnectModal,
+    } = useWalletModal();
+
+
+
   useEffect(() => {
     // Check if we should open connect modal after account activation
     if (location.state?.openConnectModal) {
-      setIsConnectModalOpen(true);
+      openConnectModal(true);
       // Clear the state
       window.history.replaceState({}, document.title);
     }
@@ -241,24 +252,6 @@ const Navbar = () => {
     { name: "About", link: "/about" },
   ];
 
-  const handleConnectClick = () => {
-    setIsConnectModalOpen(true);
-  };
-
-  const handleRegisterClick = () => {
-    setIsRegisterModalOpen(true);
-  };
-
-  const switchToRegister = () => {
-    setIsConnectModalOpen(false);
-    setIsRegisterModalOpen(true);
-  };
-
-  const switchToConnect = () => {
-    setIsRegisterModalOpen(false);
-    setIsConnectModalOpen(true);
-  };
-
   return (
     <>
       <nav
@@ -283,7 +276,7 @@ const Navbar = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-2xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text">
-                  PharmaChain
+                  {siteConfig?.siteName}
                 </span>
                 <span className="-mt-1 text-xs text-gray-500">
                   Blockchain Security
@@ -355,14 +348,14 @@ const Navbar = () => {
               ) : (
                 <div className="flex items-center gap-6">
                   <button
-                    onClick={() => setIsConnectModalOpen(true)}
+                    onClick={() => openConnectModal()}
                     className="items-center hidden gap-2 px-4 py-3 text-[15px] font-medium text-white rounded-lg shadow-md md:flex bg-primary-600 hover:bg-primary-700 focus:outline-none0"
                   >
                     <Wallet className="w-5 h-5" />
                     Connect Wallet
                   </button>
                   <button
-                    onClick={() => setIsRegisterModalOpen(true)}
+                    onClick={() => openRegisterModal()}
                     className="items-center hidden gap-2 px-4 py-2.5 text-[15px] font-medium border rounded-lg md:flex text-primary-600 border-primary-600 hover:bg-primary-50 focus:outline-none"
                   >
                     Register
@@ -464,18 +457,6 @@ const Navbar = () => {
           </div>
         </div>
       </nav>
-
-      <ConnectWalletModal
-        isOpen={isConnectModalOpen}
-        onClose={() => setIsConnectModalOpen(false)}
-        onRegisterClick={switchToRegister}
-      />
-
-      <RegisterWalletModal
-        isOpen={isRegisterModalOpen}
-        onClose={() => setIsRegisterModalOpen(false)}
-        onConnectClick={switchToConnect}
-      />
     </>
   );
 };

@@ -1,107 +1,152 @@
 const { ethers } = require("ethers");
 const Product = require("../models/Product");
 const { contract, signer, provider } = require("../utils/blockchain");
+const Batch = require("../models/Batch");
+const Manufacturer = require("../models/Manufacturer");
+
 
 const registerProduct = async (req, res) => {
   try {
     const {
-      name,
+      productName,
       serialNumber,
       batchNumber,
-      manufactureDate,
-      expiryDate,
-      manufacturerName,
-      manufacturerLicense,
-      productionLocation,
       drugCode,
-      dosageForm,
-      strength,
-      storageCondition,
-      approvalCertificateId,
-      manufacturerCountry,
+      price
     } = req.body;
 
-    // Call smart contract function
+    // Validate required fields
+    if (!productName || !serialNumber || !batchNumber) {
+      return res.status(400).json({ message: 'All required fields must be provided' });
+    }
+
+    // Validate signer
+    if (!signer.address) {
+      return res.status(500).json({ message: 'Server error: Signer address is not available' });
+    }
+
+    // Validate batch
+    const batch = await Batch.findOne({
+      batchNumber,
+      manufacturerId: req.user.userId,
+    });
+
+    if (!batch) {
+      return res.status(404).json({ message: 'Batch not found or not owned by manufacturer' });
+    }
+
+    if (batch.quantityAvailable < 1) {
+      return res.status(400).json({ message: 'No available quantity in batch' });
+    }
+
+    const manufacturer = await Manufacturer.findOne({ user: req.user.userId });
+
+    if (!manufacturer) {
+      return res.status(400).json({ message: "Manufacturer not found" });
+    }
+
     const tx = await contract.registerProduct(
-      name,
+      productName,
       serialNumber,
       batchNumber,
-      Math.floor(new Date(manufactureDate).getTime() / 1000),
-      Math.floor(new Date(expiryDate).getTime() / 1000),
-      manufacturerName,
-      manufacturerLicense,
-      productionLocation,
-      drugCode,
-      dosageForm,
-      strength,
-      storageCondition,
-      approvalCertificateId,
-      manufacturerCountry
+      Math.floor(new Date(batch.manufactureDate).getTime() / 1000),
+      Math.floor(new Date(batch.expiryDate).getTime() / 1000),
+      manufacturer.companyName || 'Company Name',
+      batch.approvalCertId || 'Approval certificate Id',
+      batch.productionLocation || '',
+      drugCode || '',
+      batch.dosageForm,
+      batch.strength,
+      batch.storageConditions || '',
+      batch.approvalCertId,
+      'Nepal'
     );
 
     const receipt = await tx.wait();
 
+    console.log("Receipt is", receipt);
+
+    // Check transaction status
+    if (receipt.status !== 1) {
+      throw new Error('Transaction failed on blockchain');
+    }
+
+    // Update batch quantity
+    batch.quantityAvailable -= 1;
+    await batch.save();
+
+    // Save product to MongoDB with additional blockchain data
     const newProduct = await Product.create({
-      name,
+      manufacturerId: req.user.userId,
+      batchId: batch._id,
+      productName,
       serialNumber,
       batchNumber,
-      manufactureDate,
-      expiryDate,
-      manufacturerName,
-      manufacturerLicense,
-      productionLocation,
-      drugCode,
-      dosageForm,
-      strength,
-      storageCondition,
-      approvalCertificateId,
-      manufacturerCountry,
-      txHash: receipt.transactionHash,
+      manufactureDate: batch.manufactureDate,
+      expiryDate: batch.expiryDate,
+      manufacturerName: manufacturer.companyName,
+      manufacturerLicense: batch.approvalCertId || '',
+      productionLocation: batch.productionLocation || '',
+      drugCode: drugCode || '',
+      dosageForm: batch.dosageForm || '',
+      strength: batch.strength,
+      storageCondition: batch.storageConditions || '',
+      approvalCertId: batch.approvalCertId,
+      manufacturerCountry: 'Nepal',
+      fingerprint: ethers.keccak256(ethers.toUtf8Bytes(serialNumber + batchNumber)),
+      
+      // Blockchain transaction details
+      txHash: receipt.hash, 
+      blockNumber: Number(receipt.blockNumber), 
+      blockHash: receipt.blockHash,
+      gasUsed: receipt.gasUsed.toString(), 
       manufacturerAddress: signer.address,
-      digitalFingerprint: ethers.keccak256(ethers.toUtf8Bytes(serialNumber + batchNumber)),
+      contractAddress: receipt.to, 
+      
+      price: price
     });
 
-    res.status(201).json({ message: "Product registered", product: newProduct });
+    res.status(201).json({
+      message: 'Product registered successfully',
+      product: newProduct,
+      blockchain: {
+        txHash: receipt.hash,
+        blockNumber: Number(receipt.blockNumber),
+        blockHash: receipt.blockHash,
+        gasUsed: receipt.gasUsed.toString(),
+        contractAddress: receipt.to,
+        status: receipt.status === 1 ? 'success' : 'failed'
+      },
+      fingerprint: newProduct.fingerprint,
+      registrationTimestamp: new Date().toISOString(),
+      manufacturerAddress: signer.address,
+      productId: serialNumber,
+    });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to register product", details: error.message });
+    console.error('Product registration error:', error);
+    
+    // More detailed error handling
+    if (error.code === 'CALL_EXCEPTION') {
+      return res.status(400).json({
+        message: 'Smart contract call failed',
+        details: error.reason || error.message,
+      });
+    } else if (error.code === 'INSUFFICIENT_FUNDS') {
+      return res.status(400).json({
+        message: 'Insufficient funds for transaction',
+        details: 'Please ensure the wallet has enough ETH for gas fees',
+      });
+    }
+    
+    return res.status(500).json({
+      message: 'Failed to register product',
+      details: error.message,
+    });
   }
 };
 
-// Add this debugging function to your controller
-const debugBlockchainConnection = async (req, res) => {
-  try {
-    console.log("=== Debugging Blockchain Connection ===");
-    console.log("Contract address:", process.env.CONTRACT_ADDRESS);
-    console.log("RPC URL:", process.env.BLOCKCHAIN_RPC);
-    console.log("Signer address:", signer.address);
-    
-    // Check if contract is deployed
-    const code = await signer.provider.getCode(process.env.CONTRACT_ADDRESS);
-    console.log("Contract code exists:", code !== "0x");
-    
-    // Check network
-    const network = await signer.provider.getNetwork();
-    console.log("Network:", network);
-    
-    // Try to call a view function to test connection
-    const product = await contract.products("SNBLK32");
-    console.log("Product data for SNBLK32:", product);
-    
-    res.json({
-      contractAddress: process.env.CONTRACT_ADDRESS,
-      rpcUrl: process.env.BLOCKCHAIN_RPC,
-      signerAddress: signer.address,
-      contractExists: code !== "0x",
-      network: network,
-      productData: product
-    });
-    
-  } catch (error) {
-    console.error("Debug error:", error);
-    res.status(500).json({ error: error.message });
-  }
-};
+
 
 // FIXED: Updated getProductOnChain with proper debugging and data handling
 const getProductOnChain = async (req, res) => {
@@ -221,8 +266,8 @@ const getProductOnChain = async (req, res) => {
       strength: productToUse[10],                               // '500mg' (index 10, not 11!)
       storageCondition: productToUse[11],                       // 'Cold' (index 11, not 12!)
       approvalCertificateId: productToUse[12],                  // '' (empty, index 12, not 13!)
-      manufacturerCountry: productToUse[13],                    // 'Nepal' (index 13, not 14!)
-      manufacturerAddress: productToUse[14],                    // '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199' (index 14, not 15!)
+      // manufacturerCountry: productToUse[13],                    // 'Nepal' (index 13, not 14!)
+      manufacturerAddress: productToUse[13],                    // '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199' (index 14, not 15!)
     };
 
     console.log("Formatted product:", productFormatted);
@@ -239,6 +284,43 @@ const getProductOnChain = async (req, res) => {
       details: error.message,
       stack: error.stack
     });
+  }
+};
+
+
+
+// Add this debugging function to your controller
+const debugBlockchainConnection = async (req, res) => {
+  try {
+    console.log("=== Debugging Blockchain Connection ===");
+    console.log("Contract address:", process.env.CONTRACT_ADDRESS);
+    console.log("RPC URL:", process.env.BLOCKCHAIN_RPC);
+    console.log("Signer address:", signer.address);
+    
+    // Check if contract is deployed
+    const code = await signer.provider.getCode(process.env.CONTRACT_ADDRESS);
+    console.log("Contract code exists:", code !== "0x");
+    
+    // Check network
+    const network = await signer.provider.getNetwork();
+    console.log("Network:", network);
+    
+    // Try to call a view function to test connection
+    const product = await contract.products("SNBLK32");
+    console.log("Product data for SNBLK32:", product);
+    
+    res.json({
+      contractAddress: process.env.CONTRACT_ADDRESS,
+      rpcUrl: process.env.BLOCKCHAIN_RPC,
+      signerAddress: signer.address,
+      contractExists: code !== "0x",
+      network: network,
+      productData: product
+    });
+    
+  } catch (error) {
+    console.error("Debug error:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 

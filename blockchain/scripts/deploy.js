@@ -3,11 +3,17 @@ async function main() {
   console.log("Deploying contracts with account:", deployer.address);
 
   const ProductRegistryFactory = await ethers.getContractFactory("ProductRegistry");
-  const productRegistry = await ProductRegistryFactory.deploy();
+  const BatchRegistryFactory = await ethers.getContractFactory("BatchRegistry");
 
-  await productRegistry.waitForDeployment();  // <--- use this instead of `.deployed()`
+  const productRegistry = await ProductRegistryFactory.deploy();
+  const batchRegistry = await BatchRegistryFactory.deploy();
+
+  await productRegistry.waitForDeployment();  
+  await batchRegistry.waitForDeployment();  
+
 
   console.log("ProductRegistry deployed to:", await productRegistry.getAddress());
+  console.log("BatchRegistry deployed to:", await batchRegistry.getAddress());
 }
 
 main()

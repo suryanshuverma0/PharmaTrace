@@ -10,7 +10,7 @@ export const getUserRole = async (address) => {
   }
 };
 
-// Register new user
+// Register new usera
 export const registerUser = async (userData) => {
   try {
     const res = await apiClient.post('/auth/register', userData);

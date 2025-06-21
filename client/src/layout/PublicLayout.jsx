@@ -7,7 +7,7 @@ const PublicLayout = () => {
   return (
     <>
       <Navbar />
-      <main className="min-h-[80vh]">
+      <main className="min-h-[85vh]">
         <Outlet />
       </main>
       <Footer />

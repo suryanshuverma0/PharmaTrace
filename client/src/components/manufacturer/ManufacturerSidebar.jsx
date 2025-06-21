@@ -45,6 +45,11 @@ const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
     },
     { 
       icon: <PackagePlus size={20} />, 
+      label: 'Register Batch', 
+      path: '/manufacturer/register/batch' 
+    },
+    { 
+      icon: <PackagePlus size={20} />, 
       label: 'Register Product', 
       path: '/manufacturer/register' 
     },
@@ -62,11 +67,6 @@ const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
       icon: <QrCode size={20} />, 
       label: 'QR Codes', 
       path: '/manufacturer/qr-codes' 
-    },
-    { 
-      icon: <Settings size={20} />, 
-      label: 'Settings', 
-      path: '/manufacturer/settings' 
     },
   ];
 

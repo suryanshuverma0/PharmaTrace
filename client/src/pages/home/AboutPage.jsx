@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Users, TrendingUp, Award } from 'lucide-react';
+import { siteConfig } from '../../constants/data';
 
 const AboutPage = () => {
   const containerVariants = {
@@ -34,7 +35,7 @@ const AboutPage = () => {
     {
       year: "2023",
       title: "Project Inception",
-      description: "PharmaChain was conceived with the vision of revolutionizing pharmaceutical supply chains"
+      description: "PharmaTrace was conceived with the vision of revolutionizing pharmaceutical supply chains"
     },
     {
       year: "2024",
@@ -94,10 +95,10 @@ const AboutPage = () => {
             <motion.div variants={itemVariants}>
               <h2 className="mb-6 text-3xl font-bold text-gray-800">Our Mission</h2>
               <p className="mb-6 leading-relaxed text-gray-600">
-                PharmaChain is dedicated to revolutionizing the pharmaceutical supply chain 
+               {` ${siteConfig?.siteName} is dedicated to revolutionizing the pharmaceutical supply chain 
                 through blockchain technology. We aim to create a transparent, secure, and 
                 efficient ecosystem that ensures the authenticity of medications from 
-                manufacturer to patient.
+                manufacturer to patient.`}
               </p>
               <p className="leading-relaxed text-gray-600">
                 By leveraging advanced blockchain solutions, we're building a future where 

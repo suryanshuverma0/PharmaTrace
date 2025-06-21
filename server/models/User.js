@@ -11,6 +11,10 @@ const userSchema = new mongoose.Schema({
     enum: ['consumer', 'pharmacist', 'distributor', 'manufacturer'],
     default: 'consumer'
   },
+  country: { type: String, required: true },
+  state: { type: String },
+  city: { type: String },
+  website: String,
   isApproved: { type: Boolean, default: false },
   isActive: { type: Boolean, default: false },
   chain: String,

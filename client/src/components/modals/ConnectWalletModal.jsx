@@ -5,47 +5,67 @@ import { FaWallet, FaEthereum, FaUserPlus } from "react-icons/fa";
 import { useAuth } from "../../context/authContext";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { useWalletModal } from "../../context/WalletModalContext";
 
-const ConnectWalletModal = ({ isOpen, onClose, onRegisterClick }) => {
+const ConnectWalletModal = () => {
   const [error, setError] = useState("");
   const [showUnregisteredAlert, setShowUnregisteredAlert] = useState(false);
-  const { connectWallet, login, user } = useAuth();
+
+  const {
+    connectWallet,
+    login,
+    isLoading,
+    isAccountRegistered,
+    checkAccountLoading,
+  } = useAuth();
+  const { isConnectModalOpen, closeConnectModal, openRegisterModal } =
+    useWalletModal();
+
   const navigate = useNavigate();
 
   const redirectUser = (role) => {
-    if (role === "manufacturer") {
-      navigate("/manufacturer");
-    } else if (role === "distributor") {
-      navigate("/distributor");
-    } else {
-      navigate("/");
-    }
+    if (role === "manufacturer") navigate("/manufacturer");
+    else if (role === "distributor") navigate("/distributor");
+    else navigate("/");
   };
 
   const handleConnect = async () => {
     try {
-      const { success } = await connectWallet();
+      const { success, account, error } = await connectWallet();
       if (success) {
-        if (user?.isRegistered) {
+        if (isAccountRegistered) {
           const loginResult = await login();
           if (loginResult.success) {
             toast.success("Wallet connected and logged in successfully.");
+            closeConnectModal();
             redirectUser(loginResult.role);
           } else {
-            setError(loginResult.error || "Login failed");
+            const error = loginResult.error;
+            if (error && typeof error === "object" && error.code === 4001) {
+              setError(
+                "Action rejected: You denied the wallet signature request."
+              );
+            } else if (
+              typeof error === "string" &&
+              error.toLowerCase().includes("user rejected")
+            ) {
+              setError(
+                "Action rejected: You denied the wallet signature request."
+              );
+            } else {
+              setError(error?.message || error || "Login failed");
+            }
           }
         } else {
-          // Show alert for unregistered user, then close modal and trigger register flow after delay
           setShowUnregisteredAlert(true);
-
           setTimeout(() => {
             setShowUnregisteredAlert(false);
-            onClose();
-            if (onRegisterClick) onRegisterClick();
-          }, 3000); // Show alert for 3 seconds
+            closeConnectModal();
+            openRegisterModal();
+          }, 3000);
         }
       } else {
-        setError("Failed to connect wallet");
+        setError(error || "Failed to connect wallet");
       }
     } catch (err) {
       setError(err.message || "Something went wrong");
@@ -53,12 +73,16 @@ const ConnectWalletModal = ({ isOpen, onClose, onRegisterClick }) => {
   };
 
   const handleRegisterClick = () => {
-    onClose();
-    if (onRegisterClick) onRegisterClick();
+    closeConnectModal();
+    openRegisterModal();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w 2xl">
+    <Modal
+      isOpen={isConnectModalOpen}
+      onClose={closeConnectModal}
+      className="max-w 2xl"
+    >
       <div className="p-6">
         <div className="flex flex-col items-center justify-center mb-6">
           <div className="p-4 mb-4 rounded-full bg-primary-100">
@@ -73,7 +97,6 @@ const ConnectWalletModal = ({ isOpen, onClose, onRegisterClick }) => {
           </p>
         </div>
 
-        {/* Show alert at top for unregistered user */}
         {showUnregisteredAlert && (
           <Alert
             type="error"
@@ -84,13 +107,8 @@ const ConnectWalletModal = ({ isOpen, onClose, onRegisterClick }) => {
           </Alert>
         )}
 
-        {/* Show error alert */}
         {!showUnregisteredAlert && error && (
-          <Alert
-            type="error"
-            className="mb-4"
-            onClose={() => setError("")}
-          >
+          <Alert type="error" className="mb-4" onClose={() => setError("")}>
             {error}
           </Alert>
         )}
@@ -99,19 +117,28 @@ const ConnectWalletModal = ({ isOpen, onClose, onRegisterClick }) => {
           <button
             onClick={handleConnect}
             className="flex items-center justify-between w-full p-4 transition-all duration-200 border-2 border-gray-200 rounded-lg hover:border-primary-500 group"
+            disabled={isLoading || checkAccountLoading}
           >
             <div className="flex items-center">
               <FaEthereum className="w-8 h-8 mr-3 text-orange-600" />
               <div className="text-left">
                 <h3 className="font-semibold text-gray-900">MetaMask</h3>
                 <p className="text-sm text-gray-600">
-                  Connect using browser wallet
+                {isLoading ? "Connecting...": "Connect using browser wallet"}
+                  
                 </p>
               </div>
             </div>
-            <span className="transition-opacity duration-200 opacity-0 text-primary-600 group-hover:opacity-100">
-              Connect →
-            </span>
+
+            {checkAccountLoading ? (
+              <span className="transition-opacity duration-200 opacity-0 text-primary-600 group-hover:opacity-100">
+                Loading...
+              </span>
+            ) : (
+              <span className="transition-opacity duration-200 opacity-0 text-primary-600 group-hover:opacity-100">
+                Connect →
+              </span>
+            )}
           </button>
         </div>
 
@@ -136,23 +163,19 @@ const ConnectWalletModal = ({ isOpen, onClose, onRegisterClick }) => {
           </div>
         </div>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            By connecting your wallet, you agree to our{" "}
-            <a
-              href="/terms"
-              className="text-primary-600 hover:text-primary-700"
-            >
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a
-              href="/privacy"
-              className="text-primary-600 hover:text-primary-700"
-            >
-              Privacy Policy
-            </a>
-          </p>
+        <div className="mt-6 text-sm text-center text-gray-600">
+          By connecting your wallet, you agree to our{" "}
+          <a href="/terms" className="text-primary-600 hover:text-primary-700">
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a
+            href="/privacy"
+            className="text-primary-600 hover:text-primary-700"
+          >
+            Privacy Policy
+          </a>
+          .
         </div>
       </div>
     </Modal>
