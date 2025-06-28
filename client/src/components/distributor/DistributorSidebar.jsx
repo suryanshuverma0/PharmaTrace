@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaBox, FaQrcode, FaShippingFast, FaClipboardCheck } from 'react-icons/fa';
+import { FaBox, FaQrcode, FaShippingFast, FaClipboardCheck, FaCheckCircle, FaWarehouse, FaShareSquare, FaHistory } from 'react-icons/fa';
 
 const DistributorSidebar = () => {
   const location = useLocation();
@@ -16,19 +16,34 @@ const DistributorSidebar = () => {
       icon: <FaBox className="w-5 h-5" />,
     },
     {
-      path: '/distributor/shipments',
-      name: 'Manage Shipments',
+      path: '/distributor/assigned-batches',
+      name: 'Assigned Batches',
       icon: <FaShippingFast className="w-5 h-5" />,
+    },
+    {
+      path: '/distributor/acknowledge-shipment',
+      name: 'Acknowledge Shipment',
+      icon: <FaCheckCircle className="w-5 h-5" />,
+    },
+    {
+      path: '/distributor/inventory',
+      name: 'Inventory',
+      icon: <FaWarehouse className="w-5 h-5" />,
+    },
+    {
+      path: '/distributor/distribute',
+      name: 'Distribute',
+      icon: <FaShareSquare className="w-5 h-5" />,
+    },
+    {
+      path: '/distributor/track-transfers',
+      name: 'Track Transfers',
+      icon: <FaHistory className="w-5 h-5" />,
     },
     {
       path: '/distributor/verify',
       name: 'Verify Products',
       icon: <FaQrcode className="w-5 h-5" />,
-    },
-    {
-      path: '/distributor/track',
-      name: 'Track Journey',
-      icon: <FaClipboardCheck className="w-5 h-5" />,
     },
   ];
 

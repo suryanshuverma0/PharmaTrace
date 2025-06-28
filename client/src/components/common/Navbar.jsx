@@ -244,7 +244,7 @@ const Navbar = () => {
       dropdown: [
         { name: "For Manufacturers", link: "/manufacturer/dashboard" },
         { name: "For Distributors", link: "/distributor/dashboard" },
-        { name: "For Pharmacies", link: "/pharmacies" },
+        { name: "For Pharmacies", link: "/pharmacy/dashboard" },
         { name: "For Patients", link: "/consumer" },
       ],
     },

@@ -54,6 +54,11 @@ const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
       path: '/manufacturer/register' 
     },
     { 
+      icon: <PackagePlus size={20} />, 
+      label: 'Assign Batch', 
+      path: '/manufacturer/assign-batch' 
+    },
+    { 
       icon: <Boxes size={20} />, 
       label: 'Products', 
       path: '/manufacturer/products' 

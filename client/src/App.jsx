@@ -46,14 +46,7 @@ const App = () => {
       <VerifyProductButton />
       <Modals />
       <Toaster position="top-center" reverseOrder={false} toastOptions={{ duration: 5000 }} />
-      <style jsx>{`
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow { animation: spin-slow 3s linear infinite; }
-        .shadow-3xl { box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.25); }
-      `}</style>
+
     </>
   );
 };

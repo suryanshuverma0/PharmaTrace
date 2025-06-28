@@ -198,6 +198,20 @@ const ManufacturerDashboard = () => {
                   </div>
                   <ArrowRight className="w-5 h-5 text-gray-400 transition-colors group-hover:text-gray-600" />
                 </Link>
+
+                <Link
+                  to="/manufacturer/assign-batch"
+                  className="flex items-center w-full p-4 transition-all duration-200 border border-orange-200 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl hover:from-orange-100 hover:to-yellow-100 group"
+                >
+                  <div className="p-2 bg-orange-500 rounded-lg">
+                    <Truck className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 ml-4 text-left">
+                    <p className="font-medium text-gray-900">Assign Batch</p>
+                    <p className="text-sm text-gray-600">Assign batch to distributor</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-400 transition-colors group-hover:text-gray-600" />
+                </Link>
               </div>
             </div>
           </div>

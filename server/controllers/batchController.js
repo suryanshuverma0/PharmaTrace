@@ -231,7 +231,7 @@ const getBatchFromBlockchain = async (req, res) => {
 const getBatches = async (req, res) => {
   try {
     const batches = await Batch.find({ manufacturerId: req.user.userId }).select(
-      "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable approvalCertId storageConditions productionLocation"
+      "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable approvalCertId storageConditions productionLocation shipmentStatus"
     );
     res.status(200).json({ batches });
   } catch (error) {

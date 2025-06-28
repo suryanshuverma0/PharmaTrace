@@ -232,6 +232,7 @@ const RegisterBatch = () => {
                       <th className="px-6 py-3">Expiry Date</th>
                       <th className="px-6 py-3">Quantity</th>
                       <th className="px-6 py-3">Approval Cert.</th>
+                      <th className="px-6 py-3">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -254,6 +255,29 @@ const RegisterBatch = () => {
                         <td className="px-6 py-4">{batch.quantityAvailable}</td>
                         <td className="px-6 py-4">
                           {batch.approvalCertId || "-"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold
+                            ${batch.shipmentStatus === 'Produced' ? 'bg-blue-100 text-blue-800' :
+                              batch.shipmentStatus === 'In Transit' ? 'bg-amber-100 text-amber-800' :
+                                batch.shipmentStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-800' :
+                                  batch.shipmentStatus === 'Returned' ? 'bg-red-100 text-red-800' :
+                                    batch.shipmentStatus === 'Recalled' ? 'bg-gray-200 text-gray-800' :
+                                      'bg-gray-100 text-gray-800'}`}
+                          >
+                            <span className="w-2 h-2 rounded-full inline-block"
+                              style={{
+                                backgroundColor:
+                                  batch.shipmentStatus === 'Produced' ? '#2563eb' :
+                                    batch.shipmentStatus === 'In Transit' ? '#f59e42' :
+                                      batch.shipmentStatus === 'Delivered' ? '#059669' :
+                                        batch.shipmentStatus === 'Returned' ? '#dc2626' :
+                                          batch.shipmentStatus === 'Recalled' ? '#6b7280' :
+                                            '#a3a3a3'
+                              }}
+                            />
+                            {batch.shipmentStatus || 'Produced'}
+                          </span>
                         </td>
                       </tr>
                     ))}

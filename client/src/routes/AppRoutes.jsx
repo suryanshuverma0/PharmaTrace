@@ -1,3 +1,7 @@
+import PharmacyLayout from '../layout/PharmacyLayout';
+import PharmacyDashboard from '../pages/pharmacy/PharmacyDashboard';
+import ExpiryAlerts from '../pages/pharmacy/ExpiryAlerts';
+
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 
@@ -32,6 +36,12 @@ import QRCodeManager from '../pages/manufacturer/QRCodeManager';
 
 // Distributor Pages
 import DistributorDashboard from '../pages/distributor/DistributorDashboard';
+import AssignedBatches from '../pages/distributor/AssignedBatches';
+import AcknowledgeShipment from '../pages/distributor/AcknowledgeShipment';
+import InventoryManagement from '../pages/distributor/InventoryManagement';
+import DistributeToPharmacists from '../pages/distributor/DistributeToPharmacists';
+import TrackTransfers from '../pages/distributor/TrackTransfers';
+import AssignBatch from '../pages/manufacturer/AssignBatch';
 
 const AppRoutes = () => {
   return (
@@ -68,6 +78,7 @@ const AppRoutes = () => {
           <Route path="register" element={<RegisterProduct />} />
           <Route path="register/batch" element={<RegisterBatch />} />
           <Route path="products" element={<ProductsList />} />
+          <Route path="assign-batch" element={<AssignBatch />} />
           <Route path="track" element={<TrackProducts />} />
           <Route path="track/:serialNumber" element={<TrackProducts />} />
           <Route path="qr-codes" element={<QRCodeManager />} />
@@ -80,12 +91,29 @@ const AppRoutes = () => {
         <Route path="/distributor" element={<DistributorLayout />}>
           <Route index element={<DistributorDashboard />} />
           <Route path="dashboard" element={<DistributorDashboard />} />
+          <Route path="assigned-batches" element={<AssignedBatches />} />
+          <Route path="acknowledge-shipment" element={<AcknowledgeShipment />} />
+          <Route path="inventory" element={<InventoryManagement />} />
+          <Route path="distribute" element={<DistributeToPharmacists />} />
+          <Route path="track-transfers" element={<TrackTransfers />} />
           <Route path="verify" element={<VerifyDrug />} />
           <Route path="track" element={<TrackProducts />} />
           <Route path="track/:serialNumber" element={<TrackProducts />} />
-          <Route path="shipments" element={<DistributorDashboard />} />
         </Route>
       </Route>
+
+            {/* Pharmacy Routes */}
+      {/* <Route element={<ProtectedRoute allowedRoles={['pharmacy']} />}> */}
+        <Route path="/pharmacy" element={<PharmacyLayout />}>
+          <Route index element={<PharmacyDashboard />} />
+          <Route path="dashboard" element={<PharmacyDashboard />} />
+          <Route path="inventory" element={<PharmacyDashboard />} />
+          <Route path="verify" element={<VerifyDrug />} />
+          <Route path="expiry-alerts" element={<ExpiryAlerts />} />
+        </Route>
+      {/* </Route> */}
+
+
     </Routes>
   );
 };
