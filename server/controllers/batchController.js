@@ -2,6 +2,10 @@ const Batch = require("../models/Batch");
 const { ethers } = require("ethers");
 const { signer, batchContract, provider } = require("../utils/blockchain");
 const Manufacturer = require("../models/Manufacturer");
+const Product = require("../models/Product");
+const Distributor = require("../models/Distributor");
+const User = require("../models/User");
+const mongoose = require("mongoose");
 
 
 const registerBatch = async (req, res) => {
@@ -242,11 +246,135 @@ const getBatches = async (req, res) => {
   }
 };
 
+const getAvailableBatches = async (req, res) => {
+  try {
+    const batches = await Batch.find({
+      manufacturerId: req.user.userId,
+      quantityAvailable: { $gt: 0 }, 
+    }).select(
+      "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable approvalCertId storageConditions productionLocation shipmentStatus"
+    );
+
+    res.status(200).json({ batches });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to fetch batches",
+      details: error.message,
+    });
+  }
+};
+
+const assignBatchToDistributor = async (req, res) => {
+  const { batchId } = req.params;
+  const { to, remarks, status = "In Transit", txHash, quantity } = req.body;
+  console.log("User in request:", req.user);
+
+
+  if (!to || !quantity) {
+    return res.status(400).json({ message: "Distributor address and quantity are required" });
+  }
+
+  try {
+    const batch = await Batch.findById(batchId);
+    if (!batch) {
+      return res.status(404).json({ message: "Batch not found" });
+    }
+
+    // Check if product associated with batch exists
+    const product = await Product.findOne({ batchId: batch._id });
+    if (!product) {
+      return res.status(400).json({ message: "Cannot assign batch without associated product" });
+    }
+
+    // Note: quantityAvailable NOT reduced here
+    // Append to shipmentHistory with quantity
+    batch.shipmentHistory.push({
+      from: req?.user?.address,
+      to,
+      status,
+      remarks,
+      txHash,
+      quantity,
+    });
+
+    batch.shipmentStatus = status;
+    batch.updatedAt = new Date();
+
+    await batch.save();
+
+    res.status(200).json({ message: "Batch assigned successfully", data: batch });
+  } catch (error) {
+    console.error("Assign Batch Error:", error);
+    res.status(500).json({ message: "Failed to assign batch", error: error.message });
+  }
+};
+
+
+const getRecentlyAssignedBatches = async (req, res) => {
+  try {
+    const manufacturerId = req.user.userId;
+
+    // Find batches with non-empty shipmentHistory
+    const batches = await Batch.find({
+      manufacturerId,
+      shipmentHistory: { $exists: true, $ne: [] }
+    })
+      .sort({ updatedAt: -1 })
+      .limit(10)
+      .lean();
+
+    const assignedData = [];
+
+    for (const batch of batches) {
+      const latestShipment = batch.shipmentHistory[batch.shipmentHistory.length - 1];
+
+      // Defensive check if shipment exists
+      if (!latestShipment) continue;
+
+      // Fetch related product by batchId
+      const product = await Product.findOne({ batchId: batch._id }).lean();
+
+      // Find distributor user by wallet address in shipment 'to'
+      const distributorUser = await User.findOne({ address: latestShipment.to }).lean();
+
+      // Find distributor company by user id
+      const distributor = distributorUser
+        ? await Distributor.findOne({ user: distributorUser._id }).lean()
+        : null;
+
+      // Format assignedAt date safely
+      const assignedAt = latestShipment.timestamp
+        ? new Date(latestShipment.timestamp).toISOString().slice(0, 16).replace("T", " ")
+        : "Unknown";
+
+      assignedData.push({
+        batchNumber: batch.batchNumber,
+        productName: product?.productName || "Unknown",
+        distributor: distributor?.companyName || "Unknown Distributor",
+        distributorWallet: latestShipment.to,
+        quantity: latestShipment.quantity || 0,
+        remarks: latestShipment.remarks || "",
+        assignedAt,
+        shipmentStatus: batch.shipmentStatus
+      });
+    }
+
+    res.status(200).json({ assignments: assignedData });
+  } catch (error) {
+    console.error("Error fetching recent assignments:", error);
+    res.status(500).json({ message: "Failed to fetch recent assignments", error: error.message });
+  }
+};
+
+
 
 module.exports = { 
   registerBatch, 
   updateBatchQuantity, 
   getBatchFromBlockchain ,
-  getBatches
+  getBatches,
+  getAvailableBatches,
+  assignBatchToDistributor,
+  getRecentlyAssignedBatches
 };
 

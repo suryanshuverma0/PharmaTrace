@@ -38,7 +38,7 @@ const RegisterProduct = () => {
     const fetchData = async () => {
       try {
         // Fetch batches
-        const batchesResponse = await apiClient.get('/batches');
+        const batchesResponse = await apiClient.get('/batches/available');
         setBatches(batchesResponse.data.batches || []);
         if (batchesResponse.data.batches.length === 0) {
           setAlert({

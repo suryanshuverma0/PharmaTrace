@@ -108,8 +108,9 @@ const batchSchema = new mongoose.Schema({
       from: { type: String, required: true },
       to: { type: String, required: true },
       status: { type: String, required: true },
+      quantity: { type: String, required: true },
       remarks: String,
-      txHash: String, // Track blockchain transactions for shipment updates
+      txHash: String,
     }
   ],
 
