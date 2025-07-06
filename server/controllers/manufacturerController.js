@@ -1,35 +1,94 @@
+const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Batch = require('../models/Batch');
 
 const getManufacturerDashboard = async (req, res) => {
   try {
+    // Check authentication
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    // Convert userId to ObjectId
+    let manufacturerId;
+    try {
+      manufacturerId = new mongoose.Types.ObjectId(req.user.userId);
+    } catch (error) {
+      console.error('Invalid manufacturerId format:', req.user.userId);
+      return res.status(400).json({ message: 'Invalid manufacturer ID format' });
+    }
+    console.log("manufacturerId:", manufacturerId.toString());
+
     // Count total products for the manufacturer
-    const totalProducts = await Product.countDocuments({ manufacturerId: req.user.userId });
+    const totalProducts = await Product.countDocuments({ manufacturerId });
+    console.log("Total products:", totalProducts);
 
-    // Fetch 5 most recent products
-    const recentProducts = await Product.find({ manufacturerId: req.user.userId })
-      .sort({ registrationTimestamp: -1 })
-      .limit(5)
-      .select('productName serialNumber batchNumber status')
-      .lean();
+    // Count batches with shipmentStatus "In Transit"
+    const totalInTransit = await Batch.countDocuments({
+      manufacturerId,
+      shipmentStatus: { $regex: '^In.*Transit$', $options: 'i' }
+    });
+    console.log("Total in-transit batches:", totalInTransit);
 
-    // Fetch manufactureDate for each product from Batch
+    // Debug: Check batches for the manufacturer
+    const batchesCheck = await Batch.find({ manufacturerId }).lean();
+    console.log("Batches found:", batchesCheck.length, batchesCheck.map(b => ({
+      batchNumber: b.batchNumber,
+      shipmentStatus: b.shipmentStatus
+    })));
+
+    // Fetch 5 most recent products, one per batchNumber
+    const recentProducts = await Product.aggregate([
+      {
+        $match: { manufacturerId }
+      },
+      {
+        $sort: { registrationTimestamp: -1 }
+      },
+      {
+        $group: {
+          _id: "$batchNumber",
+          product: { $first: "$$ROOT" }
+        }
+      },
+      {
+        $replaceRoot: { newRoot: "$product" }
+      },
+      {
+        $limit: 5
+      },
+      {
+        $project: {
+          productName: 1,
+          serialNumber: 1,
+          batchNumber: 1
+        }
+      }
+    ]).exec();
+
+    // Fetch manufactureDate and status for each product from Batch
     for (let product of recentProducts) {
       const batch = await Batch.findOne({ batchNumber: product.batchNumber })
-        .select('manufactureDate')
+        .select('manufactureDate shipmentStatus')
         .lean();
+      console.log(`Processing product with batchNumber: ${product.batchNumber}, batch found:`, !!batch, batch ? { shipmentStatus: batch.shipmentStatus } : {});
       product.manufactureDate = batch ? new Date(batch.manufactureDate).toISOString().split('T')[0] : null;
       product.name = product.productName; // Rename productName to name
       delete product.productName; // Remove productName
-      // Ensure status has a default if undefined
-      product.status = product.status || 'manufactured';
+      // Normalize status to use hyphens
+      product.status = batch && batch.shipmentStatus 
+        ? batch.shipmentStatus.toLowerCase().replace(/\s+/g, '-') 
+        : 'unknown';
     }
+    console.log("Recent products:", recentProducts);
 
     res.status(200).json({
       totalProducts,
+      totalInTransit,
       recentProducts,
     });
   } catch (error) {
+    console.error('Error fetching dashboard data:', error);
     return res.status(500).json({
       message: 'Failed to fetch dashboard data',
       details: error.message,

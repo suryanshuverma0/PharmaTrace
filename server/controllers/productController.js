@@ -1,4 +1,6 @@
 const { ethers } = require("ethers");
+const mongoose = require('mongoose');
+
 const Product = require("../models/Product");
 const { contract, signer, provider } = require("../utils/blockchain");
 const Batch = require("../models/Batch");
@@ -324,4 +326,93 @@ const debugBlockchainConnection = async (req, res) => {
   }
 };
 
-module.exports = { registerProduct, getProductOnChain, debugBlockchainConnection };
+
+const getManufacturerProducts = async (req, res) => {
+  try {
+    // Check authentication
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    // Convert userId to ObjectId
+    let manufacturerId;
+    try {
+      manufacturerId = new mongoose.Types.ObjectId(req.user.userId);
+    } catch (error) {
+      console.error('Invalid manufacturerId format:', req.user.userId);
+      return res.status(400).json({ message: 'Invalid manufacturer ID format' });
+    }
+    console.log("manufacturerId:", manufacturerId.toString());
+
+    // Debug: Check if products exist for this manufacturer
+    const productsCheck = await Product.find({ manufacturerId });
+    console.log("Products found:", productsCheck.length);
+
+    // Debug: Check if batches exist
+    const batchesCheck = await Batch.find({});
+    console.log("Batches found:", batchesCheck.length);
+
+    // Aggregate to get one product per batch
+    const products = await Product.aggregate([
+      {
+        $match: {
+          manufacturerId: manufacturerId
+        }
+      },
+      {
+        $group: {
+          _id: "$batchId",
+          product: { $first: "$$ROOT" } // Take the first product for each batch
+        }
+      },
+      {
+        $lookup: {
+          from: 'batches',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'batch'
+        }
+      },
+      {
+        $unwind: {
+          path: '$batch',
+          preserveNullAndEmptyArrays: true // Allow products without matching batches
+        }
+      },
+      {
+        $project: {
+          id: '$product._id',
+          name: '$product.productName',
+          serialNumber: '$product.serialNumber',
+          batchNumber: '$product.batchNumber',
+          manufactureDate: {
+            $dateToString: { format: "%Y-%m-%d", date: "$product.manufactureDate" }
+          },
+          expiryDate: {
+            $dateToString: { format: "%Y-%m-%d", date: "$product.expiryDate" }
+          },
+          location: '$product.productionLocation',
+          status: {
+            $cond: {
+              if: '$batch.shipmentStatus',
+              then: { $toLower: { $trim: { input: "$batch.shipmentStatus" } } },
+              else: 'unknown'
+            }
+          }
+        }
+      }
+    ]);
+
+    console.log("Aggregated products:", products);
+    res.status(200).json(products);
+  } catch (error) {
+    console.error('Error fetching manufacturer products:', error);
+    res.status(500).json({
+      message: 'Error fetching products',
+      error: error.message
+    });
+  }
+};
+
+
+module.exports = { registerProduct, getProductOnChain, debugBlockchainConnection, getManufacturerProducts };

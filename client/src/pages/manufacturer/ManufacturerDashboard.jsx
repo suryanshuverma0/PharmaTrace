@@ -20,6 +20,7 @@ import apiClient from '../../services/api/api';
 const ManufacturerDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     totalProducts: 0,
+    totalInTransit: 0,
     recentProducts: [],
   });
   const [loading, setLoading] = useState(true);
@@ -32,6 +33,7 @@ const ManufacturerDashboard = () => {
         setDashboardData({
           totalProducts: response.data.totalProducts,
           recentProducts: response.data.recentProducts,
+          totalInTransit: response.data.totalInTransit || 0,
         });
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load dashboard data');
@@ -54,7 +56,7 @@ const ManufacturerDashboard = () => {
     },
     { 
       label: 'In Transit',
-      value: '56',
+      value: dashboardData.totalInTransit.toLocaleString(),
       change: '+3.2%',
       trend: 'up',
       icon: <Truck className="w-6 h-6" />,

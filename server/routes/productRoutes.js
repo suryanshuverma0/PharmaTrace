@@ -8,5 +8,6 @@ const authMiddleware = require("../middleware/auth");
 router.post('/register',authMiddleware(["manufacturer"]), productController.registerProduct);
 router.get('/get/:serialNumber', productController.getProductOnChain);
 router.get('/debug', productController.debugBlockchainConnection);
+router.get('/registered-product', authMiddleware(["manufacturer"]), productController.getManufacturerProducts);
 
 module.exports = router;
