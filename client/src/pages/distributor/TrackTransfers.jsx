@@ -1,33 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/UI/Card';
+import apiClient from '../../services/api/api';
 
 const TrackTransfers = () => {
   const [transfers, setTransfers] = useState([]);
 
   useEffect(() => {
-    // Mock transfer history
-    setTransfers([
-      {
-        batchId: 'BATCH001',
-        product: 'Paracetamol',
-        total: 1000,
-        left: 600,
-        distributions: [
-          { pharmacy: 'Pharmacy A', quantity: 200, status: 'Delivered' },
-          { pharmacy: 'Pharmacy B', quantity: 200, status: 'In Transit' },
-        ],
-      },
-      {
-        batchId: 'BATCH002',
-        product: 'Ibuprofen',
-        total: 500,
-        left: 300,
-        distributions: [
-          { pharmacy: 'Pharmacy C', quantity: 200, status: 'Delivered' },
-        ],
-      },
-    ]);
+    fetchTransfers();
   }, []);
+
+  const fetchTransfers = async () => {
+    try {
+      const res = await apiClient.get('/distributer/transfers');
+      // Group and aggregate transfers by batchId for UI compatibility
+      const grouped = {};
+      (res.data.transfers || []).forEach(t => {
+        if (!grouped[t.batchId]) {
+          grouped[t.batchId] = {
+            batchId: t.batchId,
+            product: t.product,
+            total: 0,
+            left: 0,
+            distributions: []
+          };
+        }
+        // Convert quantity to number for aggregation
+        const qty = Number(t.quantity) || 0;
+        grouped[t.batchId].total += qty;
+        grouped[t.batchId].distributions.push({
+          pharmacy: t.to,
+          quantity: qty,
+          status: t.status
+        });
+      });
+      // Calculate left for each batch (total - sum of delivered)
+      Object.values(grouped).forEach(batch => {
+        const delivered = batch.distributions
+          .filter(d => d.status === 'Delivered')
+          .reduce((sum, d) => sum + d.quantity, 0);
+        batch.left = batch.total - delivered;
+      });
+      setTransfers(Object.values(grouped));
+    } catch (error) {
+      setTransfers([]);
+    }
+  };
 
   return (
     <div className="space-y-6">

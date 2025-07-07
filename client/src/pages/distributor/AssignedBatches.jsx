@@ -1,21 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/UI/Card';
 import { FaTruck } from 'react-icons/fa';
+import apiClient from '../../services/api/api';
 
 const AssignedBatches = () => {
   const [batches, setBatches] = useState([]);
 
   useEffect(() => {
-    // Mock data for assigned batches
-    setBatches([
-      { batchId: 'BATCH001', product: 'Paracetamol', quantity: 1000, status: 'In Transit', manufacturer: '0xabc...' },
-      { batchId: 'BATCH002', product: 'Ibuprofen', quantity: 500, status: 'In Transit', manufacturer: '0xdef...' },
-    ]);
+    fetchAssignedBatches();
   }, []);
+
+  const fetchAssignedBatches = async () => {
+    try {
+      const res = await apiClient.get('/distributer/batches');
+      setBatches(res.data.batches || []);
+    } catch (error) {
+      setBatches([]);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold mb-4">Assigned Batches</h2>
+      <h2 className="mb-4 text-2xl font-bold">Assigned Batches</h2>
       <div className="grid gap-4 md:grid-cols-2">
         {batches.map((batch) => (
           <Card key={batch.batchId} className="flex flex-col gap-2">
@@ -27,7 +33,7 @@ const AssignedBatches = () => {
             <div>Quantity: {batch.quantity}</div>
             <div>Manufacturer: {batch.manufacturer.slice(0, 6)}...</div>
             <div>
-              <span className="px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold">
+              <span className="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-100 rounded">
                 {batch.status}
               </span>
             </div>

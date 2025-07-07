@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/UI/Card';
 import { Input } from '../../components/UI/Input';
+import apiClient from '../../services/api/api';
 
 const InventoryManagement = () => {
   const [inventory, setInventory] = useState([]);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    // Mock inventory data
-    setInventory([
-      { batchId: 'BATCH001', product: 'Paracetamol', quantity: 800, total: 1000, status: 'Ready' },
-      { batchId: 'BATCH002', product: 'Ibuprofen', quantity: 500, total: 500, status: 'Ready' },
-    ]);
+    fetchInventory();
   }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const res = await apiClient.get('/distributer/inventory');
+      setInventory(res.data.inventory || []);
+    } catch (error) {
+      setInventory([]);
+    }
+  };
 
   const filtered = inventory.filter((item) =>
     item.product.toLowerCase().includes(search.toLowerCase()) ||

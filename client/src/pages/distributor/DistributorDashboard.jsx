@@ -5,6 +5,7 @@ import { Button } from '../../components/UI/Button';
 import { Select } from '../../components/UI/Select';
 import Alert from '../../components/UI/Alert';
 import { FaBox, FaTruck, FaCheckCircle, FaShippingFast, FaWarehouse, FaShareSquare, FaHistory } from 'react-icons/fa';
+import apiClient from '../../services/api/api';
 
 const DistributorDashboard = () => {
   const [products, setProducts] = useState([]);
@@ -24,73 +25,46 @@ const DistributorDashboard = () => {
   ];
 
   useEffect(() => {
-    // Fetch products assigned to distributor
-    fetchProducts();
-    // Mock assigned batches
-    setBatches([
-      { batchId: 'BATCH001', product: 'Paracetamol', quantity: 1000, status: 'In Transit', manufacturer: '0xabc...' },
-      { batchId: 'BATCH002', product: 'Ibuprofen', quantity: 500, status: 'Delivered', manufacturer: '0xdef...' },
-    ]);
-    // Mock inventory
-    setInventory([
-      { batchId: 'BATCH001', product: 'Paracetamol', quantity: 800, total: 1000, status: 'Ready' },
-      { batchId: 'BATCH002', product: 'Ibuprofen', quantity: 500, total: 500, status: 'Ready' },
-    ]);
-    // Mock transfer history
-    setTransfers([
-      {
-        batchId: 'BATCH001',
-        product: 'Paracetamol',
-        total: 1000,
-        left: 600,
-        distributions: [
-          { pharmacy: 'Pharmacy A', quantity: 200, status: 'Delivered' },
-          { pharmacy: 'Pharmacy B', quantity: 200, status: 'In Transit' },
-        ],
-      },
-      {
-        batchId: 'BATCH002',
-        product: 'Ibuprofen',
-        total: 500,
-        left: 500,
-        distributions: [],
-      },
-    ]);
+    fetchDashboardData();
   }, []);
 
-  const fetchProducts = async () => {
-    // TODO: Replace with actual smart contract call
-    const mockProducts = [
-      {
-        serialNumber: 'SN001',
-        name: 'Product A',
-        manufacturer: '0xabc...',
-        status: 'Manufactured',
-      },
-      {
-        serialNumber: 'SN002',
-        name: 'Product B',
-        manufacturer: '0xdef...',
-        status: 'At Distributor',
-      },
-    ];
-    setProducts(mockProducts);
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch products assigned to distributor
+      const productsRes = await apiClient.get('/distributer/products');
+      setProducts(productsRes.data.products || []);
+
+      // Fetch assigned batches
+      const batchesRes = await apiClient.get('/distributer/batches');
+      setBatches(batchesRes.data.batches || []);
+
+      // Fetch inventory
+      const inventoryRes = await apiClient.get('/distributer/inventory');
+      setInventory(inventoryRes.data.inventory || []);
+
+      // Fetch transfer/distribution history
+      const transfersRes = await apiClient.get('/distributer/transfers');
+      setTransfers(transfersRes.data.transfers || []);
+    } catch (error) {
+      setNotification({ show: true, message: 'Failed to fetch dashboard data', type: 'error' });
+    }
   };
+
+  // Deprecated: fetchProducts is now handled in fetchDashboardData
 
   const handleReceiveProduct = async (serialNumber) => {
     try {
-      // TODO: Call smart contract method to update product status
+      await apiClient.post(`/distributor/receive`, { serialNumber });
       setNotification({
         show: true,
         message: 'Product received successfully',
         type: 'success',
       });
-      // Refresh products list
-      fetchProducts();
+      fetchDashboardData();
     } catch (error) {
       setNotification({
         show: true,
-        message: 'Failed to receive product',
+        message: error?.response?.data?.message || 'Failed to receive product',
         type: 'error',
       });
     }
@@ -105,20 +79,18 @@ const DistributorDashboard = () => {
       });
       return;
     }
-
     try {
-      // TODO: Call smart contract method to update product status and assign to pharmacy
+      await apiClient.post(`/distributor/ship`, { serialNumber, pharmacy: selectedPharmacy });
       setNotification({
         show: true,
         message: 'Product shipped successfully',
         type: 'success',
       });
-      // Refresh products list
-      fetchProducts();
+      fetchDashboardData();
     } catch (error) {
       setNotification({
         show: true,
-        message: 'Failed to ship product',
+        message: error?.response?.data?.message || 'Failed to ship product',
         type: 'error',
       });
     }
@@ -192,26 +164,26 @@ const DistributorDashboard = () => {
       </div>
 
       {/* Assigned Batches Table */}
-      <Card className="shadow-lg border border-gray-100">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
-          <h2 className="text-lg font-semibold flex items-center text-primary-700"><FaShippingFast className="mr-2 text-primary-500" />Assigned Batches</h2>
+      <Card className="border border-gray-100 shadow-lg">
+        <div className="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
+          <h2 className="flex items-center text-lg font-semibold text-primary-700"><FaShippingFast className="mr-2 text-primary-500" />Assigned Batches</h2>
           <input
             type="text"
             placeholder="Search by product or batch..."
-            className="border border-primary-200 focus:ring-primary-400 focus:border-primary-400 rounded px-3 py-1 w-full md:w-64 transition"
+            className="w-full px-3 py-1 transition border rounded border-primary-200 focus:ring-primary-400 focus:border-primary-400 md:w-64"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
         <div className="overflow-x-auto rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200 bg-white rounded-lg">
+          <table className="min-w-full bg-white divide-y divide-gray-200 rounded-lg">
             <thead className="bg-primary-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Batch ID</th>
-                <th className="px-4 py-2 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Product</th>
-                <th className="px-4 py-2 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Quantity</th>
-                <th className="px-4 py-2 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-2 text-left text-xs font-bold text-primary-700 uppercase tracking-wider">Manufacturer</th>
+                <th className="px-4 py-2 text-xs font-bold tracking-wider text-left uppercase text-primary-700">Batch ID</th>
+                <th className="px-4 py-2 text-xs font-bold tracking-wider text-left uppercase text-primary-700">Product</th>
+                <th className="px-4 py-2 text-xs font-bold tracking-wider text-left uppercase text-primary-700">Quantity</th>
+                <th className="px-4 py-2 text-xs font-bold tracking-wider text-left uppercase text-primary-700">Status</th>
+                <th className="px-4 py-2 text-xs font-bold tracking-wider text-left uppercase text-primary-700">Manufacturer</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -219,7 +191,7 @@ const DistributorDashboard = () => {
                 batch.product.toLowerCase().includes(search.toLowerCase()) ||
                 batch.batchId.toLowerCase().includes(search.toLowerCase())
               ).map((batch) => (
-                <tr key={batch.batchId} className="hover:bg-primary-50 transition">
+                <tr key={batch.batchId} className="transition hover:bg-primary-50">
                   <td className="px-4 py-2 font-mono text-sm">{batch.batchId}</td>
                   <td className="px-4 py-2">{batch.product}</td>
                   <td className="px-4 py-2">{batch.quantity}</td>
