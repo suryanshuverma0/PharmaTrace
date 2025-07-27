@@ -1,8 +1,9 @@
-const { ethers } = require("ethers");
+// const { ethers } = require("ethers"); // Commented for MVP
 const mongoose = require('mongoose');
+const QRCode = require('qrcode');
 
 const Product = require("../models/Product");
-const { contract, signer, provider } = require("../utils/blockchain");
+// const { contract, signer, provider } = require("../utils/blockchain"); // Commented for MVP
 const Batch = require("../models/Batch");
 const Manufacturer = require("../models/Manufacturer");
 
@@ -18,13 +19,13 @@ const registerProduct = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!productName || !serialNumber || !batchNumber) {
-      return res.status(400).json({ message: 'All required fields must be provided' });
+    if (!productName || !serialNumber || !batchNumber || !price) {
+      return res.status(400).json({ message: 'All required fields must be provided (productName, serialNumber, batchNumber, price)' });
     }
-
-    // Validate signer
-    if (!signer.address) {
-      return res.status(500).json({ message: 'Server error: Signer address is not available' });
+    
+    // Validate price format
+    if (isNaN(price) || Number(price) <= 0) {
+      return res.status(400).json({ message: 'Price must be a valid positive number' });
     }
 
     // Validate batch
@@ -47,31 +48,22 @@ const registerProduct = async (req, res) => {
       return res.status(400).json({ message: "Manufacturer not found" });
     }
 
-    const tx = await contract.registerProduct(
-      productName,
+    // Generate QR Code
+    const qrData = {
       serialNumber,
       batchNumber,
-      Math.floor(new Date(batch.manufactureDate).getTime() / 1000),
-      Math.floor(new Date(batch.expiryDate).getTime() / 1000),
-      manufacturer.companyName || 'Company Name',
-      batch.approvalCertId || 'Approval certificate Id',
-      batch.productionLocation || '',
-      drugCode || '',
-      batch.dosageForm,
-      batch.strength,
-      batch.storageConditions || '',
-      batch.approvalCertId,
-      'Nepal'
-    );
+      productName,
+      manufacturer: manufacturer.companyName,
+      manufactureDate: batch.manufactureDate,
+      expiryDate: batch.expiryDate
+    };
+    const qrCodeUrl = await QRCode.toDataURL(JSON.stringify(qrData));
 
-    const receipt = await tx.wait();
-
-    console.log("Receipt is", receipt);
-
-    // Check transaction status
-    if (receipt.status !== 1) {
-      throw new Error('Transaction failed on blockchain');
-    }
+    // Create fingerprint without blockchain
+    const fingerprint = require('crypto')
+      .createHash('sha256')
+      .update(serialNumber + batchNumber + new Date().toISOString())
+      .digest('hex');
 
     // Update batch quantity
     batch.quantityAvailable -= 1;
@@ -95,15 +87,8 @@ const registerProduct = async (req, res) => {
       storageCondition: batch.storageConditions || '',
       approvalCertId: batch.approvalCertId,
       manufacturerCountry: 'Nepal',
-      fingerprint: ethers.keccak256(ethers.toUtf8Bytes(serialNumber + batchNumber)),
-      
-      // Blockchain transaction details
-      txHash: receipt.hash, 
-      blockNumber: Number(receipt.blockNumber), 
-      blockHash: receipt.blockHash,
-      gasUsed: receipt.gasUsed.toString(), 
-      manufacturerAddress: signer.address,
-      contractAddress: receipt.to, 
+      fingerprint,
+      qrCodeUrl,
       
       price: price
     });
@@ -111,18 +96,10 @@ const registerProduct = async (req, res) => {
     res.status(201).json({
       message: 'Product registered successfully',
       product: newProduct,
-      blockchain: {
-        txHash: receipt.hash,
-        blockNumber: Number(receipt.blockNumber),
-        blockHash: receipt.blockHash,
-        gasUsed: receipt.gasUsed.toString(),
-        contractAddress: receipt.to,
-        status: receipt.status === 1 ? 'success' : 'failed'
-      },
+      qrCodeUrl,
       fingerprint: newProduct.fingerprint,
       registrationTimestamp: new Date().toISOString(),
-      manufacturerAddress: signer.address,
-      productId: serialNumber,
+      serialNumber
     });
 
   } catch (error) {
@@ -415,4 +392,55 @@ const getManufacturerProducts = async (req, res) => {
 };
 
 
-module.exports = { registerProduct, getProductOnChain, debugBlockchainConnection, getManufacturerProducts };
+const getManufacturerBatches = async (req, res) => {
+  try {
+    // First get all batches for the manufacturer
+    const batches = await Batch.find({ manufacturerId: req.user.userId })
+      .sort('-createdAt');
+
+    // For each batch, get its products
+    const batchesWithProducts = await Promise.all(batches.map(async (batch) => {
+      const products = await Product.find({ 
+        manufacturerId: req.user.userId,
+        batchNumber: batch.batchNumber 
+      }).sort('-createdAt');
+
+      return {
+        _id: batch._id,
+        batchNumber: batch.batchNumber,
+        manufactureDate: batch.manufactureDate,
+        expiryDate: batch.expiryDate,
+        quantityProduced: batch.quantityProduced,
+        quantityAvailable: batch.quantityAvailable,
+        dosageForm: batch.dosageForm,
+        strength: batch.strength,
+        storageConditions: batch.storageConditions,
+        productionLocation: batch.productionLocation,
+        shipmentStatus: batch.shipmentStatus,
+        products: products.map(product => ({
+          _id: product._id,
+          productName: product.productName,
+          serialNumber: product.serialNumber,
+          drugCode: product.drugCode,
+          price: product.price,
+          qrCodeUrl: product.qrCodeUrl,
+          fingerprint: product.fingerprint,
+          status: product.status || 'produced'
+        }))
+      };
+    }));
+
+    res.json(batchesWithProducts);
+  } catch (error) {
+    console.error('Error fetching batches:', error);
+    res.status(500).json({ message: 'Failed to fetch batches', error: error.message });
+  }
+};
+
+module.exports = { 
+  registerProduct, 
+  getProductOnChain, 
+  debugBlockchainConnection, 
+  getManufacturerProducts,
+  getManufacturerBatches 
+};

@@ -12,7 +12,9 @@ import {
   CheckCircle,
   AlertTriangle,
   Plus,
-  ArrowRight
+  ArrowRight,
+  Download,
+  Printer
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../services/api/api';
@@ -21,7 +23,8 @@ const ManufacturerDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     totalProducts: 0,
     totalInTransit: 0,
-    recentProducts: [],
+    totalBatches: 0,
+    recentBatches: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -218,11 +221,11 @@ const ManufacturerDashboard = () => {
             </div>
           </div>
 
-          {/* Recent Products */}
+          {/* Recent Batches */}
           <div className="lg:col-span-2">
             <div className="p-6 bg-white border shadow-lg rounded-2xl border-gray-200/50">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Products</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Recent Batches</h3>
                 <Link
                   to="/manufacturer/products"
                   className="text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
@@ -231,14 +234,14 @@ const ManufacturerDashboard = () => {
                 </Link>
               </div>
               <div className="space-y-4">
-                {dashboardData.recentProducts.length === 0 && (
+                {dashboardData.recentBatches?.length === 0 && (
                   <div className="p-4 text-center text-gray-500">
-                    No recent products found.
+                    No recent batches found.
                   </div>
                 )}
-                {dashboardData.recentProducts.map((product, index) => (
+                {dashboardData.recentBatches?.map((batch, index) => (
                   <motion.div
-                    key={product.serialNumber}
+                    key={batch._id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
@@ -247,32 +250,39 @@ const ManufacturerDashboard = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-xl">
-                          <Box className="w-6 h-6 text-blue-600" />
+                          <Boxes className="w-6 h-6 text-blue-600" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900">{product.name}</h4>
-                          <div className="flex space-x-4">
-                            <p className="text-sm text-gray-500">SN: {product.serialNumber}</p>
-                            <p className="text-sm text-gray-500">Batch: {product.batchNumber}</p>
+                          <h4 className="font-semibold text-gray-900">Batch: {batch.batchNumber}</h4>
+                          <div className="flex flex-wrap gap-4">
+                            <p className="text-sm text-gray-500">
+                              Products: {batch.productsCount}/{batch.quantityProduced}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Available: {batch.quantityAvailable}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {batch.dosageForm} - {batch.strength}
+                            </p>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
                         <span className={`px-3 py-1 text-sm rounded-full ${
-                          product.status === 'manufactured'
+                          batch.shipmentStatus === 'Produced'
                             ? 'bg-blue-100 text-blue-800'
-                            : product.status === 'in-transit'
+                            : batch.shipmentStatus === 'In Transit'
                             ? 'bg-amber-100 text-amber-800'
-                            : product.status === 'delivered'
+                            : batch.shipmentStatus === 'Delivered'
                             ? 'bg-emerald-100 text-emerald-800'
-                            : product.status === 'returned'
+                            : batch.shipmentStatus === 'Returned'
                             ? 'bg-red-100 text-red-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+                          {batch.shipmentStatus}
                         </span>
                         <Link
-                          to={`/manufacturer/track/${product.serialNumber}`}
+                          to={`/manufacturer/batches/${batch._id}`}
                           className="p-2 text-gray-400 transition-colors rounded-lg hover:text-gray-600 hover:bg-gray-100"
                         >
                           <Route className="w-5 h-5" />

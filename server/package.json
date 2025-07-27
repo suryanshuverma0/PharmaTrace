@@ -23,6 +23,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.1",
     "nodemailer": "^7.0.3",
+    "qrcode": "^1.5.4",
     "web3": "^4.16.0"
   },
   "devDependencies": {

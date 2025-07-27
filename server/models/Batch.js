@@ -111,6 +111,35 @@ const batchSchema = new mongoose.Schema({
       quantity: { type: String, required: true },
       remarks: String,
       txHash: String,
+      // Additional fields for journey tracking
+      actor: {
+        name: { type: String, required: true },
+        type: { type: String, required: true },
+        license: { type: String },
+        location: { type: String }
+      },
+      environmentalConditions: {
+        temperature: String,
+        humidity: String,
+        status: {
+          type: String,
+          enum: ['Normal', 'Warning', 'Critical']
+        }
+      },
+      qualityCheck: {
+        performedBy: String,
+        date: Date,
+        result: {
+          type: String,
+          enum: ['Pass', 'Fail', 'Pending']
+        },
+        notes: String
+      },
+      verifiedBy: {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        timestamp: Date,
+        role: String
+      }
     }
   ],
 

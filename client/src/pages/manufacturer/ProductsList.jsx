@@ -10,7 +10,9 @@ import {
   MoreVertical,
   Calendar,
   MapPin,
-  AlertCircle
+  AlertCircle,
+  Boxes,
+  Printer
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Input } from '../../components/UI/Input';
@@ -33,17 +35,25 @@ const ProductsList = () => {
     { value: 'delivered', label: 'Delivered' }
   ];
 
-  // Fetch registered products from the backend
+  // State for QR modal
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showQRModal, setShowQRModal] = useState(false);
+
+  // Fetch registered batches with products from the backend
   const getRegisteredProducts = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/products/registered-product');
-      // Normalize status values to use hyphens
-      const normalizedProducts = response.data.map(product => ({
-        ...product,
-        status: product.status.replace(/\s+/g, '-').toLowerCase()
+      const response = await apiClient.get('products/registered-batches');
+      // Response should be grouped by batch with products inside
+      const normalizedBatches = response.data.map(batch => ({
+        ...batch,
+        status: batch.shipmentStatus.toLowerCase().replace(/\s+/g, '-'),
+        products: batch.products.map(product => ({
+          ...product,
+          status: product.status?.replace(/\s+/g, '-').toLowerCase() || 'produced'
+        }))
       }));
-      setProducts(normalizedProducts);
+      setProducts(normalizedBatches);
       setLoading(false);
     } catch (err) {
       setError(err.message);
@@ -56,13 +66,31 @@ const ProductsList = () => {
     getRegisteredProducts();
   }, []);
 
-  // Filter products based on productName and status
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase().trim());
-    const matchesFilter = filterStatus === 'all' || product.status === filterStatus;
-    console.log('Filtering:', { product, searchTerm, filterStatus, matchesSearch, matchesFilter });
-    return matchesSearch && matchesFilter;
+  // Filter batches based on search term and status
+  const filteredBatches = products.filter(batch => {
+    const hasMatchingProducts = batch.products.some(product => 
+      product.productName.toLowerCase().includes(searchTerm.toLowerCase().trim())
+    );
+    const matchesBatchNumber = batch.batchNumber.toLowerCase().includes(searchTerm.toLowerCase().trim());
+    const matchesFilter = filterStatus === 'all' || batch.status === filterStatus;
+    
+    return (hasMatchingProducts || matchesBatchNumber) && matchesFilter;
   });
+
+  // Handle QR code actions
+  const handleQRCodeClick = (product) => {
+    setSelectedProduct(product);
+    setShowQRModal(true);
+  };
+
+  const downloadQRCode = (qrCodeUrl, fileName) => {
+    const link = document.createElement('a');
+    link.href = qrCodeUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Debounce search input to improve performance
   const debounce = (func, wait) => {
@@ -112,14 +140,15 @@ const ProductsList = () => {
   }
 
   return (
-    <div className="min-h-screen p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Registered Products</h1>
-        <p className="mt-2 text-lg text-gray-600">
-          View and manage all your registered pharmaceutical products
-        </p>
-      </div>
+    <>
+      <div className="min-h-screen p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Registered Products</h1>
+          <p className="mt-2 text-lg text-gray-600">
+            View and manage all your registered pharmaceutical products
+          </p>
+        </div>
 
       {/* Filters and Search */}
       <div className="grid gap-4 mb-6 md:flex md:items-center md:justify-between">
@@ -143,80 +172,157 @@ const ProductsList = () => {
         </Button>
       </div>
 
-      {/* Products List */}
-      <div className="space-y-4">
-        {filteredProducts.length === 0 ? (
-          <p className="text-gray-600">No products found.</p>
+      {/* Batches List */}
+      <div className="space-y-6">
+        {filteredBatches.length === 0 ? (
+          <p className="text-gray-600">No batches found.</p>
         ) : (
-          filteredProducts.map((product) => (
+          filteredBatches.map((batch) => (
             <motion.div
-              key={product.id}
+              key={batch._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-6 transition-all duration-200 bg-white border shadow-md rounded-2xl border-gray-200/50 hover:shadow-lg"
+              className="overflow-hidden bg-white border shadow-lg rounded-2xl border-gray-200/50"
             >
-              <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
-                {/* Product Info */}
-                <div className="flex items-start flex-1 gap-4">
-                  <div className="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl">
-                    <Box className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 truncate">
-                      {product.name}
-                    </h3>
-                    <div className="mt-1 space-y-1">
-                      <div className="flex flex-wrap text-sm text-gray-500 gap-x-4 gap-y-1">
-                        <span>SN: {product.serialNumber}</span>
-                        <span>Batch: {product.batchNumber}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>Mfg: {product.manufactureDate}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>{product.location}</span>
+              {/* Batch Header */}
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
+                  <div className="flex items-start flex-1 gap-4">
+                    <div className="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl">
+                      <Boxes className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Batch: {batch.batchNumber}
+                      </h3>
+                      <div className="mt-1 space-y-1">
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>Mfg: {new Date(batch.manufactureDate).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>Exp: {new Date(batch.expiryDate).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Box className="w-4 h-4" />
+                            <span>Products: {batch.products.length}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-3 ml-auto">
-                  <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(product.status)}`}>
-                    {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+                  <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(batch.status)}`}>
+                    {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
                   </span>
-                  <div className="flex items-center -mr-2 gap-0.5">
-                    <button className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50">
-                      <QrCode className="w-5 h-5" />
-                    </button>
-                    <Link
-                      to={`/manufacturer/track/${product.serialNumber}`}
-                      className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
-                    >
-                      <Route className="w-5 h-5" />
-                    </Link>
-                    <button className="p-2 text-gray-400 transition-colors rounded-lg hover:text-gray-600 hover:bg-gray-50">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
-                  </div>
                 </div>
               </div>
 
-              {product.status === 'in-transit' && (
-                <div className="flex items-center gap-2 px-4 py-3 mt-4 text-sm text-amber-700 bg-amber-50 rounded-xl">
-                  <AlertCircle className="w-5 h-5" />
-                  <span>Product in transit to distribution center - ETA: 2 days</span>
+              {/* Products Grid */}
+              <div className="p-6 bg-gray-50">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {batch.products.map((product) => (
+                    <div
+                      key={product._id}
+                      className="p-4 transition-all duration-200 bg-white border rounded-xl border-gray-200/50 hover:border-blue-200 hover:shadow-md"
+                    >
+                      <div className="flex justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-900 truncate">
+                            {product.productName}
+                          </h4>
+                          <p className="mt-1 text-sm text-gray-500">
+                            SN: {product.serialNumber}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleQRCodeClick(product)}
+                            className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                          >
+                            <QrCode className="w-5 h-5" />
+                          </button>
+                          <Link
+                            to={`/manufacturer/track/${product.serialNumber}`}
+                            className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                          >
+                            <Route className="w-5 h-5" />
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </motion.div>
           ))
         )}
       </div>
-    </div>
+
+      {/* QR Code Modal */}
+      {showQRModal && selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md p-6 bg-white rounded-2xl">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 mb-4 text-green-500">
+                <QrCode className="w-full h-full" />
+              </div>
+              <h3 className="mb-2 text-xl font-semibold text-gray-900">
+                Product QR Code
+              </h3>
+
+              <div className="w-full p-4 mb-4 rounded-lg bg-gray-50">
+                <div className="mb-2">
+                  <p className="text-sm text-gray-600">Serial Number</p>
+                  <p className="font-mono text-sm break-all">{selectedProduct.serialNumber}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Digital Fingerprint</p>
+                  <p className="font-mono text-sm break-all">{selectedProduct.fingerprint}</p>
+                </div>
+              </div>
+
+              <div className="p-4 mb-6 bg-white border rounded-lg">
+                <img
+                  src={selectedProduct.qrCodeUrl}
+                  alt="Product QR Code"
+                  className="w-48 h-48 mx-auto"
+                />
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-4">
+                <Button
+                  variant="secondary"
+                  className="flex items-center gap-2"
+                  onClick={() => downloadQRCode(selectedProduct.qrCodeUrl, `QR-${selectedProduct.serialNumber}.png`)}
+                >
+                  <Download className="w-5 h-5" />
+                  Download QR
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex items-center gap-2"
+                  onClick={() => window.print()}
+                >
+                  <Printer className="w-5 h-5" />
+                  Print QR
+                </Button>
+              </div>
+
+              <Button
+                variant="primary"
+                className="w-full mt-6"
+                onClick={() => setShowQRModal(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
+    </>
   );
 };
 

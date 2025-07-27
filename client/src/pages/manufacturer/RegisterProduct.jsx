@@ -17,14 +17,20 @@ const RegisterProduct = () => {
     batchNumber: '',
     drugCode: '',
     price: '',
-    dosageForm: '',
-    strength: '',
-    storageConditions: '',
-    approvalCertId: '',
-    productionLocation: '',
-    manufactureDate: '',
-    expiryDate: '',
-    manufacturerAddress: '',
+    packSize: '',
+    regulatoryInfo: {
+      licenseNumber: '',
+      issuedBy: '',
+      issuedDate: '',
+      validUntil: ''
+    },
+    composition: [{ ingredient: '', quantity: '' }],
+    usage: {
+      indications: [''],
+      contraindications: [''],
+      sideEffects: [''],
+      dosage: ''
+    }
   });
   const [batches, setBatches] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);

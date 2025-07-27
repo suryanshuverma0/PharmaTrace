@@ -26,6 +26,11 @@ const RegisterBatch = () => {
     storageConditions: "",
     productionLocation: "",
     approvalCertId: "",
+    qualityCheck: {
+      performedBy: "",
+      result: "Pass",
+      notes: ""
+    }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alert, setAlert] = useState(null);

@@ -48,7 +48,7 @@ const TrackTransfers = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold mb-4">Track All Transfers</h2>
+      <h2 className="mb-4 text-2xl font-bold">Track All Transfers</h2>
       <div className="grid gap-4 md:grid-cols-2">
         {transfers.map((batch) => (
           <Card key={batch.batchId} className="flex flex-col gap-2">
@@ -57,8 +57,8 @@ const TrackTransfers = () => {
             <div>Total: {batch.total}</div>
             <div>Quantity Left: <span className="font-bold">{batch.left}</span></div>
             <div className="mt-2">
-              <div className="font-semibold mb-1">Distributions:</div>
-              <ul className="list-disc ml-6">
+              <div className="mb-1 font-semibold">Distributions:</div>
+              <ul className="ml-6 list-disc">
                 {batch.distributions.map((d, idx) => (
                   <li key={idx}>
                     {d.pharmacy}: {d.quantity} units -

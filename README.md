@@ -7,6 +7,12 @@ A blockchain-powered pharmaceutical supply chain management platform for secure,
 - **Role-Based Dashboards:** Separate interfaces for manufacturers, distributors, pharmacies, and consumers.
 - **Batch & Product Management:** Register, assign, and track batches and products with full shipment and transfer history.
 - **Inventory & Shipment Tracking:** Real-time inventory, shipment acknowledgment, and transfer tracking for distributors and pharmacies.
+- **Medicine Verification & Journey Tracking:** 
+  - QR code-based medicine authenticity verification
+  - Complete supply chain journey visualization
+  - Environmental conditions monitoring (temperature, humidity)
+  - Quality control and testing data
+  - Regulatory compliance verification
 - **Authentication & Authorization:** Secure login and protected routes for all user roles.
 - **Modern UI:** Built with React, Tailwind CSS, and Vite for a fast, responsive experience.
 
@@ -87,6 +93,12 @@ npm run dev
 - Distributors can acknowledge shipments, manage inventory, and transfer to pharmacies.
 - Pharmacies can receive shipments and manage their inventory.
 - All actions are tracked and visible in the shipment/transfer history.
+- End-users (consumers) can:
+  - Scan product QR codes to verify authenticity
+  - View complete medicine journey from manufacturer to pharmacy
+  - Check quality control data and storage conditions
+  - Verify regulatory compliance and testing results
+  - Access detailed product information and expiry dates
 
 ## Contributing
 Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.

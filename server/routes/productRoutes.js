@@ -9,5 +9,6 @@ router.post('/register',authMiddleware(["manufacturer"]), productController.regi
 router.get('/get/:serialNumber', productController.getProductOnChain);
 router.get('/debug', productController.debugBlockchainConnection);
 router.get('/registered-product', authMiddleware(["manufacturer"]), productController.getManufacturerProducts);
+router.get('/registered-batches', authMiddleware(["manufacturer"]), productController.getManufacturerBatches);
 
 module.exports = router;

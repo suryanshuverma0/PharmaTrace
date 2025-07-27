@@ -43,9 +43,7 @@ const AssignBatch = () => {
   const [error, setError] = useState("");
   const [alert, setAlert] = useState(null);
 
-  const [recentAssignments, setRecentAssignments] = useState(
-    DUMMY_ASSIGNED_BATCHES
-  );
+  const [recentAssignments, setRecentAssignments] = useState([]);
 
   useEffect(() => {
     const fetchDistributerData = async () => {
@@ -132,12 +130,26 @@ const AssignBatch = () => {
         return;
       }
 
-      await apiClient.post(`batches/${selectedBatch}/assign/`, {
+      const response = await apiClient.post(`/api/batches/${selectedBatch}/assign`, {
         to: distributor.user.address,
         remarks,
         status: "In Transit",
         quantity: parseInt(quantity)
       });
+
+      // Update the batches list with new quantity
+      setBatches(prevBatches => 
+        prevBatches.map(b => 
+          b._id === selectedBatch 
+            ? { ...b, quantityAvailable: b.quantityAvailable - parseInt(quantity) }
+            : b
+        )
+      );
+
+      // Add new assignment to recent assignments
+      if (response.data.assignment) {
+        setRecentAssignments(prev => [response.data.assignment, ...prev]);
+      }
 
       setSuccess("Batch assigned to distributor successfully!");
       setSelectedBatch("");

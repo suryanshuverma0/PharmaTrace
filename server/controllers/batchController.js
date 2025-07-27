@@ -1,6 +1,6 @@
 const Batch = require("../models/Batch");
-const { ethers } = require("ethers");
-const { signer, batchContract, provider } = require("../utils/blockchain");
+// const { ethers } = require("ethers"); // Commented for MVP
+// const { signer, batchContract, provider } = require("../utils/blockchain"); // Commented for MVP
 const Manufacturer = require("../models/Manufacturer");
 const Product = require("../models/Product");
 const Distributor = require("../models/Distributor");
@@ -55,47 +55,17 @@ const registerBatch = async (req, res) => {
       return res.status(400).json({ message: "Batch number already exists" });
     }
 
-    // Validate signer
-    if (!signer.address) {
-      return res.status(500).json({ message: 'Server error: Signer address is not available' });
-    }
-
     // Get manufacturer details
     const manufacturer = await Manufacturer.findOne({ user: req.user.userId });
     if (!manufacturer) {
       return res.status(400).json({ message: "Manufacturer not found" });
     }
 
-    // Register batch on blockchain first
-    console.log('Registering batch on blockchain...');
-    const tx = await batchContract.registerBatch(
-      batchNumber,
-      Math.floor(manuDate.getTime() / 1000), // Convert to Unix timestamp
-      Math.floor(expDate.getTime() / 1000),   // Convert to Unix timestamp
-      quantityProduced,
-      dosageForm,
-      strength,
-      storageConditions || '',
-      productionLocation || '',
-      approvalCertId || '',
-      manufacturer.companyName || 'Company Name',
-      'Nepal'
-    );
-
-    console.log('Waiting for blockchain confirmation...');
-    const receipt = await tx.wait();
-
-    console.log("Batch registration receipt:", receipt);
-
-    // Check transaction status
-    if (receipt.status !== 1) {
-      throw new Error('Blockchain transaction failed');
-    }
-
-    // Generate digital fingerprint for the batch
-    const digitalFingerprint = ethers.keccak256(
-      ethers.toUtf8Bytes(batchNumber + manuDate.toISOString() + expDate.toISOString())
-    );
+    // Generate digital fingerprint for the batch (without blockchain)
+    const digitalFingerprint = require('crypto')
+      .createHash('sha256')
+      .update(batchNumber + manuDate.toISOString() + expDate.toISOString())
+      .digest('hex');
 
     // Create new batch in database with blockchain data
     const batch = new Batch({
@@ -112,31 +82,40 @@ const registerBatch = async (req, res) => {
       approvalCertId: approvalCertId || '',
       digitalFingerprint,
       
-      // Blockchain transaction details
-      txHash: receipt.hash,
-      blockNumber: Number(receipt.blockNumber),
-      blockHash: receipt.blockHash,
-      gasUsed: receipt.gasUsed.toString(),
-      contractAddress: receipt.to,
-      manufacturerAddress: signer.address,
+      // Initial shipment status
+      shipmentStatus: 'Produced',
+      shipmentHistory: [{
+        timestamp: new Date(),
+        from: manufacturer.companyName,
+        to: manufacturer.companyName,
+        status: 'Produced',
+        quantity: quantityProduced.toString(),
+        remarks: 'Initial batch production',
+        actor: {
+          name: manufacturer.companyName || 'Unknown Manufacturer',
+          type: 'Manufacturer',
+          license: manufacturer.licenseNumber || 'N/A',
+          location: productionLocation || manufacturer.address || 'N/A'
+        },
+        environmentalConditions: {
+          temperature: '25°C',
+          humidity: '60%',
+          status: 'Normal'
+        },
+        qualityCheck: {
+          performedBy: req.user.name,
+          date: new Date(),
+          result: 'Pass',
+          notes: 'Initial quality check passed'
+        }
+      }],
     });
 
     await batch.save();
 
     res.status(201).json({ 
-      message: "Batch registered successfully on blockchain and database", 
-      batch: {
-        ...batch.toObject(),
-        blockchain: {
-          txHash: receipt.hash,
-          blockNumber: Number(receipt.blockNumber),
-          blockHash: receipt.blockHash,
-          gasUsed: receipt.gasUsed.toString(),
-          contractAddress: receipt.to,
-          status: receipt.status === 1 ? 'success' : 'failed',
-          registrationTimestamp: new Date().toISOString()
-        }
-      }
+      message: "Batch registered successfully", 
+      batch: batch.toObject()
     });
 
   } catch (error) {
@@ -266,11 +245,104 @@ const getAvailableBatches = async (req, res) => {
 
 const assignBatchToDistributor = async (req, res) => {
   const { batchId } = req.params;
-  const { to, remarks, status = "In Transit", txHash, quantity } = req.body;
-  console.log("User in request:", req.user);
-
+  const { to, remarks, status = "In Transit", quantity } = req.body;
 
   if (!to || !quantity) {
+    return res.status(400).json({ message: "Distributor address and quantity are required" });
+  }
+
+  try {
+    // Start a transaction
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Get the batch with a lock for update
+      const batch = await Batch.findById(batchId).session(session);
+      if (!batch) {
+        throw new Error("Batch not found");
+      }
+
+      // Check if quantity is available
+      if (batch.quantityAvailable < quantity) {
+        throw new Error(`Insufficient quantity available. Only ${batch.quantityAvailable} units left`);
+      }
+
+      // Get manufacturer details
+      const manufacturer = await Manufacturer.findOne({ user: req.user.userId }).session(session);
+      if (!manufacturer) {
+        throw new Error("Manufacturer not found");
+      }
+
+      // Get distributor details
+      const distributor = await Distributor.findOne({ "user.address": to }).session(session);
+      if (!distributor) {
+        throw new Error("Distributor not found");
+      }
+
+      // Update batch quantity
+      batch.quantityAvailable -= quantity;
+      
+      // Add to shipment history
+      batch.shipmentHistory.push({
+        timestamp: new Date(),
+        from: manufacturer.companyName,
+        to: distributor.companyName,
+        status,
+        quantity: quantity.toString(),
+        remarks,
+        actor: {
+          name: manufacturer.companyName,
+          type: "Manufacturer",
+          license: manufacturer.licenseNumber,
+          location: manufacturer.address
+        },
+        environmentalConditions: {
+          temperature: "25°C",
+          humidity: "60%",
+          status: "Normal"
+        },
+        qualityCheck: {
+          performedBy: req.user.name,
+          date: new Date(),
+          result: "Pass",
+          notes: "Quality check passed before shipment"
+        },
+        verifiedBy: {
+          user: req.user.userId,
+          timestamp: new Date(),
+          role: "Manufacturer"
+        }
+      });
+
+      // If all quantity is assigned, update batch status
+      if (batch.quantityAvailable === 0) {
+        batch.shipmentStatus = "In Transit";
+      }
+
+      await batch.save({ session });
+      await session.commitTransaction();
+
+      res.status(200).json({
+        message: "Batch assigned successfully",
+        assignment: {
+          batchNumber: batch.batchNumber,
+          productDetails: `${batch.dosageForm} ${batch.strength}`,
+          distributor: distributor.companyName,
+          distributorWallet: to,
+          quantity,
+          remarks,
+          assignedAt: new Date(),
+          shipmentStatus: status
+        }
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  } catch (error) {
     return res.status(400).json({ message: "Distributor address and quantity are required" });
   }
 
