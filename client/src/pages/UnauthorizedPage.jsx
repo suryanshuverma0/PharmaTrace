@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaLock } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '../context/authContext';
+import { useAuth } from '../context/AuthContext';
 
 const UnauthorizedPage = () => {
   const { isAuthenticated, user } = useAuth();

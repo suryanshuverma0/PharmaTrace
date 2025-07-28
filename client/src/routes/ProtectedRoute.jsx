@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { useAuth } from "../context/authContext";
+import { useAuth } from "../context/AuthContext";
 import { useWalletModal } from "../context/WalletModalContext";
 
 const ProtectedRoute = ({ allowedRoles }) => {
