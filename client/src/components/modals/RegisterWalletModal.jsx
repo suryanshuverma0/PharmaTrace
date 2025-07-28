@@ -4,7 +4,7 @@ import Button from "../UI/Button";
 import Input from "../UI/Input";
 import Select from "../UI/Select";
 import { FaUser, FaBuilding, FaWallet } from "react-icons/fa";
-import { useAuth } from "../../context/authContext";
+import { useAuth } from "../../context/AuthContext";
 import { useWalletModal } from "../../context/WalletModalContext"; // ✅ Added
 import { toast } from "react-hot-toast";
 

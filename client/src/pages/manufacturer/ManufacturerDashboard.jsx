@@ -14,7 +14,11 @@ import {
   Plus,
   ArrowRight,
   Download,
-  Printer
+  Printer,
+  Building2,
+  Mail,
+  Phone,
+  FileText
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../services/api/api';
@@ -26,25 +30,35 @@ const ManufacturerDashboard = () => {
     totalBatches: 0,
     recentBatches: [],
   });
+  const [manufacturerData, setManufacturerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchData = async () => {
       try {
-        const response = await apiClient.get('/manufacturer/dashboard');
+        setLoading(true);
+        const [dashboardResponse, profileResponse] = await Promise.all([
+          apiClient.get('/manufacturer/dashboard'),
+          apiClient.get('/manufacturer/profile')
+        ]);
+
         setDashboardData({
-          totalProducts: response.data.totalProducts,
-          recentProducts: response.data.recentProducts,
-          totalInTransit: response.data.totalInTransit || 0,
+          totalProducts: dashboardResponse.data.totalProducts,
+          recentProducts: dashboardResponse.data.recentProducts,
+          totalInTransit: dashboardResponse.data.totalInTransit || 0,
+          recentBatches: dashboardResponse.data.recentBatches || [],
+          totalBatches: dashboardResponse.data.recentBatches?.length || 0,
         });
+
+        setManufacturerData(profileResponse.data);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
     };
-    fetchDashboardData();
+    fetchData();
   }, []);
 
   // Dummy data for other stats
@@ -90,11 +104,37 @@ const ManufacturerDashboard = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="mb-2 text-3xl font-bold text-gray-900">
-              Welcome Back, PharmaCorp
+              <span className='text-2xl font-semibold text-gray-700'>Welcome Back,</span> <br></br> {manufacturerData?.companyName || 'Manufacturer'}
             </h2>
-            <p className="text-lg text-gray-600">
-              Here's your manufacturing and supply chain overview
-            </p>
+            <div className="space-y-1">
+              <p className="text-lg text-gray-600">
+                Here's your manufacturing and supply chain overview
+              </p>
+              {manufacturerData && (
+                <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Building2 className="w-4 h-4" />
+                    {manufacturerData.address}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Mail className="w-4 h-4" />
+                    {manufacturerData.email}
+                  </span>
+                  {manufacturerData.phoneNumber && (
+                    <span className="flex items-center gap-1">
+                      <Phone className="w-4 h-4" />
+                      {manufacturerData.phoneNumber}
+                    </span>
+                  )}
+                  {manufacturerData.licenseNumber && (
+                    <span className="flex items-center gap-1">
+                      <FileText className="w-4 h-4" />
+                      License: {manufacturerData.licenseNumber}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <div className="mt-4 sm:mt-0">
             <Link

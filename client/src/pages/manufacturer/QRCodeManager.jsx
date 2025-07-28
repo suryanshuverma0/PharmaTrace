@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
   QrCode,
   Download,
   Printer,
@@ -8,77 +8,151 @@ import {
   Filter,
   Box,
   Calendar,
-  Check
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Boxes,
+  Route,
+  MoreVertical
 } from 'lucide-react';
+import ProductModal from '../../components/modals/ProductModal';
 import { Input } from '../../components/UI/Input';
 import { Button } from '../../components/UI/Button';
 import { Select } from '../../components/UI/Select';
-import { Card } from '../../components/UI/Card';
+import apiClient from '../../services/api/api';
 
 const QRCodeManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [expandedBatches, setExpandedBatches] = useState(new Set());
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
-  // Sample data
-  const products = [
-    {
-      id: 1,
-      name: "Amoxicillin 500mg",
-      serialNumber: "AMX500-B247",
-      batchNumber: "B247",
-      manufactureDate: "2025-06-01",
-      qrGenerated: true,
-      status: "active"
-    },
-    {
-      id: 2,
-      name: "Lisinopril 10mg",
-      serialNumber: "LSP010-B123",
-      batchNumber: "B123",
-      manufactureDate: "2025-06-01",
-      qrGenerated: false,
-      status: "pending"
-    },
-    {
-      id: 3,
-      name: "Metformin 850mg",
-      serialNumber: "MTF850-B789",
-      batchNumber: "B789",
-      manufactureDate: "2025-05-30",
-      qrGenerated: true,
-      status: "active"
-    }
-  ];
+  useEffect(() => {
+    const fetchBatches = async () => {
+      try {
+        setLoading(true);
+        // Fetch both batches and manufacturer profile
+        const [batchResponse, profileResponse] = await Promise.all([
+          apiClient.get('/products/registered-batches'),
+          apiClient.get('/manufacturer/profile')
+        ]);
 
-  const handleSelectProduct = (productId) => {
-    setSelectedProducts(prev => {
-      if (prev.includes(productId)) {
-        return prev.filter(id => id !== productId);
+        const manufacturerProfile = profileResponse.data;
+        const sortedBatches = batchResponse.data
+          .map(batch => ({
+            ...batch,
+            products: batch.products.map(product => ({
+              ...product,
+              manufactureDate: batch.manufactureDate,
+              expiryDate: batch.expiryDate,
+              batchNumber: batch.batchNumber,
+              productionLocation: manufacturerProfile.address,
+              manufacturer: manufacturerProfile.companyName,
+              manufacturerCountry: manufacturerProfile.country || 'Nepal',
+              manufacturerAddress: manufacturerProfile.address
+            }))
+          }))
+          .sort((a, b) => new Date(b.createdAt || b.manufactureDate) - new Date(a.createdAt || a.manufactureDate));
+
+        setBatches(sortedBatches);
+        if (sortedBatches.length > 0) {
+          setExpandedBatches(new Set([sortedBatches[0]._id]));
+        }
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to fetch batches');
+      } finally {
+        setLoading(false);
       }
-      return [...prev, productId];
+    };
+    fetchBatches();
+  }, []);
+
+  const toggleBatch = (batchId) => {
+    setExpandedBatches(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(batchId)) {
+        newSet.delete(batchId);
+      } else {
+        newSet.add(batchId);
+      }
+      return newSet;
     });
   };
 
-  const handleSelectAll = () => {
-    if (selectedProducts.length === products.length) {
-      setSelectedProducts([]);
-    } else {
-      setSelectedProducts(products.map(p => p.id));
-    }
+  const handleQRCodeClick = (product) => {
+    setSelectedProduct(product);
+    setShowQRModal(true);
   };
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = 
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.serialNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = filterStatus === 'all' || 
-      (filterStatus === 'generated' && product.qrGenerated) ||
-      (filterStatus === 'pending' && !product.qrGenerated);
-    
-    return matchesSearch && matchesFilter;
+  const handleProductClick = (product) => {
+    // Make sure we have all the required data
+    const batch = batches.find(b => b.products.some(p => p._id === product._id));
+    if (batch) {
+      setSelectedProduct({
+        ...product,
+        manufactureDate: product.manufactureDate || batch.manufactureDate,
+        expiryDate: product.expiryDate || batch.expiryDate,
+        batchNumber: product.batchNumber || batch.batchNumber
+      });
+    } else {
+      setSelectedProduct(product);
+    }
+    setShowProductModal(true);
+  };
+
+  const downloadQRCode = (qrCodeUrl, fileName) => {
+    const link = document.createElement('a');
+    link.href = qrCodeUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
+
+  const handleSearchChange = useCallback(
+    debounce((value) => setSearchTerm(value), 300),
+    []
+  );
+
+  const filteredBatches = batches.filter(batch => {
+    const hasMatchingProducts = batch.products?.some(product =>
+      product.productName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const matchesBatchNumber = batch.batchNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' ||
+      (filterStatus === 'qr-generated' && batch.products?.some(p => p.qrCodeUrl)) ||
+      (filterStatus === 'pending' && batch.products?.some(p => !p.qrCodeUrl));
+
+    return (hasMatchingProducts || matchesBatchNumber) && matchesFilter;
   });
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'manufactured':
+      case 'produced':
+        return 'bg-blue-100 text-blue-800';
+      case 'in-transit':
+        return 'bg-amber-100 text-amber-800';
+      case 'delivered':
+        return 'bg-emerald-100 text-emerald-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -90,141 +164,249 @@ const QRCodeManager = () => {
         </p>
       </div>
 
-      {/* Actions Bar */}
+      {/* Filters and Search */}
       <div className="grid gap-4 mb-6 md:flex md:items-center md:justify-between">
         <div className="flex items-center flex-1 gap-4">
           <div className="flex-1">
             <Input
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by batch number or product name..."
+              onChange={(e) => handleSearchChange(e.target.value)}
               icon={<Search className="w-5 h-5" />}
-              className="max-w-md"
+              className="flex-1"
             />
           </div>
-          <Select
+          {/* <Select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             className="w-48"
             icon={<Filter className="w-5 h-5" />}
           >
-            <option value="all">All Products</option>
-            <option value="generated">QR Generated</option>
+            <option value="all">All Status</option>
+            <option value="qr-generated">QR Generated</option>
             <option value="pending">Pending Generation</option>
-          </Select>
+          </Select> */}
         </div>
         <div className="flex gap-3">
           <Button
             variant="secondary"
-            className="flex items-center gap-2"
-            disabled={selectedProducts.length === 0}
+            className="flex items-center h-10 gap-2"
+            onClick={() => setExpandedBatches(new Set(batches.map(b => b._id)))}
           >
-            <Printer className="w-5 h-5" />
-            Print Selected
+            <ChevronDown className="w-5 h-5" />
+            Expand All
           </Button>
           <Button
             variant="secondary"
-            className="flex items-center gap-2"
-            disabled={selectedProducts.length === 0}
+            className="flex items-center h-10 gap-2"
+            onClick={() => setExpandedBatches(new Set())}
           >
-            <Download className="w-5 h-5" />
-            Download Selected
+            <ChevronUp className="w-5 h-5" />
+            Collapse All
           </Button>
         </div>
       </div>
 
-      {/* Products Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredProducts.map((product) => (
-          <motion.div
-            key={product.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <Card className={`relative overflow-hidden transition-all duration-200 ${
-              selectedProducts.includes(product.id) ? 'ring-2 ring-blue-500' : ''
-            }`}>
-              {/* Selection Overlay */}
-              <div
-                className="absolute inset-0 z-10 cursor-pointer"
-                onClick={() => handleSelectProduct(product.id)}
+      {/* Loading State */}
+      {loading ? (
+        <div className="p-6 text-center bg-white rounded-xl">
+          <p className="text-gray-600">Loading batches...</p>
+        </div>
+      ) : error ? (
+        <div className="p-6 text-center bg-red-50 rounded-xl">
+          <p className="text-red-600">{error}</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {filteredBatches.length === 0 ? (
+            <div className="p-6 text-center bg-white rounded-xl">
+              <p className="text-gray-500">No batches found</p>
+            </div>
+          ) : (
+            filteredBatches.map((batch) => (
+              <motion.div
+                key={batch._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="overflow-hidden bg-white border shadow-lg rounded-2xl border-gray-200/50"
               >
-                <div className="absolute top-4 right-4">
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                    selectedProducts.includes(product.id)
-                      ? 'bg-blue-500 border-blue-500'
-                      : 'border-gray-300'
-                  }`}>
-                    {selectedProducts.includes(product.id) && (
-                      <Check className="w-4 h-4 text-white" />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl">
-                    {product.qrGenerated ? (
-                      <QrCode className="w-6 h-6 text-blue-600" />
-                    ) : (
-                      <Box className="w-6 h-6 text-blue-600" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 truncate">
-                      {product.name}
-                    </h3>
-                    <div className="mt-1 space-y-1">
-                      <p className="text-sm text-gray-500">
-                        SN: {product.serialNumber}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Batch: {product.batchNumber}
-                      </p>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        {product.manufactureDate}
+                {/* Batch Header */}
+                <div
+                  className="p-6 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                  onClick={() => toggleBatch(batch._id)}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
+                    <div className="flex items-start flex-1 gap-4">
+                      <div className="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl">
+                        <Boxes className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                          <h3 class="text-lg font-semibold text-gray-900">
+                            Batch: {batch.batchNumber}
+                          </h3>
+                          {expandedBatches.has(batch._id) ? (
+                            <ChevronUp className="w-5 h-5 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="mt-1 space-y-1">
+                          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>Mfg: {new Date(batch.manufactureDate).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>Exp: {new Date(batch.expiryDate).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Box className="w-4 h-4" />
+                              <span>Products: {batch.products?.length || 0}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
+                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(batch.status)}`}>
+                      {batch.status}
+                    </span>
                   </div>
                 </div>
 
-                {/* Status & Actions */}
-                <div className="flex items-center justify-between mt-6 pt-6 border-t">
-                  <span className={`px-3 py-1 text-sm rounded-full ${
-                    product.qrGenerated
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {product.qrGenerated ? 'Generated' : 'Pending'}
-                  </span>
-                  {product.qrGenerated && (
-                    <div className="flex -space-x-1">
-                      <Button
-                        variant="ghost"
-                        className="p-2 hover:text-blue-600"
-                        title="Download QR Code"
-                      >
-                        <Download className="w-5 h-5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="p-2 hover:text-blue-600"
-                        title="Print QR Code"
-                      >
-                        <Printer className="w-5 h-5" />
-                      </Button>
-                    </div>
+                {/* Products Grid */}
+                <AnimatePresence>
+                  {expandedBatches.has(batch._id) && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="p-6 bg-gray-50"
+                    >
+                      <div className="grid grid-cols-1 gap-4">
+                        {batch.products?.map((product) => (
+                          <div
+                            key={product._id}
+                            className="p-4 transition-all duration-200 bg-white border rounded-xl border-gray-200/50 hover:border-blue-200 hover:shadow-md"
+                          >
+                            <div className="flex justify-between">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 truncate">
+                                  {product.productName}
+                                </h4>
+                                <p className="mt-1 text-sm text-gray-500">
+                                  SN: {product.serialNumber}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleProductClick(product)}
+                                  className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <MoreVertical className="w-5 h-5" />
+                                </button>
+                                <button
+                                  onClick={() => handleQRCodeClick(product)}
+                                  className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <QrCode className="w-5 h-5" />
+                                </button>
+                                <button
+                                  onClick={() => window.open(`/manufacturer/track/${product.serialNumber}`, '_blank')}
+                                  className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <Route className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
                   )}
+                </AnimatePresence>
+              </motion.div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQRModal && selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md p-6 bg-white rounded-2xl">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 mb-4 text-green-500">
+                <QrCode className="w-full h-full" />
+              </div>
+              <h3 className="mb-2 text-xl font-semibold text-gray-900">
+                Product QR Code
+              </h3>
+
+              <div className="w-full p-4 mb-4 rounded-lg bg-gray-50">
+                <div className="mb-2">
+                  <p className="text-sm text-gray-600">Serial Number</p>
+                  <p className="font-mono text-sm break-all">{selectedProduct.serialNumber}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Digital Fingerprint</p>
+                  <p className="font-mono text-sm break-all">{selectedProduct.fingerprint}</p>
                 </div>
               </div>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+
+              <div className="p-4 mb-6 bg-white border rounded-lg">
+                <img
+                  src={selectedProduct.qrCodeUrl}
+                  alt="Product QR Code"
+                  className="w-48 h-48 mx-auto"
+                />
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-4">
+                <Button
+                  variant="secondary"
+                  className="flex items-center gap-2"
+                  onClick={() => downloadQRCode(selectedProduct.qrCodeUrl, `QR-${selectedProduct.serialNumber}.png`)}
+                >
+                  <Download className="w-5 h-5" />
+                  Download QR
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex items-center gap-2"
+                  onClick={() => window.print()}
+                >
+                  <Printer className="w-5 h-5" />
+                  Print QR
+                </Button>
+              </div>
+
+              <Button
+                variant="primary"
+                className="w-full mt-6"
+                onClick={() => setShowQRModal(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product Details Modal */}
+      {showProductModal && selectedProduct && (
+        <ProductModal
+          product={selectedProduct}
+          onClose={() => setShowProductModal(false)}
+          onDownloadQR={downloadQRCode}
+        />
+      )}
     </div>
   );
 };
+
+// Add the import at the top of the file
+import ProductDetailsModal from '../../components/modals/ProductDetailsModal';
 
 export default QRCodeManager;

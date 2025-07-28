@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search,
   Route,
@@ -11,17 +11,74 @@ import {
   Factory,
   Truck,
   Store,
-  User
+  User,
+  AlertCircle
 } from 'lucide-react';
 import { Card } from '../../components/UI/Card';
 import { Input } from '../../components/UI/Input';
 import { Button } from '../../components/UI/Button';
+import { ProductTrackingSkeleton } from '../../components/UI/Skeleton';
+import apiClient from '../../services/api/api';
 
 const TrackProducts = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Sample product data
+  // Function to format journey data
+  const formatJourneyData = (product) => {
+    const journey = [];
+
+    // Add manufacturing step
+    journey.push({
+      step: "Manufactured",
+      location: product.productionLocation || "Manufacturing Facility",
+      date: new Date(product.manufactureDate).toLocaleString(),
+      verifiedBy: product.manufacturer,
+      role: "Manufacturer",
+      temperature: product.storageTemp || "20°C",
+      humidity: product.humidity || "45%"
+    });
+
+    // Add quality check if available
+    if (product.qualityCheck) {
+      journey.push({
+        step: "Quality Check",
+        location: product.productionLocation,
+        date: new Date(product.qualityCheckDate).toLocaleString(),
+        verifiedBy: product.qualityCheckBy || "QA Team",
+        role: "QA Specialist",
+        status: "Passed",
+        notes: product.qualityNotes || "Meets all quality standards"
+      });
+    }
+
+    // Add shipping info if in transit or delivered
+    if (product.status === 'in-transit' || product.status === 'delivered') {
+      journey.push({
+        step: "Shipped",
+        location: product.shipmentOrigin || product.productionLocation,
+        date: new Date(product.shipmentDate).toLocaleString(),
+        verifiedBy: product.shipmentVerifiedBy || "Logistics Team",
+        role: "Logistics Manager",
+        carrier: product.carrier || "SecurePharm Logistics",
+        trackingId: product.trackingId
+      });
+    }
+
+    // Add current status
+    journey.push({
+      step: product.status?.charAt(0).toUpperCase() + product.status?.slice(1) || "In Processing",
+      location: product.currentLocation || "Manufacturing Facility",
+      date: new Date().toLocaleString(),
+      verifiedBy: product.lastVerifiedBy || "System",
+      role: "Status Update",
+      storageConditions: `Temperature: ${product.currentTemp || "20°C"}, Humidity: ${product.currentHumidity || "45%"}`
+    });
+
+    return journey;
+  };
   const sampleProduct = {
     name: "Amoxicillin 500mg",
     serialNumber: "AMX500-B247",
@@ -68,11 +125,33 @@ const TrackProducts = () => {
     ]
   };
 
-  const handleSearch = (serialNumber) => {
-    // Simulate API call
-    setTimeout(() => {
-      setSelectedProduct(sampleProduct);
-    }, 1000);
+  const handleSearch = async (serialNumber) => {
+    if (!serialNumber.trim()) {
+      setError("Please enter a serial number");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setSelectedProduct(null);
+
+      const response = await apiClient.get(`/tracking/track/${serialNumber}`);
+      const product = response.data;
+
+      // Format the product data with journey
+      const formattedProduct = {
+        ...product,
+        journey: formatJourneyData(product)
+      };
+
+      setSelectedProduct(formattedProduct);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to find product. Please check the serial number.");
+      setSelectedProduct(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStepIcon = (step) => {
@@ -129,8 +208,25 @@ const TrackProducts = () => {
         </div>
       </Card>
 
+      {/* Error Message */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 mb-6 text-red-800 bg-red-100 rounded-xl"
+        >
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" />
+            <p>{error}</p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Loading State */}
+      {loading && <ProductTrackingSkeleton />}
+
       {/* Product Journey */}
-      {selectedProduct && (
+      {!loading && selectedProduct && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -153,7 +249,7 @@ const TrackProducts = () => {
                     </p>
                   </div>
                 </div>
-                <div className="px-4 py-2 text-sm bg-blue-100 rounded-lg text-blue-800">
+                <div className="px-4 py-2 text-sm text-blue-800 bg-blue-100 rounded-lg">
                   Current Location: {selectedProduct.currentLocation}
                 </div>
               </div>
@@ -177,7 +273,7 @@ const TrackProducts = () => {
                         </div>
                       </div>
                       <div className="flex-1">
-                        <div className="p-6 bg-white border rounded-xl shadow-sm">
+                        <div className="p-6 bg-white border shadow-sm rounded-xl">
                           <div className="flex flex-wrap items-center justify-between gap-4">
                             <div>
                               <h4 className="text-lg font-semibold text-gray-900">
@@ -207,7 +303,7 @@ const TrackProducts = () => {
                           {Object.entries(step).map(([key, value]) => {
                             if (!['step', 'location', 'date', 'verifiedBy', 'role'].includes(key)) {
                               return (
-                                <div key={key} className="mt-4 pt-4 border-t">
+                                <div key={key} className="pt-4 mt-4 border-t">
                                   <div className="text-sm text-gray-600">
                                     <span className="font-medium">{key.charAt(0).toUpperCase() + key.slice(1)}:</span>{' '}
                                     {value}

@@ -19,7 +19,8 @@ import { Input } from '../../components/UI/Input';
 import { Button } from '../../components/UI/Button';
 import { Select } from '../../components/UI/Select';
 import apiClient from '../../services/api/api';
-
+import ProductDetailsModal from '../../components/modals/ProductDetailsModal';
+import ProductModal from '../../components/modals/ProductModal';
 const ProductsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -35,23 +36,54 @@ const ProductsList = () => {
     { value: 'delivered', label: 'Delivered' }
   ];
 
-  // State for QR modal
+  // State for modals
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
 
   // Fetch registered batches with products from the backend
   const getRegisteredProducts = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('products/registered-batches');
+      const [batchResponse, profileResponse] = await Promise.all([
+        apiClient.get('products/registered-batches'),
+        apiClient.get('/manufacturer/profile')
+      ]);
+      
+      const manufacturerProfile = profileResponse.data;
+      
       // Response should be grouped by batch with products inside
-      const normalizedBatches = response.data.map(batch => ({
+      const normalizedBatches = batchResponse.data.map(batch => ({
         ...batch,
         status: batch.shipmentStatus.toLowerCase().replace(/\s+/g, '-'),
-        products: batch.products.map(product => ({
-          ...product,
-          status: product.status?.replace(/\s+/g, '-').toLowerCase() || 'produced'
-        }))
+        products: batch.products.map(product => {
+          // Parse the QR code data if it exists
+          let qrData = {};
+          try {
+            if (product.qrCodeUrl) {
+              const qrDataString = product.qrCodeUrl.split(',')[1]; // Get base64 part
+              const decodedString = atob(qrDataString); // Decode base64
+              qrData = JSON.parse(decodedString);
+            }
+          } catch (e) {
+            console.log('Error parsing QR data:', e);
+          }
+
+          return {
+            ...product,
+            ...qrData, // This includes manufactureDate and expiryDate from QR
+            status: product.status?.replace(/\s+/g, '-').toLowerCase() || 'produced',
+            batchNumber: batch.batchNumber,
+            // Fallback to batch dates if QR data is not available
+            manufactureDate: qrData.manufactureDate || batch.manufactureDate,
+            expiryDate: qrData.expiryDate || batch.expiryDate,
+            // Add manufacturer details
+            productionLocation: manufacturerProfile.address,
+            manufacturer: manufacturerProfile.companyName,
+            manufacturerCountry: manufacturerProfile.country || 'Nepal',
+            manufacturerAddress: manufacturerProfile.address
+          };
+        })
       }));
       setProducts(normalizedBatches);
       setLoading(false);
@@ -77,10 +109,15 @@ const ProductsList = () => {
     return (hasMatchingProducts || matchesBatchNumber) && matchesFilter;
   });
 
-  // Handle QR code actions
+  // Handle modal actions
   const handleQRCodeClick = (product) => {
     setSelectedProduct(product);
     setShowQRModal(true);
+  };
+
+  const handleProductClick = (product) => {
+    setSelectedProduct(product);
+    setShowProductModal(true);
   };
 
   const downloadQRCode = (qrCodeUrl, fileName) => {
@@ -221,7 +258,7 @@ const ProductsList = () => {
 
               {/* Products Grid */}
               <div className="p-6 bg-gray-50">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4">
                   {batch.products.map((product) => (
                     <div
                       key={product._id}
@@ -237,6 +274,12 @@ const ProductsList = () => {
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleProductClick(product)}
+                            className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                          >
+                            <MoreVertical className="w-5 h-5" />
+                          </button>
                           <button 
                             onClick={() => handleQRCodeClick(product)}
                             className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
@@ -321,9 +364,24 @@ const ProductsList = () => {
           </div>
         </div>
       )}
+
+      {/* Product Details Modal */}
+      {showProductModal && selectedProduct && (
+        <ProductModal
+          product={selectedProduct}
+          onClose={() => setShowProductModal(false)}
+          onDownloadQR={downloadQRCode}
+        />
+      )}
       </div>
     </>
   );
+
+// Add the import at the top of the file
+
+
+// Add the import at the top of the file
+
 };
 
 export default ProductsList;

@@ -1,6 +1,48 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Batch = require('../models/Batch');
+const Manufacturer = require('../models/Manufacturer');
+
+const getManufacturerProfile = async (req, res) => {
+  try {
+
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    console.log("userId:", req.user.userId);
+
+    const manufacturer = await Manufacturer.findOne({ user: req.user.userId })
+      .select('-password')
+      .lean();
+
+    if (!manufacturer) {
+      return res.status(404).json({ message: "Manufacturer not found" });
+    }
+
+    // Get additional statistics
+    const totalProducts = await Product.countDocuments({ manufacturerId: manufacturer._id });
+    const totalBatches = await Batch.countDocuments({ manufacturerId: manufacturer._id });
+    const totalInTransit = await Batch.countDocuments({
+      manufacturerId: manufacturer._id,
+      shipmentStatus: { $regex: '^In.*Transit$', $options: 'i' }
+    });
+
+    const manufacturerDetails = {
+      ...manufacturer,
+      statistics: {
+        totalProducts,
+        totalBatches,
+        totalInTransit
+      }
+    };
+
+    res.status(200).json(manufacturerDetails);
+  } catch (error) {
+    console.error('Error fetching manufacturer profile:', error);
+    res.status(500).json({ message: 'Failed to fetch manufacturer profile' });
+  }
+};
 
 const getManufacturerDashboard = async (req, res) => {
   try {
@@ -17,7 +59,7 @@ const getManufacturerDashboard = async (req, res) => {
       console.error('Invalid manufacturerId format:', req.user.userId);
       return res.status(400).json({ message: 'Invalid manufacturer ID format' });
     }
-    console.log("manufacturerId:", manufacturerId.toString());
+
 
     // Count total products for the manufacturer
     const totalProducts = await Product.countDocuments({ manufacturerId });
@@ -82,10 +124,48 @@ const getManufacturerDashboard = async (req, res) => {
     }
     console.log("Recent products:", recentProducts);
 
+    // Fetch recent batches with complete information
+    const recentBatches = await Batch.aggregate([
+      {
+        $match: { manufacturerId }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $limit: 5
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'batchNumber',
+          foreignField: 'batchNumber',
+          as: 'products'
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          batchNumber: 1,
+          shipmentStatus: 1,
+          dosageForm: 1,
+          strength: 1,
+          quantityProduced: 1,
+          quantityAvailable: { 
+            $subtract: ['$quantityProduced', { $size: '$products' }] 
+          },
+          productsCount: { $size: '$products' }
+        }
+      }
+    ]).exec();
+
+    console.log("Recent batches:", recentBatches);
+
     res.status(200).json({
       totalProducts,
       totalInTransit,
       recentProducts,
+      recentBatches,
     });
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
@@ -96,4 +176,4 @@ const getManufacturerDashboard = async (req, res) => {
   }
 };
 
-module.exports = { getManufacturerDashboard };
+module.exports = { getManufacturerDashboard, getManufacturerProfile };

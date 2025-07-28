@@ -25,6 +25,7 @@ app.use("/api/batches", batchRoutes);
 app.use("/api/manufacturer", manufacturerRoutes);
 app.use("/api/distributer", distributerRoutes);
 app.use("/api/pharmacies", require("./routes/pharmacyRoutes"));
+app.use("/api/tracking", require("./routes/trackingRoutes"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
