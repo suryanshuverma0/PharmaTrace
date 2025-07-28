@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import  Button  from "../../components/UI/Button";
 import { PharmaChainLogo } from "../LandingPage";
 import toast, { Toaster } from 'react-hot-toast';
-import { useAuth } from "../../context/authContext";
+import { useAuth } from "../../context/AuthContext";
 
 const LoginPage = () => {
   const { connectWallet, login, user, isLoading } = useAuth();

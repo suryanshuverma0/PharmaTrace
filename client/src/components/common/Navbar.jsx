@@ -14,7 +14,7 @@ import {
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import ConnectWalletModal from "../modals/ConnectWalletModal";
 import RegisterWalletModal from "../modals/RegisterWalletModal";
-import { useAuth } from "../../context/authContext";
+import { useAuth } from "../../context/AuthContext";
 import { siteConfig } from "../../constants/data";
 import { useWalletModal } from "../../context/WalletModalContext";
 

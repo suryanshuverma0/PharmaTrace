@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Modal from "../UI/Modal";
 import Alert from "../UI/Alert";
 import { FaWallet, FaEthereum, FaUserPlus } from "react-icons/fa";
-import { useAuth } from "../../context/authContext";
+import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { useWalletModal } from "../../context/WalletModalContext";
