@@ -59,25 +59,74 @@ const getDistributorBatches = async (req, res) => {
 const getDistributorInventory = async (req, res) => {
   try {
     const distributorAddress = req.query.address || req.headers['x-distributor-address'];
-    let inventory;
+    
+    // Find batches for this distributor
+    let query = {};
     if (distributorAddress) {
-      inventory = await Batch.find({ quantityAvailable: { $gt: 0 }, shipmentHistory: { $elemMatch: { to: distributorAddress } } });
-    } else {
-      inventory = await Batch.find({ quantityAvailable: { $gt: 0 } });
+      query.shipmentHistory = { $elemMatch: { to: distributorAddress } };
     }
-    const formatted = await Promise.all(inventory.map(async i => {
-      const product = await Product.findOne({ batchId: i._id });
+    
+    const batches = await Batch.find(query)
+      .populate('manufacturerId', 'name')
+      .lean();
+
+    // Process each batch to get current inventory status
+    const inventory = await Promise.all(batches.map(async batch => {
+      const product = await Product.findOne({ batchId: batch._id }).lean();
+      
+      // Calculate current quantity
+      const initialQuantity = batch.quantityProduced || 0;
+      const shippedQuantity = (batch.shipmentHistory || [])
+        .filter(sh => sh.status?.toLowerCase() === 'delivered')
+        .reduce((sum, sh) => sum + (Number(sh.quantity) || 0), 0);
+      
+      const currentQty = initialQuantity - shippedQuantity;
+
+      // Parse storage conditions string or use object
+      let storageConditions;
+      if (typeof batch.storageConditions === 'string') {
+        const tempMatch = batch.storageConditions.match(/below (\d+)°C/);
+        storageConditions = {
+          temperature: tempMatch ? `${tempMatch[1]}°C` : 'Room temperature',
+          humidity: 'Normal',
+          lightExposure: 'Store in a dark place'
+        };
+      } else if (typeof batch.storageConditions === 'object' && batch.storageConditions !== null) {
+        storageConditions = batch.storageConditions;
+      } else {
+        storageConditions = {
+          temperature: 'Room temperature',
+          humidity: 'Normal',
+          lightExposure: 'Store in a dark place'
+        };
+      }
+      
       return {
-        batchId: i.batchNumber,
-        product: product ? product.productName : (i.dosageForm + ' ' + i.strength),
-        quantity: i.quantityAvailable,
-        total: i.quantityProduced,
-        status: i.shipmentStatus
+        batchId: batch.batchNumber,
+        product: product?.productName || `${batch.dosageForm || ''} ${batch.strength || ''}`.trim(),
+        manufacturer: batch.manufacturerId?.name || 'N/A',
+        quantity: currentQty,
+        total: initialQuantity,
+        status: batch.status || 'Available',
+        serialNumber: product?.serialNumber || '',
+        manufacturingDate: product?.manufacturingDate || batch.manufacturingDate || new Date(batch.createdAt || Date.now()),
+        expiryDate: product?.expiryDate || batch.expiryDate || null,
+        storageConditions,
+        lastUpdated: batch.updatedAt || batch.createdAt || new Date(),
+        reserved: batch.reservedQuantity || 0
       };
     }));
-    res.json({ inventory: formatted });
+
+    // Filter out items with zero or negative quantity
+    const validInventory = inventory.filter(item => item.quantity > 0);
+
+    res.json({ inventory: validInventory });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch inventory', error: error.message });
+    console.error('Error in getDistributorInventory:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch inventory', 
+      error: error.message 
+    });
   }
 };
 

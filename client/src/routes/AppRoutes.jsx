@@ -79,6 +79,7 @@ const AppRoutes = () => {
           <Route path="register/batch" element={<RegisterBatch />} />
           <Route path="products" element={<ProductsList />} />
           <Route path="assign-batch" element={<AssignBatch />} />
+          <Route path="assigned-batches" element={<AssignedBatches />} />
           <Route path="track" element={<TrackProducts />} />
           <Route path="track/:serialNumber" element={<TrackProducts />} />
           <Route path="qr-codes" element={<QRCodeManager />} />

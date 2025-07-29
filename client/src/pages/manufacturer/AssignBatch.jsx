@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Truck, Send, Package, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom"; // Make sure you import Link if you use it in alert message
+import { Link } from "react-router-dom";
 import apiClient from "../../services/api/api";
 import Button from "../../components/UI/Button";
 import Select from "../../components/UI/Select";
 import Alert from "../../components/UI/Alert";
+import RecentAssignments from "../../components/manufacturer/RecentAssignments";
 
 const DUMMY_ASSIGNED_BATCHES = [
   {
@@ -65,9 +66,43 @@ const AssignBatch = () => {
   const fetchRecentAssignments = async () => {
     try {
       const res = await apiClient.get("/batches/assigned-batches");
-      setRecentAssignments(res.data.assignments || []);
+      if (res.data && res.data.batches) {
+        // Format the assignments data based on the actual API response
+        const formattedAssignments = res.data.batches.map(batch => ({
+          _id: batch.batchId || batch._id,
+          batchNumber: batch.batchId,
+          productName: batch.product,
+          distributor: batch.shipmentHistory?.[0]?.actor?.name || 'N/A',
+          distributorWallet: batch.shipmentHistory?.[0]?.to || 'N/A',
+          quantity: batch.quantity,
+          remarks: batch.shipmentHistory?.[0]?.remarks || '',
+          assignedAt: new Date(batch.shipmentHistory?.[0]?.timestamp || new Date()).toLocaleString(),
+          shipmentStatus: batch.status,
+          environmentalConditions: batch.shipmentHistory?.[0]?.environmentalConditions,
+          qualityCheck: batch.shipmentHistory?.[0]?.qualityCheck,
+          shipmentHistory: batch.shipmentHistory?.map(hist => ({
+            status: hist.status,
+            timestamp: hist.timestamp,
+            from: hist.from,
+            to: hist.to,
+            quantity: hist.quantity,
+            remarks: hist.remarks,
+            actor: hist.actor,
+            environmentalConditions: hist.environmentalConditions,
+            qualityCheck: hist.qualityCheck
+          }))
+        }));
+        setRecentAssignments(formattedAssignments);
+      } else {
+        setRecentAssignments([]);
+      }
     } catch (err) {
       console.error("Failed to load assigned batches:", err);
+      setAlert({
+        type: "error",
+        title: "Error",
+        message: "Failed to load recent assignments. Please try again later."
+      });
     }
   };
   fetchRecentAssignments();
@@ -118,7 +153,7 @@ const AssignBatch = () => {
       const batch = batches.find(b => b._id === selectedBatch);
       const distributor = distributors.find(d => d._id === selectedDistributor);
 
-      if (!batch || !distributor || !distributor.user?.address) {
+      if (!batch || !distributor) {
         setError("Invalid batch or distributor selected.");
         setAssigning(false);
         return;
@@ -130,11 +165,30 @@ const AssignBatch = () => {
         return;
       }
 
-      const response = await apiClient.post(`/api/batches/${selectedBatch}/assign`, {
-        to: distributor.user.address,
-        remarks,
+      // Create the assignment with tracking information
+      const response = await apiClient.post(`/batches/${batch.batchNumber}/assign`, {
+        batchId: batch.batchNumber,
+        product: batch.product || batch.productName,
+        quantity: parseInt(quantity),
         status: "In Transit",
-        quantity: parseInt(quantity)
+        to: distributor.user?.address,
+        remarks,
+        actor: {
+          name: distributor.companyName,
+          type: "Distributor",
+          license: distributor.licenseNumber,
+          location: distributor.address
+        },
+        environmentalConditions: {
+          temperature: "25°C",
+          humidity: "60%",
+          status: "Normal"
+        },
+        qualityCheck: {
+          result: "Pass",
+          notes: "Pre-shipment quality check passed",
+          performedBy: "QA Team"
+        }
       });
 
       // Update the batches list with new quantity
@@ -152,24 +206,16 @@ const AssignBatch = () => {
       }
 
       setSuccess("Batch assigned to distributor successfully!");
+      
+      // Reset form
       setSelectedBatch("");
       setSelectedDistributor("");
       setQuantity("");
       setRemarks("");
-
-      setRecentAssignments(prev => [
-        {
-          batchNumber: batch.batchNumber,
-          productName: `${batch.dosageForm} ${batch.strength}`,
-          distributor: distributor.companyName,
-          distributorWallet: distributor.user.address,
-          quantity: parseInt(quantity),
-          remarks,
-          assignedAt: new Date().toLocaleString(),
-          shipmentStatus: "In Transit"
-        },
-        ...prev
-      ]);
+      
+      // Fetch updated assignments to get tracking info
+      const res = await apiClient.get("/assignments/recent-assignments");
+      setRecentAssignments(res.data.assignments || []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to assign batch.");
     } finally {
@@ -179,94 +225,34 @@ const AssignBatch = () => {
 
   return (
     <div className="flex flex-col items-center min-h-screen space-y-8">
-      <div className="w-full max-w-3xl p-6 bg-white border border-gray-200 shadow rounded-2xl">
-        <h3 className="flex items-center gap-2 mb-4 text-lg font-semibold text-gray-900">
-          <Package className="w-5 h-5 text-blue-600" /> Recently Assigned
-          Batches
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm text-left">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-2 font-semibold">Batch Number</th>
-                <th className="px-4 py-2 font-semibold">Product</th>
-                <th className="px-4 py-2 font-semibold">Distributor</th>
-                <th className="px-4 py-2 font-semibold">Wallet</th>
-                <th className="px-4 py-2 font-semibold">Quantity</th>
-                <th className="px-4 py-2 font-semibold">Assigned At</th>
-                <th className="px-4 py-2 font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentAssignments.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-6 text-center text-gray-500"
-                  >
-                    No assignments found.
-                  </td>
-                </tr>
-              ) : (
-                recentAssignments.map((a, idx) => (
-                  <tr
-                    key={a.batchNumber + a.distributor + idx}
-                    className="border-b last:border-0"
-                  >
-                    <td className="px-4 py-2">{a.batchNumber}</td>
-                    <td className="px-4 py-2">{a.productName}</td>
-                    <td className="px-4 py-2">{a.distributor}</td>
-                    <td className="px-4 py-2 font-mono text-xs">
-                      {a.distributorWallet}
-                    </td>
-                    <td className="px-4 py-2">{a.quantity}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      {a.assignedAt}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap
-                        ${
-                          a.shipmentStatus === "Produced"
-                            ? "bg-blue-100 text-blue-800"
-                            : a.shipmentStatus === "In Transit"
-                            ? "bg-amber-100 text-amber-800"
-                            : a.shipmentStatus === "Delivered"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : a.shipmentStatus === "Returned"
-                            ? "bg-red-100 text-red-800"
-                            : a.shipmentStatus === "Recalled"
-                            ? "bg-gray-200 text-gray-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        <span
-                          className="inline-block w-2 h-2 rounded-full"
-                          style={{
-                            backgroundColor:
-                              a.shipmentStatus === "Produced"
-                                ? "#2563eb"
-                                : a.shipmentStatus === "In Transit"
-                                ? "#f59e42"
-                                : a.shipmentStatus === "Delivered"
-                                ? "#059669"
-                                : a.shipmentStatus === "Returned"
-                                ? "#dc2626"
-                                : a.shipmentStatus === "Recalled"
-                                ? "#6b7280"
-                                : "#a3a3a3",
-                          }}
-                        />
-                        {a.shipmentStatus}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* <div className="w-full max-w-3xl p-6 bg-white border border-gray-200 shadow rounded-2xl">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+            <Package className="w-5 h-5 text-blue-600" /> Recently Assigned
+            Batches
+          </h3>
+          <Link
+            to="/manufacturer/assigned-batches"
+            className="flex items-center text-sm text-blue-600 hover:text-blue-700"
+          >
+            View All
+            <svg
+              className="w-4 h-4 ml-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </Link>
         </div>
-      </div>
+        <RecentAssignments assignments={recentAssignments} />
+      </div> */}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

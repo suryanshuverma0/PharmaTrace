@@ -23,8 +23,40 @@ const AssignedBatches = () => {
   const fetchAssignedBatches = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get('/api/distributer/batches');
-      setBatches(res.data.batches || []);
+      const res = await apiClient.get('/distributer/batches');
+      const formattedBatches = (res.data.batches || []).map(batch => {
+        // Get the latest shipment history entry
+        const latestHistory = batch.shipmentHistory.length > 0 
+          ? batch.shipmentHistory[batch.shipmentHistory.length - 1]
+          : null;
+
+        // Get the latest environmental conditions and quality check from history
+        const latestEnvConditions = batch.shipmentHistory.find(h => h.environmentalConditions)?.environmentalConditions;
+        const latestQualityCheck = batch.shipmentHistory.find(h => h.qualityCheck)?.qualityCheck;
+        
+        return {
+          _id: batch.batchId, // Using batchId as _id since it appears unique
+          batchNumber: batch.batchId,
+          productDetails: batch.product,
+          status: batch.status,
+          manufacturer: batch.manufacturer,
+          assignedQuantity: batch.quantity,
+          serialNumber: batch.serialNumber,
+          assignedAt: latestHistory?.timestamp || new Date().toISOString(),
+          manufactureDate: latestHistory?.timestamp,
+          expiryDate: null, // Add if available in your data
+          environmentalConditions: latestEnvConditions || null,
+          qualityCheck: latestQualityCheck ? {
+            result: latestQualityCheck.result,
+            performedBy: latestQualityCheck.performedBy || 'QA Team',
+            date: latestQualityCheck.date
+          } : null,
+          remarks: latestHistory?.remarks || '',
+          shipmentHistory: batch.shipmentHistory
+        };
+      });
+      
+      setBatches(formattedBatches);
       setError(null);
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to fetch assigned batches');
@@ -35,8 +67,9 @@ const AssignedBatches = () => {
   };
 
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'produced':
+      case 'manufactuerd': // Handle both spellings
         return 'bg-blue-100 text-blue-800';
       case 'in transit':
         return 'bg-amber-100 text-amber-800';
@@ -44,6 +77,10 @@ const AssignedBatches = () => {
         return 'bg-emerald-100 text-emerald-800';
       case 'returned':
         return 'bg-red-100 text-red-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      case 'recalled':
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -166,6 +203,65 @@ const AssignedBatches = () => {
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* Shipment History Timeline */}
+                <div className="mt-6">
+                  <h4 className="mb-4 text-lg font-medium text-gray-900">Shipment History</h4>
+                  <div className="relative">
+                    {batch.shipmentHistory.map((event, index) => (
+                      <div key={event._id} className="relative pb-8">
+                        {index !== batch.shipmentHistory.length - 1 && (
+                          <div className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true" />
+                        )}
+                        <div className="relative flex items-start space-x-3">
+                          <div className={`relative px-1 ${getStatusColor(event.status)} rounded-full`}>
+                            <div className="flex items-center justify-center w-8 h-8">
+                              {event.status.toLowerCase() === 'delivered' ? (
+                                <ClipboardCheck className="w-5 h-5" />
+                              ) : event.status.toLowerCase() === 'in transit' ? (
+                                <Truck className="w-5 h-5" />
+                              ) : (
+                                <Package className="w-5 h-5" />
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900">
+                              {event.status}
+                              {event.quantity && (
+                                <span className="ml-2 text-gray-500">({event.quantity} units)</span>
+                              )}
+                            </div>
+                            <div className="mt-1 text-sm text-gray-500">
+                              <p>{new Date(event.timestamp).toLocaleString()}</p>
+                              {event.remarks && (
+                                <p className="mt-1">{event.remarks}</p>
+                              )}
+                              {event.environmentalConditions && (
+                                <div className="p-2 mt-2 rounded-lg bg-gray-50">
+                                  <p className="font-medium">Environmental Conditions:</p>
+                                  <p>Temperature: {event.environmentalConditions.temperature}</p>
+                                  <p>Humidity: {event.environmentalConditions.humidity}</p>
+                                  <p>Status: {event.environmentalConditions.status}</p>
+                                </div>
+                              )}
+                              {event.qualityCheck && (
+                                <div className="p-2 mt-2 rounded-lg bg-gray-50">
+                                  <p className="font-medium">Quality Check:</p>
+                                  <p>Result: {event.qualityCheck.result}</p>
+                                  <p>Date: {new Date(event.qualityCheck.date).toLocaleString()}</p>
+                                  {event.qualityCheck.notes && (
+                                    <p>Notes: {event.qualityCheck.notes}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {batch.remarks && (

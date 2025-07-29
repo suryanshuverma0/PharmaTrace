@@ -10,7 +10,11 @@ import {
   LogOut,
   User,
   Menu,
-  X
+  X,
+  ClipboardList,
+  Send,
+  PackageCheck,
+  Package
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import  Button from '../UI/Button';
@@ -44,7 +48,7 @@ const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
       path: '/manufacturer/dashboard' 
     },
     { 
-      icon: <PackagePlus size={20} />, 
+      icon: <ClipboardList size={20} />, 
       label: 'Register Batch', 
       path: '/manufacturer/register/batch' 
     },
@@ -54,12 +58,16 @@ const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
       path: '/manufacturer/register' 
     },
     { 
-      icon: <PackagePlus size={20} />, 
+      icon: <Send size={20} />, 
       label: 'Assign Batch', 
       path: '/manufacturer/assign-batch' 
+    },{ 
+      icon: <PackageCheck size={20} />, 
+      label: 'Assigned Batch', 
+      path: '/manufacturer/assigned-batches' 
     },
     { 
-      icon: <Boxes size={20} />, 
+      icon: <Package size={20} />, 
       label: 'Products', 
       path: '/manufacturer/products' 
     },
