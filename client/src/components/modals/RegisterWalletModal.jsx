@@ -123,6 +123,13 @@ const RegisterWalletModal = () => {
         }
       });
 
+      // Create a message to sign
+      const message = `Register ${formData.name} as ${formData.role} at ${new Date().toISOString()}`;
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [message, window.ethereum.selectedAddress],
+      });
+
       const registrationData = {
         name: formData.name,
         email: formData.email,
@@ -131,6 +138,9 @@ const RegisterWalletModal = () => {
         country: formData.country,
         city: formData.city,
         state: formData.state,
+        message,
+        signature,
+        address: window.ethereum.selectedAddress,
         ...roleData,
       };
 

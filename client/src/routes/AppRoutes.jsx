@@ -55,7 +55,7 @@ const AppRoutes = () => {
         <Route path="activate-account" element={<AccountActivation />} />
         <Route path="connect" element={<RegisterPage />} />
         <Route path="verify-product" element={<VerifyDrug />} />
-        <Route path="consumer/journey/:drugId" element={<JourneyDetails />} />
+        <Route path="consumer/journey/:serialNumber" element={<JourneyDetails />} />
         <Route path="unauthorized" element={<UnauthorizedPage />} />
       </Route>
 
@@ -64,7 +64,7 @@ const AppRoutes = () => {
         <Route index element={<ConsumerDashboard />} />
         <Route path="dashboard" element={<ConsumerDashboard />} />
         <Route path="verify" element={<VerifyDrug />} />
-        <Route path="journey/:drugId" element={<JourneyDetails />} />
+        <Route path="journey/:serialNumber" element={<JourneyDetails />} />
         <Route path="vault" element={<div>Vault Placeholder</div>} />
         <Route path="history" element={<div>History Placeholder</div>} />
         <Route path="settings" element={<div>Settings Placeholder</div>} />

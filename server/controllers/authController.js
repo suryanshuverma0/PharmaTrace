@@ -2,6 +2,7 @@ const express = require("express");
 const User = require("../models/User");
 const Manufacturer = require("../models/Manufacturer");
 const Distributor = require("../models/Distributor");
+const Pharmacist = require("../models/Pharmacist");
 require('dotenv').config();
 
 
@@ -96,34 +97,41 @@ const registerUser = async (req, res) => {
     });
     await newUser.save();
 
-    // Create role-specific entry
-    if (role === 'manufacturer') {
-      await Manufacturer.create({
-        user: newUser._id,
-        companyName,
-        registrationNumber,
-        licenseDocument,
-        certifications: certifications || [],
-      });
-    } else if (role === 'distributor') {
-      await Distributor.create({
-        user: newUser._id,
-        companyName,
-        registrationNumber,
-        licenseDocument,
-        warehouseAddress,
-        operationalRegions: operationalRegions || [],
-      });
-    } else if (role === 'pharmacist') {
-      await Pharmacist.create({
-        user: newUser._id,
-        pharmacyName,
-        licenseNumber,
-        licenseDocument,
-        pharmacyLocation,
-      });
+    try {
+      // Create role-specific entry
+      if (role === 'manufacturer') {
+        await Manufacturer.create({
+          user: newUser._id,
+          companyName,
+          registrationNumber,
+          licenseDocument,
+          certifications: certifications || [],
+        });
+      } else if (role === 'distributor') {
+        await Distributor.create({
+          user: newUser._id,
+          companyName,
+          registrationNumber,
+          licenseDocument,
+          warehouseAddress,
+          operationalRegions: operationalRegions || [],
+        });
+      } else if (role === 'pharmacist') {
+        await Pharmacist.create({
+          user: newUser._id,
+          pharmacyName,
+          licenseNumber,
+          licenseDocument,
+          pharmacyLocation,
+        });
+      }
+    } catch (roleError) {
+      // If role-specific creation fails, delete the user and throw error
+      await User.findByIdAndDelete(newUser._id);
+      throw new Error(`Failed to create ${role} profile: ${roleError.message}`);
     }
 
+    // After successful creation, send email
     const userDetails = {
       userId: newUser._id,
       address: newUser.address,
@@ -141,8 +149,12 @@ const registerUser = async (req, res) => {
       message: 'User registered successfully',
       data: { name, role, address, email, phone, country },
     });
-  } catch (err) {
-    return res.status(500).json({ message: 'Registration failed', error: err.message });
+
+  } catch (error) {
+    return res.status(500).json({ 
+      message: 'Registration failed', 
+      error: error.message 
+    });
   }
 };
 

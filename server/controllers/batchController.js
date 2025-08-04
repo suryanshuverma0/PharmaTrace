@@ -252,57 +252,66 @@ const assignBatchToDistributor = async (req, res) => {
   }
 
   try {
-    // Start a transaction
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // Get the batch using batchNumber with findOneAndUpdate to ensure atomicity
+    const batch = await Batch.findOne({ batchNumber: batchId });
+    if (!batch) {
+      throw new Error("Batch not found");
+    }
 
-    try {
-      // Get the batch with a lock for update
-      const batch = await Batch.findById(batchId).session(session);
-      if (!batch) {
-        throw new Error("Batch not found");
-      }
+    // Check if quantity is available
+    if (batch.quantityAvailable < quantity) {
+      throw new Error(`Insufficient quantity available. Only ${batch.quantityAvailable} units left`);
+    }
 
-      // Check if quantity is available
-      if (batch.quantityAvailable < quantity) {
-        throw new Error(`Insufficient quantity available. Only ${batch.quantityAvailable} units left`);
-      }
+    // Get manufacturer details
+    const manufacturer = await Manufacturer.findOne({ user: req.user.userId });
+    if (!manufacturer) {
+      throw new Error("Manufacturer not found");
+    }
 
-      // Get manufacturer details
-      const manufacturer = await Manufacturer.findOne({ user: req.user.userId }).session(session);
-      if (!manufacturer) {
-        throw new Error("Manufacturer not found");
-      }
+    // Get distributor details - first find the user by wallet address
+    const distributorUser = await User.findOne({ address: to });
+    if (!distributorUser) {
+      throw new Error("Distributor wallet address not found");
+    }
 
-      // Get distributor details
-      const distributor = await Distributor.findOne({ "user.address": to }).session(session);
-      if (!distributor) {
-        throw new Error("Distributor not found");
-      }
+    // Then find the distributor by user ID
+    const distributor = await Distributor.findOne({ user: distributorUser._id });
+    if (!distributor) {
+      throw new Error("Distributor not found for the given wallet address");
+    }
 
-      // Update batch quantity
-      batch.quantityAvailable -= quantity;
+    // Check if product associated with batch exists
+    const product = await Product.findOne({ batchNumber: batch.batchNumber });
+    if (!product) {
+      throw new Error("Cannot assign batch without associated product");
+    }
+
+    // Calculate new available quantity
+    const newQuantityAvailable = batch.quantityAvailable - quantity;
       
-      // Add to shipment history
-      batch.shipmentHistory.push({
+      // Prepare shipment entry
+      const shipmentEntry = {
         timestamp: new Date(),
         from: manufacturer.companyName,
+        fromAddress: manufacturer.user?.address || '',
         to: distributor.companyName,
+        toAddress: distributorUser.address,
         status,
         quantity: quantity.toString(),
         remarks,
-        actor: {
+        actor: req.body.actor || {
           name: manufacturer.companyName,
           type: "Manufacturer",
           license: manufacturer.licenseNumber,
           location: manufacturer.address
         },
-        environmentalConditions: {
+        environmentalConditions: req.body.environmentalConditions || {
           temperature: "25°C",
           humidity: "60%",
           status: "Normal"
         },
-        qualityCheck: {
+        qualityCheck: req.body.qualityCheck || {
           performedBy: req.user.name,
           date: new Date(),
           result: "Pass",
@@ -313,71 +322,48 @@ const assignBatchToDistributor = async (req, res) => {
           timestamp: new Date(),
           role: "Manufacturer"
         }
-      });
+      };
 
-      // If all quantity is assigned, update batch status
-      if (batch.quantityAvailable === 0) {
-        batch.shipmentStatus = "In Transit";
+      // Update batch with new quantity and shipment history atomically
+      const updatedBatch = await Batch.findOneAndUpdate(
+        { batchNumber: batchId, quantityAvailable: { $gte: quantity } },
+        { 
+          $set: {
+            quantityAvailable: newQuantityAvailable,
+            shipmentStatus: newQuantityAvailable === 0 ? "In Transit" : status,
+            updatedAt: new Date()
+          },
+          $push: { shipmentHistory: shipmentEntry }
+        },
+        { new: true }
+      );
+
+      if (!updatedBatch) {
+        throw new Error("Failed to update batch. Quantity may have changed.");
       }
-
-      await batch.save({ session });
-      await session.commitTransaction();
 
       res.status(200).json({
         message: "Batch assigned successfully",
         assignment: {
-          batchNumber: batch.batchNumber,
-          productDetails: `${batch.dosageForm} ${batch.strength}`,
+          batchNumber: updatedBatch.batchNumber,
+          productName: product.productName,
+          productDetails: `${updatedBatch.dosageForm} ${updatedBatch.strength}`,
           distributor: distributor.companyName,
-          distributorWallet: to,
+          distributorWallet: distributorUser.address,
           quantity,
           remarks,
           assignedAt: new Date(),
-          shipmentStatus: status
+          shipmentStatus: updatedBatch.shipmentStatus,
+          shipmentEntry
         }
       });
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
-  } catch (error) {
-    return res.status(400).json({ message: "Distributor address and quantity are required" });
-  }
-
-  try {
-    const batch = await Batch.findById(batchId);
-    if (!batch) {
-      return res.status(404).json({ message: "Batch not found" });
-    }
-
-    // Check if product associated with batch exists
-    const product = await Product.findOne({ batchId: batch._id });
-    if (!product) {
-      return res.status(400).json({ message: "Cannot assign batch without associated product" });
-    }
-
-    // Note: quantityAvailable NOT reduced here
-    // Append to shipmentHistory with quantity
-    batch.shipmentHistory.push({
-      from: req?.user?.address,
-      to,
-      status,
-      remarks,
-      txHash,
-      quantity,
-    });
-
-    batch.shipmentStatus = status;
-    batch.updatedAt = new Date();
-
-    await batch.save();
-
-    res.status(200).json({ message: "Batch assigned successfully", data: batch });
+    
   } catch (error) {
     console.error("Assign Batch Error:", error);
-    res.status(500).json({ message: "Failed to assign batch", error: error.message });
+    return res.status(400).json({ 
+      message: error.message || "Failed to assign batch",
+      error: error.message 
+    });
   }
 };
 

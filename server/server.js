@@ -8,6 +8,7 @@ const batchRoutes = require("./routes/batchRoutes");
 const manufacturerRoutes = require("./routes/manufacturerRoutes");
 const distributerRoutes = require('./routes/distributerRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
+const verificationRoutes = require('./routes/verificationRoutes');
 
 const connect_db = require('./config/db');
 
@@ -25,11 +26,13 @@ app.use("/api/products", productRoutes);
 app.use("/api/batches", batchRoutes);
 app.use("/api/manufacturer", manufacturerRoutes);
 app.use("/api/distributer", distributerRoutes);
-app.use("/api/pharmacies", require("./routes/pharmacyRoutes"));
+app.use("/api/pharmacy", require("./routes/pharmacyRoutes"));
 app.use("/api/tracking", require("./routes/trackingRoutes"));
 app.use("/api/assignments", assignmentRoutes);
+app.use("/api/distribution", require("./routes/distributionRoutes"));
+app.use("/api/verification", verificationRoutes);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

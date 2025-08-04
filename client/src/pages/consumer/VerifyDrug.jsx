@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Scan, Package, ArrowRight, X } from "lucide-react";
+import { Search, Scan, Package, ArrowRight, X, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/UI/Card";
 import { Input } from "../../components/UI/Input";
 import { Button } from "../../components/UI/Button";
 import { Modal } from "../../components/UI/Modal";
 import { Badge } from "../../components/UI/Badge";
+import { verificationAPI } from "../../services/api/verificationAPI";
 
 const VerifyDrug = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const VerifyDrug = () => {
   const [serialNumber, setSerialNumber] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
+  const [error, setError] = useState(null);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -29,27 +31,42 @@ const VerifyDrug = () => {
   };
 
   const handleVerify = async () => {
+    if (!serialNumber.trim()) {
+      setError('Please enter a serial number');
+      return;
+    }
+
     setIsVerifying(true);
-    // Simulate API call
-    setTimeout(() => {
+    setError(null);
+
+    try {
+      const result = await verificationAPI.verifyProduct(serialNumber.trim());
+      setVerificationResult(result);
+    } catch (error) {
+      console.error('Verification error:', error);
+      setError(error.message || 'Failed to verify product. Please check the serial number and try again.');
+      
+      // Set a fake result for products not found to show the structure
+      if (error.message?.includes('not found')) {
+        setVerificationResult({
+          success: false,
+          isAuthentic: false,
+          message: 'Product not found in our database',
+          product: {
+            serialNumber: serialNumber.trim()
+          }
+        });
+      }
+    } finally {
       setIsVerifying(false);
-      setVerificationResult({
-        isAuthentic: true,
-        productName: "Amoxicillin 500mg",
-        manufacturer: "PharmaCorp Inc.",
-        serialNumber: serialNumber || "AMX123456789",
-        manufactureDate: "2025-01-15",
-        expiryDate: "2027-01-15",
-        batchNumber: "BATCH123",
-        currentLocation: "Pharmacy XYZ, New York",
-      });
-    }, 2000);
+    }
   };
 
   const resetVerification = () => {
     setVerificationMethod(null);
     setSerialNumber("");
     setVerificationResult(null);
+    setError(null);
   };
 
   return (
@@ -153,12 +170,19 @@ const VerifyDrug = () => {
                   <h3 className="mb-6 text-xl font-semibold text-gray-900">
                     Enter Serial Number
                   </h3>
+                  {error && (
+                    <div className="flex items-center p-4 mb-4 text-red-700 bg-red-100 border border-red-200 rounded-lg">
+                      <AlertTriangle className="w-5 h-5 mr-2" />
+                      <span className="text-sm">{error}</span>
+                    </div>
+                  )}
                   <div className="flex flex-col w-full gap-4 sm:flex-row">
                     <div className="flex-grow">
                       <Input
                         placeholder="Enter product serial number"
                         value={serialNumber}
                         onChange={(e) => setSerialNumber(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
                         icon={<Search className="w-5 h-5" />}
                         className="w-full text-lg"
                       />
@@ -167,7 +191,7 @@ const VerifyDrug = () => {
                       variant="primary"
                       onClick={handleVerify}
                       loading={isVerifying}
-                      disabled={!serialNumber}
+                      disabled={!serialNumber.trim()}
                       className="w-full h-full px-8 py-3 sm:w-auto"
                     >
                       Verify
@@ -189,10 +213,23 @@ const VerifyDrug = () => {
               <div className="flex items-start justify-between mb-8">
                 <div className="flex items-center space-x-4">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-green-500 rounded-full opacity-25 "></div>
-                    <Badge variant="success" size="lg" className="relative">
-                      Authentic Product
-                    </Badge>
+                    {verificationResult.isAuthentic ? (
+                      <>
+                        <div className="absolute inset-0 bg-green-500 rounded-full opacity-25"></div>
+                        <Badge variant="success" size="lg" className="relative flex items-center">
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Authentic Product
+                        </Badge>
+                      </>
+                    ) : (
+                      <>
+                        <div className="absolute inset-0 bg-red-500 rounded-full opacity-25"></div>
+                        <Badge variant="danger" size="lg" className="relative flex items-center">
+                          <XCircle className="w-4 h-4 mr-2" />
+                          {verificationResult.success === false ? 'Product Not Found' : 'Unverified Product'}
+                        </Badge>
+                      </>
+                    )}
                   </div>
                   <p className="text-gray-600">
                     Verified on {new Date().toLocaleDateString()}
@@ -211,66 +248,149 @@ const VerifyDrug = () => {
                 <div className="space-y-6">
                   <div className="pb-6 border-b border-gray-100">
                     <h3 className="text-2xl font-semibold text-gray-900">
-                      {verificationResult.productName}
+                      {verificationResult.product?.productName || 'Unknown Product'}
                     </h3>
                     <p className="mt-2 text-gray-600">
-                      Manufactured by {verificationResult.manufacturer}
+                      Manufactured by {verificationResult.manufacturer?.name || 'Unknown Manufacturer'}
                     </p>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 rounded-lg bg-gray-50">
-                        <p className="text-sm text-gray-500">Serial Number</p>
-                        <p className="mt-1 font-medium text-gray-900">
-                          {verificationResult.serialNumber}
-                        </p>
+                  {verificationResult.success !== false && (
+                    <>
+                      {/* Expiry Warning */}
+                      {verificationResult.isExpired && (
+                        <div className="flex items-center p-4 text-red-700 bg-red-100 border border-red-200 rounded-lg">
+                          <AlertTriangle className="w-5 h-5 mr-2" />
+                          <span className="text-sm font-medium">This product has expired</span>
+                        </div>
+                      )}
+                      
+                      {!verificationResult.isExpired && verificationResult.daysUntilExpiry <= 30 && (
+                        <div className="flex items-center p-4 text-orange-700 bg-orange-100 border border-orange-200 rounded-lg">
+                          <AlertTriangle className="w-5 h-5 mr-2" />
+                          <span className="text-sm font-medium">
+                            Expires in {verificationResult.daysUntilExpiry} days
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 rounded-lg bg-gray-50">
+                            <p className="text-sm text-gray-500">Serial Number</p>
+                            <p className="mt-1 font-medium text-gray-900">
+                              {verificationResult.product?.serialNumber}
+                            </p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-gray-50">
+                            <p className="text-sm text-gray-500">Batch Number</p>
+                            <p className="mt-1 font-medium text-gray-900">
+                              {verificationResult.product?.batchNumber}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 rounded-lg bg-gray-50">
+                            <p className="text-sm text-gray-500">Manufacture Date</p>
+                            <p className="mt-1 font-medium text-gray-900">
+                              {verificationResult.product?.manufactureDate ? 
+                                new Date(verificationResult.product.manufactureDate).toLocaleDateString() : 
+                                'N/A'}
+                            </p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-gray-50">
+                            <p className="text-sm text-gray-500">Expiry Date</p>
+                            <p className="mt-1 font-medium text-gray-900">
+                              {verificationResult.product?.expiryDate ? 
+                                new Date(verificationResult.product.expiryDate).toLocaleDateString() : 
+                                'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Additional Product Details */}
+                        {(verificationResult.product?.dosageForm || verificationResult.product?.strength) && (
+                          <div className="grid grid-cols-2 gap-4">
+                            {verificationResult.product.dosageForm && (
+                              <div className="p-4 rounded-lg bg-gray-50">
+                                <p className="text-sm text-gray-500">Dosage Form</p>
+                                <p className="mt-1 font-medium text-gray-900">
+                                  {verificationResult.product.dosageForm}
+                                </p>
+                              </div>
+                            )}
+                            {verificationResult.product.strength && (
+                              <div className="p-4 rounded-lg bg-gray-50">
+                                <p className="text-sm text-gray-500">Strength</p>
+                                <p className="mt-1 font-medium text-gray-900">
+                                  {verificationResult.product.strength}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="p-4 rounded-lg bg-gray-50">
-                        <p className="text-sm text-gray-500">Batch Number</p>
-                        <p className="mt-1 font-medium text-gray-900">
-                          {verificationResult.batchNumber}
-                        </p>
-                      </div>
+                    </>
+                  )}
+
+                  {/* Error message for not found products */}
+                  {verificationResult.success === false && (
+                    <div className="p-6 border border-red-200 rounded-lg bg-red-50">
+                      <h4 className="text-lg font-semibold text-red-800">Product Not Found</h4>
+                      <p className="mt-2 text-red-600">
+                        The serial number "{verificationResult.product?.serialNumber}" was not found in our database. 
+                        Please check the serial number and try again.
+                      </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 rounded-lg bg-gray-50">
-                        <p className="text-sm text-gray-500">Manufacture Date</p>
-                        <p className="mt-1 font-medium text-gray-900">
-                          {verificationResult.manufactureDate}
-                        </p>
-                      </div>
-                      <div className="p-4 rounded-lg bg-gray-50">
-                        <p className="text-sm text-gray-500">Expiry Date</p>
-                        <p className="mt-1 font-medium text-gray-900">
-                          {verificationResult.expiryDate}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="space-y-6">
-                  <div className="p-6 rounded-lg bg-primary-50">
-                    <h4 className="text-lg font-semibold text-gray-900">
-                      Current Location
-                    </h4>
-                    <p className="mt-2 text-gray-600">
-                      {verificationResult.currentLocation}
-                    </p>
-                  </div>
-                  <Button
-                    variant="primary"
-                    className="justify-center w-full py-3 text-center transition-all duration-300 shadow-lg hover:shadow-xl"
-                    onClick={() =>
-                      navigate(
-                        `/consumer/journey/${verificationResult.serialNumber}`
-                      )
-                    }
-                  >
-                    View Complete Journey
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
+                  {verificationResult.success !== false && verificationResult.currentLocation && (
+                    <div className="p-6 rounded-lg bg-primary-50">
+                      <h4 className="text-lg font-semibold text-gray-900">
+                        Current Location
+                      </h4>
+                      <p className="mt-2 text-gray-600">
+                        {verificationResult.currentLocation.location}
+                      </p>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Updated: {new Date(verificationResult.currentLocation.lastUpdated).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Blockchain Verification */}
+                  {verificationResult.blockchain?.verified && (
+                    <div className="p-6 rounded-lg bg-blue-50">
+                      <h4 className="text-lg font-semibold text-gray-900">
+                        Blockchain Verified
+                      </h4>
+                      <p className="mt-2 text-gray-600">
+                        This product is verified on the blockchain
+                      </p>
+                      {verificationResult.blockchain.txHash && (
+                        <p className="mt-1 text-xs text-blue-600 break-all">
+                          TX: {verificationResult.blockchain.txHash}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {verificationResult.success !== false && (
+                    <Button
+                      variant="primary"
+                      className="justify-center w-full py-3 text-center transition-all duration-300 shadow-lg hover:shadow-xl"
+                      onClick={() =>
+                        navigate(
+                          `/consumer/journey/${verificationResult.product?.serialNumber}`
+                        )
+                      }
+                    >
+                      View Complete Journey
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

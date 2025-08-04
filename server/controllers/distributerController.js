@@ -76,11 +76,22 @@ const getDistributorInventory = async (req, res) => {
       
       // Calculate current quantity
       const initialQuantity = batch.quantityProduced || 0;
-      const shippedQuantity = (batch.shipmentHistory || [])
-        .filter(sh => sh.status?.toLowerCase() === 'delivered')
-        .reduce((sum, sh) => sum + (Number(sh.quantity) || 0), 0);
       
-      const currentQty = initialQuantity - shippedQuantity;
+      // Calculate shipped quantities (both delivered and in transit)
+      const shipmentQuantities = (batch.shipmentHistory || [])
+        .reduce((acc, sh) => {
+          const qty = Number(sh.quantity) || 0;
+          const status = sh.status?.toLowerCase();
+          if (status === 'delivered' || status === 'in_transit') {
+            acc.shipped += qty;
+          }
+          if (status === 'pending' || status === 'rejected') {
+            acc.reserved += qty;
+          }
+          return acc;
+        }, { shipped: 0, reserved: 0 });
+      
+      const currentQty = initialQuantity - shipmentQuantities.shipped;
 
       // Parse storage conditions string or use object
       let storageConditions;
@@ -113,7 +124,7 @@ const getDistributorInventory = async (req, res) => {
         expiryDate: product?.expiryDate || batch.expiryDate || null,
         storageConditions,
         lastUpdated: batch.updatedAt || batch.createdAt || new Date(),
-        reserved: batch.reservedQuantity || 0
+        reserved: shipmentQuantities.reserved || 0
       };
     }));
 
