@@ -31,13 +31,14 @@ const ProductsList = () => {
   // Options for the Select component
   const statusOptions = [
     { value: 'all', label: 'All Status' },
-    { value: 'manufactured', label: 'Manufactured' },
+    { value: 'produced', label: 'Manufactured' },
     { value: 'in-transit', label: 'In Transit' },
     { value: 'delivered', label: 'Delivered' }
   ];
 
   // State for modals
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedBatch, setSelectedBatch] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
 
@@ -115,8 +116,9 @@ const ProductsList = () => {
     setShowQRModal(true);
   };
 
-  const handleProductClick = (product) => {
+  const handleProductClick = (product, batch) => {
     setSelectedProduct(product);
+    setSelectedBatch(batch);
     setShowProductModal(true);
   };
 
@@ -275,7 +277,7 @@ const ProductsList = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => handleProductClick(product)}
+                            onClick={() => handleProductClick(product, batch)}
                             className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
                           >
                             <MoreVertical className="w-5 h-5" />
@@ -369,6 +371,7 @@ const ProductsList = () => {
       {showProductModal && selectedProduct && (
         <ProductModal
           product={selectedProduct}
+          batch={selectedBatch}
           onClose={() => setShowProductModal(false)}
           onDownloadQR={downloadQRCode}
         />

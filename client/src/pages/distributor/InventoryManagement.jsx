@@ -34,14 +34,21 @@ const InventoryManagement = () => {
       setError(null);
       const res = await apiClient.get('/distributer/inventory');
       const inventoryData = res.data.inventory || [];
-      
-      // Process and enrich inventory data
-      const enrichedInventory = inventoryData.map(item => ({
-        ...item,
-        stockStatus: getStockStatus(item.quantity, item.total),
-        expiryStatus: getExpiryStatus(item.expiryDate),
-        lastUpdated: item.lastUpdated || new Date().toISOString(),
-      }));
+
+      const enrichedInventory = inventoryData.map(item => {
+        // Backwards compatibility mapping
+        const totalAssigned = item.totalAssignedToDistributor ?? item.total ?? item.quantity;
+        const shippedOut = item.shippedOutByDistributor ?? 0;
+        const available = item.quantity; // already remaining for distributor
+        return {
+          ...item,
+          totalAssignedToDistributor: totalAssigned,
+            shippedOutByDistributor: shippedOut,
+          stockStatus: getStockStatus(available, totalAssigned || 1),
+          expiryStatus: getExpiryStatus(item.expiryDate),
+          lastUpdated: item.lastUpdated || new Date().toISOString(),
+        };
+      });
       
       setInventory(enrichedInventory);
     } catch (error) {
@@ -53,7 +60,7 @@ const InventoryManagement = () => {
   };
 
   const getStockStatus = (available, total) => {
-    const ratio = available / total;
+    const ratio = total > 0 ? (available / total) : 0;
     if (ratio <= 0.2) return 'low';
     if (ratio <= 0.5) return 'medium';
     return 'good';
@@ -220,8 +227,9 @@ const InventoryManagement = () => {
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Product</th>
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Batch ID</th>
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Manufacturer</th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Available Qty</th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Total Qty</th>
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Remaining (You Hold)</th>
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Assigned To You</th>
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Shipped Out</th>
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Manufacturing Date</th>
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Expiry Date</th>
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Status</th>
@@ -238,7 +246,8 @@ const InventoryManagement = () => {
                   <td className="px-6 py-4 whitespace-nowrap">{item.batchId}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.manufacturer || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.quantity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.total}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.totalAssignedToDistributor}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.shippedOutByDistributor || 0}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.manufacturingDate)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.expiryDate)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -276,12 +285,16 @@ const InventoryManagement = () => {
                   
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div>
-                      <p className="text-sm text-gray-500">Available</p>
+                      <p className="text-sm text-gray-500">Remaining</p>
                       <p className="text-lg font-semibold">{item.quantity}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Total</p>
-                      <p className="text-lg font-semibold">{item.total}</p>
+                      <p className="text-sm text-gray-500">Assigned</p>
+                      <p className="text-lg font-semibold">{item.totalAssignedToDistributor}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Shipped Out</p>
+                      <p className="text-lg font-semibold">{item.shippedOutByDistributor || 0}</p>
                     </div>
                   </div>
 

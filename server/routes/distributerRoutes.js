@@ -8,10 +8,11 @@ router.get('/list', distributorController.getApprovedDistributors);
 
 // Distributor dashboard API endpoints
 router.get('/products', authMiddleware(['distributor']), distributorController.getDistributorProducts);
-router.get('/batches', authMiddleware(['distributor']), distributorController.getDistributorBatches);
+router.get('/batches', authMiddleware(['distributor', 'manufacturer']), distributorController.getDistributorBatches);
 router.get('/inventory', authMiddleware(['distributor']), distributorController.getDistributorInventory);
 router.get('/transfers', authMiddleware(['distributor']), distributorController.getDistributorTransfers);
 router.post('/receive', authMiddleware(['distributor']), distributorController.receiveProduct);
 router.post('/ship', authMiddleware(['distributor']), distributorController.shipProduct);
+router.post('/distribute-batch', authMiddleware(['distributor']), distributorController.distributeBatchToPharmacy);
 
 module.exports = router;

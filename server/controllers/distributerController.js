@@ -27,7 +27,12 @@ const getDistributorProducts = async (req, res) => {
 // Fetch assigned batches (filter by distributor address if provided)
 const getDistributorBatches = async (req, res) => {
   try {
-    const distributorAddress = req.query.address || req.headers['x-distributor-address'];
+    let distributorAddress = req.query.address || req.headers['x-distributor-address'];
+    // Derive from authenticated user if missing and role is distributor
+    if (!distributorAddress && req.user && req.user.role === 'distributor') {
+      const authUser = await User.findById(req.user.userId).lean();
+      distributorAddress = authUser?.address;
+    }
     let batches;
     if (distributorAddress) {
       batches = await Batch.find({ shipmentHistory: { $elemMatch: { to: distributorAddress } } });
@@ -36,13 +41,47 @@ const getDistributorBatches = async (req, res) => {
     }
     // Map to frontend format
     const formatted = await Promise.all(batches.map(async b => {
-      // Try to get product name and serial number for this batch
       const product = await Product.findOne({ batchId: b._id });
-      // Include full shipment history for UI
+
+      // Sum quantities assigned TO this distributor (manufacturer -> distributor)
+      const assignedToDistributor = (b.shipmentHistory || []).reduce((sum, entry) => {
+        const qty = Number(entry.quantity) || 0;
+        if (entry.to === distributorAddress || entry.toAddress === distributorAddress) {
+          // Count only manufacturer -> distributor movements (Produced status excluded)
+          if (entry.status && entry.status.toLowerCase() !== 'produced') {
+            return sum + qty;
+          }
+        }
+        return sum;
+      }, 0);
+
+      // Sum quantities the distributor has already shipped OUT to pharmacies (toAddress not equal distributor)
+      const shippedOutByDistributor = (b.shipmentHistory || []).reduce((sum, entry) => {
+        const qty = Number(entry.quantity) || 0;
+        if ((entry.from === distributorAddress || entry.fromAddress === distributorAddress) && entry.to !== distributorAddress) {
+          if (entry.status && ['in transit','delivered'].includes(entry.status.toLowerCase())) {
+            return sum + qty;
+          }
+        }
+        return sum;
+      }, 0);
+
+      const distributorAvailable = Math.max(0, assignedToDistributor - shippedOutByDistributor);
+
       return {
         batchId: b.batchNumber,
+        storageConditions: b.storageConditions,
+        manufactureDate: b.manufactureDate,
+        expiryDate: b.expiryDate,
+        dosageForm: b.dosageForm,
+        strength: b.strength,
+        productionLocation: b.productionLocation,
+        approvalCertId: b.approvalCertId,
         product: product ? product.productName : (b.dosageForm + ' ' + b.strength),
-        quantity: b.quantityProduced,
+        // quantity now reflects what this distributor still holds
+        quantity: distributorAvailable,
+        totalAssignedToDistributor: assignedToDistributor,
+        shippedOutByDistributor,
         status: b.shipmentStatus,
         manufacturer: b.manufacturerId ? b.manufacturerId.toString() : '',
         serialNumber: product ? product.serialNumber : '',
@@ -58,7 +97,11 @@ const getDistributorBatches = async (req, res) => {
 // Fetch inventory (batches with quantityAvailable > 0, filter by distributor if provided)
 const getDistributorInventory = async (req, res) => {
   try {
-    const distributorAddress = req.query.address || req.headers['x-distributor-address'];
+    let distributorAddress = req.query.address || req.headers['x-distributor-address'];
+    if (!distributorAddress && req.user && req.user.role === 'distributor') {
+      const authUser = await User.findById(req.user.userId).lean();
+      distributorAddress = authUser?.address;
+    }
     
     // Find batches for this distributor
     let query = {};
@@ -74,24 +117,38 @@ const getDistributorInventory = async (req, res) => {
     const inventory = await Promise.all(batches.map(async batch => {
       const product = await Product.findOne({ batchId: batch._id }).lean();
       
-      // Calculate current quantity
-      const initialQuantity = batch.quantityProduced || 0;
-      
-      // Calculate shipped quantities (both delivered and in transit)
-      const shipmentQuantities = (batch.shipmentHistory || [])
-        .reduce((acc, sh) => {
-          const qty = Number(sh.quantity) || 0;
-          const status = sh.status?.toLowerCase();
-          if (status === 'delivered' || status === 'in_transit') {
-            acc.shipped += qty;
+      // Quantities from perspective of this distributor
+      const assignedToDistributor = (batch.shipmentHistory || []).reduce((sum, entry) => {
+        const qty = Number(entry.quantity) || 0;
+        if (entry.to === distributorAddress || entry.toAddress === distributorAddress) {
+          if (entry.status && entry.status.toLowerCase() !== 'produced') {
+            return sum + qty;
           }
-          if (status === 'pending' || status === 'rejected') {
-            acc.reserved += qty;
+        }
+        return sum;
+      }, 0);
+
+      const shippedOutByDistributor = (batch.shipmentHistory || []).reduce((sum, entry) => {
+        const qty = Number(entry.quantity) || 0;
+        if ((entry.from === distributorAddress || entry.fromAddress === distributorAddress) && entry.to !== distributorAddress) {
+          if (entry.status && ['in transit','delivered'].includes(entry.status.toLowerCase())) {
+            return sum + qty;
           }
-          return acc;
-        }, { shipped: 0, reserved: 0 });
-      
-      const currentQty = initialQuantity - shipmentQuantities.shipped;
+        }
+        return sum;
+      }, 0);
+
+      const reservedByDistributor = (batch.shipmentHistory || []).reduce((sum, entry) => {
+        const qty = Number(entry.quantity) || 0;
+        if ((entry.from === distributorAddress || entry.fromAddress === distributorAddress) && entry.to !== distributorAddress) {
+          if (entry.status && ['pending','rejected'].includes(entry.status.toLowerCase())) {
+            return sum + qty;
+          }
+        }
+        return sum;
+      }, 0);
+
+      const currentQty = Math.max(0, assignedToDistributor - shippedOutByDistributor);
 
       // Parse storage conditions string or use object
       let storageConditions;
@@ -116,15 +173,16 @@ const getDistributorInventory = async (req, res) => {
         batchId: batch.batchNumber,
         product: product?.productName || `${batch.dosageForm || ''} ${batch.strength || ''}`.trim(),
         manufacturer: batch.manufacturerId?.name || 'N/A',
-        quantity: currentQty,
-        total: initialQuantity,
+  quantity: currentQty,
+  totalAssignedToDistributor: assignedToDistributor,
         status: batch.status || 'Available',
         serialNumber: product?.serialNumber || '',
         manufacturingDate: product?.manufacturingDate || batch.manufacturingDate || new Date(batch.createdAt || Date.now()),
         expiryDate: product?.expiryDate || batch.expiryDate || null,
         storageConditions,
         lastUpdated: batch.updatedAt || batch.createdAt || new Date(),
-        reserved: shipmentQuantities.reserved || 0
+  reserved: reservedByDistributor || 0,
+  shippedOutByDistributor
       };
     }));
 
@@ -253,6 +311,80 @@ const shipProduct = async (req, res) => {
 };
 
 
+// Distribute batch quantity (aggregate) from distributor to pharmacy
+// Body: { batchNumber, pharmacyAddress, quantity, remarks }
+const distributeBatchToPharmacy = async (req, res) => {
+  try {
+    const { batchNumber, pharmacyAddress, quantity, remarks } = req.body;
+    if (!batchNumber || !pharmacyAddress || !quantity) {
+      return res.status(400).json({ message: 'batchNumber, pharmacyAddress and quantity are required' });
+    }
+    const qty = Number(quantity);
+    if (isNaN(qty) || qty <= 0) {
+      return res.status(400).json({ message: 'quantity must be a positive number' });
+    }
+
+    // Find batch
+    const batch = await Batch.findOne({ batchNumber });
+    if (!batch) return res.status(404).json({ message: 'Batch not found' });
+
+    // Distributor address from auth user (assuming user has address field)
+    const distributorUser = await User.findById(req.user.userId);
+    if (!distributorUser) return res.status(404).json({ message: 'Distributor user not found' });
+    const distributorAddress = distributorUser.address;
+
+    // Compute distributor holdings
+    const assignedToDistributor = (batch.shipmentHistory || []).reduce((sum, entry) => {
+      const q = Number(entry.quantity) || 0;
+      if (entry.toAddress === distributorAddress || entry.to === distributorAddress) {
+        if (entry.status && entry.status.toLowerCase() !== 'produced') {
+          return sum + q;
+        }
+      }
+      return sum;
+    }, 0);
+
+    const shippedOutByDistributor = (batch.shipmentHistory || []).reduce((sum, entry) => {
+      const q = Number(entry.quantity) || 0;
+      if ((entry.fromAddress === distributorAddress || entry.from === distributorAddress) && entry.to !== distributorAddress) {
+        if (entry.status && ['in transit','delivered'].includes(entry.status.toLowerCase())) {
+          return sum + q;
+        }
+      }
+      return sum;
+    }, 0);
+
+    const available = Math.max(0, assignedToDistributor - shippedOutByDistributor);
+    if (available < qty) {
+      return res.status(400).json({ message: `Insufficient distributor quantity. Available: ${available}` });
+    }
+
+    // Append shipmentHistory entry
+    batch.shipmentHistory.push({
+      timestamp: new Date(),
+      from: distributorUser.companyName || 'Distributor',
+      fromAddress: distributorAddress,
+      to: pharmacyAddress,
+      toAddress: pharmacyAddress,
+      status: 'In Transit',
+      quantity: qty.toString(),
+      remarks: remarks || 'Distribution to pharmacy'
+    });
+    batch.shipmentStatus = 'In Transit';
+    await batch.save();
+
+    res.json({
+      message: 'Distribution recorded',
+      batchNumber,
+      quantity: qty,
+      remaining: available - qty
+    });
+  } catch (error) {
+    console.error('Distribute batch error:', error);
+    res.status(500).json({ message: 'Failed to distribute batch', error: error.message });
+  }
+};
+
 const getApprovedDistributors = async (req, res) => {
   try {
     const distributors = await Distributor.find()
@@ -280,4 +412,5 @@ module.exports = {
   getDistributorTransfers,
   receiveProduct,
   shipProduct
+  ,distributeBatchToPharmacy
 };

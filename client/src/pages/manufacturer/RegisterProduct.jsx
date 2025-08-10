@@ -43,8 +43,8 @@ const RegisterProduct = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch batches
-        const batchesResponse = await apiClient.get('/batches/available');
+        // Fetch batches available for product registration
+        const batchesResponse = await apiClient.get('/batches/available-for-products');
         setBatches(batchesResponse.data.batches || []);
         if (batchesResponse.data.batches.length === 0) {
           setAlert({
@@ -222,7 +222,7 @@ const RegisterProduct = () => {
 
   const batchOptions = batches.map((batch) => ({
     value: batch.batchNumber,
-    label: `${batch.batchNumber} (Qty: ${batch.quantityAvailable})`,
+    label: `${batch.batchNumber} (${batch.quantityAvailable} available for products)`,
   }));
 
   return (

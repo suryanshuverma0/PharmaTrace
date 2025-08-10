@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../UI/Button';
 
-const ProductModal = ({ product, onClose, onDownloadQR }) => {
+const ProductModal = ({ product,batch, onClose, onDownloadQR }) => {
   // Debug log to see what data we're receiving
   console.log('Product data in modal:', product);
   
@@ -133,18 +133,10 @@ const ProductModal = ({ product, onClose, onDownloadQR }) => {
 
               {/* Storage Conditions */}
               <div>
-                <h3 className="flex items-center gap-2 mb-3 text-lg font-medium">
-                  <Thermometer className="w-5 h-5" />
-                  Storage Conditions
-                </h3>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <p className="text-sm text-gray-600">Temperature Range</p>
-                    <p className="font-medium text-gray-900">{product.storageTemp || "2°C to 8°C"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Humidity Range</p>
-                    <p className="font-medium text-gray-900">{product.humidity || "45% to 65%"}</p>
+                    <p className="text-sm text-gray-600">Storage </p>
+                    <p className="font-medium text-gray-900">{batch?.storageConditions}</p>
                   </div>
                 </div>
               </div>

@@ -61,11 +61,49 @@ const registerBatch = async (req, res) => {
       return res.status(400).json({ message: "Manufacturer not found" });
     }
 
+    // Function to parse storage conditions and extract environmental data
+    const parseStorageConditions = (storageConditions) => {
+      if (!storageConditions) {
+        return {
+          temperature: '25°C',
+          humidity: '60%',
+          status: 'Normal'
+        };
+      }
+
+      // Extract temperature from storage conditions
+      const tempMatch = storageConditions.match(/(\d+)°?\s*c/i);
+      const temperature = tempMatch ? `${tempMatch[1]}°C` : '25°C';
+      
+      // Determine status based on temperature
+      const tempValue = tempMatch ? parseInt(tempMatch[1]) : 25;
+      let status = 'Normal';
+      
+      if (tempValue > 30) {
+        status = 'Warning';
+      } else if (tempValue > 40) {
+        status = 'Critical';
+      }
+
+      // Extract humidity if mentioned, otherwise default
+      const humidityMatch = storageConditions.match(/(\d+)%?\s*humid/i);
+      const humidity = humidityMatch ? `${humidityMatch[1]}%` : '60%';
+
+      return {
+        temperature,
+        humidity,
+        status
+      };
+    };
+
     // Generate digital fingerprint for the batch (without blockchain)
     const digitalFingerprint = require('crypto')
       .createHash('sha256')
       .update(batchNumber + manuDate.toISOString() + expDate.toISOString())
       .digest('hex');
+
+    // Parse environmental conditions from storage conditions
+    const environmentalConditions = parseStorageConditions(storageConditions);
 
     // Create new batch in database with blockchain data
     const batch = new Batch({
@@ -74,7 +112,8 @@ const registerBatch = async (req, res) => {
       manufactureDate: manuDate,
       expiryDate: expDate,
       quantityProduced,
-      quantityAvailable: quantityProduced,
+      quantityAvailable: quantityProduced, // Available for individual product registration
+      quantityAssigned: 0, // Initially no quantity assigned to distributors
       dosageForm,
       strength,
       storageConditions: storageConditions || '',
@@ -94,16 +133,12 @@ const registerBatch = async (req, res) => {
         actor: {
           name: manufacturer.companyName || 'Unknown Manufacturer',
           type: 'Manufacturer',
-          license: manufacturer.licenseNumber || 'N/A',
+          license: approvalCertId || manufacturer.licenseNumber || 'N/A',
           location: productionLocation || manufacturer.address || 'N/A'
         },
-        environmentalConditions: {
-          temperature: '25°C',
-          humidity: '60%',
-          status: 'Normal'
-        },
+        environmentalConditions,
         qualityCheck: {
-          performedBy: req.user.name,
+          performedBy: manufacturer.companyName || req.user.name || 'System',
           date: new Date(),
           result: 'Pass',
           notes: 'Initial quality check passed'
@@ -214,9 +249,17 @@ const getBatchFromBlockchain = async (req, res) => {
 const getBatches = async (req, res) => {
   try {
     const batches = await Batch.find({ manufacturerId: req.user.userId }).select(
-      "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable approvalCertId storageConditions productionLocation shipmentStatus"
+      "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable quantityAssigned approvalCertId storageConditions productionLocation shipmentStatus"
     );
-    res.status(200).json({ batches });
+
+    // Add calculated fields
+    const batchesWithCalculatedFields = batches.map(batch => ({
+      ...batch.toObject(),
+      quantityRemainingForAssignment: Math.max(0, batch.quantityProduced - (batch.quantityAssigned || 0)),
+      totalProductsRegistered: batch.quantityProduced - batch.quantityAvailable
+    }));
+
+    res.status(200).json({ batches: batchesWithCalculatedFields });
   } catch (error) {
     return res.status(500).json({
       message: "Failed to fetch batches",
@@ -229,15 +272,52 @@ const getAvailableBatches = async (req, res) => {
   try {
     const batches = await Batch.find({
       manufacturerId: req.user.userId,
-      quantityAvailable: { $gt: 0 }, 
+      $expr: { 
+        $gt: [
+          { $subtract: ['$quantityProduced', { $ifNull: ['$quantityAssigned', 0] }] }, 
+          0
+        ] 
+      }
     }).select(
-      "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable approvalCertId storageConditions productionLocation shipmentStatus"
+      "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable quantityAssigned approvalCertId storageConditions productionLocation shipmentStatus"
     );
 
-    res.status(200).json({ batches });
+    // Add calculated fields
+    const batchesWithCalculatedFields = batches.map(batch => ({
+      ...batch.toObject(),
+      quantityRemainingForAssignment: Math.max(0, batch.quantityProduced - (batch.quantityAssigned || 0)),
+      totalProductsRegistered: batch.quantityProduced - batch.quantityAvailable
+    }));
+
+    res.status(200).json({ batches: batchesWithCalculatedFields });
   } catch (error) {
     return res.status(500).json({
-      message: "Failed to fetch batches",
+      message: "Failed to fetch available batches",
+      details: error.message,
+    });
+  }
+};
+
+const getAvailableBatchesForProducts = async (req, res) => {
+  try {
+    const batches = await Batch.find({
+      manufacturerId: req.user.userId,
+      quantityAvailable: { $gt: 0 }
+    }).select(
+      "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable quantityAssigned approvalCertId storageConditions productionLocation shipmentStatus"
+    );
+
+    // Add calculated fields
+    const batchesWithCalculatedFields = batches.map(batch => ({
+      ...batch.toObject(),
+      quantityRemainingForAssignment: Math.max(0, batch.quantityProduced - (batch.quantityAssigned || 0)),
+      totalProductsRegistered: batch.quantityProduced - batch.quantityAvailable
+    }));
+
+    res.status(200).json({ batches: batchesWithCalculatedFields });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to fetch batches available for products",
       details: error.message,
     });
   }
@@ -287,8 +367,8 @@ const assignBatchToDistributor = async (req, res) => {
       throw new Error("Cannot assign batch without associated product");
     }
 
-    // Calculate new available quantity
-    const newQuantityAvailable = batch.quantityAvailable - quantity;
+    // Use the new method to assign quantity to distributor
+    await batch.assignToDistributor(quantity);
       
       // Prepare shipment entry
       const shipmentEntry = {
@@ -324,13 +404,12 @@ const assignBatchToDistributor = async (req, res) => {
         }
       };
 
-      // Update batch with new quantity and shipment history atomically
+      // Update batch with shipment history and status
       const updatedBatch = await Batch.findOneAndUpdate(
-        { batchNumber: batchId, quantityAvailable: { $gte: quantity } },
+        { batchNumber: batchId },
         { 
           $set: {
-            quantityAvailable: newQuantityAvailable,
-            shipmentStatus: newQuantityAvailable === 0 ? "In Transit" : status,
+            shipmentStatus: status,
             updatedAt: new Date()
           },
           $push: { shipmentHistory: shipmentEntry }
@@ -432,6 +511,7 @@ module.exports = {
   getBatchFromBlockchain ,
   getBatches,
   getAvailableBatches,
+  getAvailableBatchesForProducts,
   assignBatchToDistributor,
   getRecentlyAssignedBatches
 };

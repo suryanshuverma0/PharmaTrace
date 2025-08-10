@@ -11,9 +11,11 @@ import Card from "../../components/UI/Card";
 import Input from "../../components/UI/Input";
 import Button from "../../components/UI/Button";
 import Alert from "../../components/UI/Alert";
+import QuantityExplanation from "../../components/UI/QuantityExplanation";
 import apiClient from "../../services/api/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Select from "../../components/UI/Select";
+import toast from "react-hot-toast";
 
 const RegisterBatch = () => {
   const [formData, setFormData] = useState({
@@ -25,12 +27,7 @@ const RegisterBatch = () => {
     strength: "",
     storageConditions: "",
     productionLocation: "",
-    approvalCertId: "",
-    qualityCheck: {
-      performedBy: "",
-      result: "Pass",
-      notes: ""
-    }
+    approvalCertId: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alert, setAlert] = useState(null);
@@ -104,6 +101,17 @@ const RegisterBatch = () => {
     } else if (!/^\d+\s*(mg|g|ml)$/i.test(formData.strength)) {
       errors.push('Strength must be in format "number unit" (e.g., "500 mg").');
     }
+    if (!formData.approvalCertId) {
+      errors.push("Approval Certificate ID is required.");
+    }
+    if (!formData.storageConditions) {
+      errors.push("Storage conditions are required.");
+    } else if (!/(\d+)°?\s*c/i.test(formData.storageConditions)) {
+      errors.push("Storage conditions should include temperature (e.g., 'Store below 25°C').");
+    }
+    if (!formData.productionLocation) {
+      errors.push("Production location is required.");
+    }
     if (formData.manufactureDate && formData.expiryDate) {
       if (new Date(formData.expiryDate) <= new Date(formData.manufactureDate)) {
         errors.push("Expiry date must be after manufacture date.");
@@ -147,6 +155,8 @@ const RegisterBatch = () => {
           title: "Batch Registered",
           message: `Batch ${formData.batchNumber} registered successfully!`,
         });
+        toast.success(`Batch ${formData.batchNumber} registered successfully!`);
+        navigate("/manufacturer/registered-batches");
         setFormData({
           batchNumber: "",
           manufactureDate: "",
@@ -156,7 +166,7 @@ const RegisterBatch = () => {
           strength: "",
           storageConditions: "",
           productionLocation: "",
-          approvalCertId: "",
+          approvalCertId: ""
         });
         // Refresh batches
         const batchesResponse = await apiClient.get("/batches");
@@ -222,10 +232,21 @@ const RegisterBatch = () => {
         {batches.length > 0 && (
           <Card className="overflow-hidden">
             <div className="p-6">
-              <div className="flex items-center gap-2 mb-6 text-lg font-semibold text-gray-900">
-                <Table2 className="w-5 h-5 text-primary-600" />
-                <h3>Registered Batches</h3>
+              <div className="flex items-center justify-between gap-2 mb-6 text-lg font-semibold text-gray-900">
+                <div className="flex items-center gap-2">
+                  <Table2 className="w-5 h-5 text-primary-600" />
+                  <h3>Recent Batches</h3>
+                </div>
+                <Link
+                  to="/manufacturer/registered-batches"
+                  className="text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
+                >
+                  View All ({batches.length})
+                </Link>
               </div>
+              
+              <QuantityExplanation />
+              
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-gray-700 uppercase bg-gray-50">
@@ -235,13 +256,16 @@ const RegisterBatch = () => {
                       <th className="px-6 py-3">Strength</th>
                       <th className="px-6 py-3">Manufacture Date</th>
                       <th className="px-6 py-3">Expiry Date</th>
-                      <th className="px-6 py-3">Quantity</th>
+                      <th className="px-6 py-3">Produced</th>
+                      <th className="px-6 py-3">Products Reg.</th>
+                      <th className="px-6 py-3">Assigned</th>
+                      <th className="px-6 py-3">Remaining</th>
                       <th className="px-6 py-3">Approval Cert.</th>
                       <th className="px-6 py-3">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {batches.map((batch) => (
+                    {batches.slice(0, 5).map((batch) => (
                       <tr
                         key={batch._id}
                         className="bg-white border-b hover:bg-gray-50"
@@ -257,7 +281,18 @@ const RegisterBatch = () => {
                         <td className="px-6 py-4">
                           {new Date(batch.expiryDate).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4">{batch.quantityAvailable}</td>
+                        <td className="px-6 py-4 font-medium">
+                          {batch.quantityProduced}
+                        </td>
+                        <td className="px-6 py-4 text-blue-600">
+                          {batch.totalProductsRegistered || (batch.quantityProduced - batch.quantityAvailable)}
+                        </td>
+                        <td className="px-6 py-4 text-orange-600">
+                          {batch.quantityAssigned || 0}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-green-600">
+                          {batch.quantityRemainingForAssignment || (batch.quantityProduced - (batch.quantityAssigned || 0))}
+                        </td>
                         <td className="px-6 py-4">
                           {batch.approvalCertId || "-"}
                         </td>
@@ -270,7 +305,7 @@ const RegisterBatch = () => {
                                     batch.shipmentStatus === 'Recalled' ? 'bg-gray-200 text-gray-800' :
                                       'bg-gray-100 text-gray-800'}`}
                           >
-                            <span className="w-2 h-2 rounded-full inline-block"
+                            <span className="inline-block w-2 h-2 rounded-full"
                               style={{
                                 backgroundColor:
                                   batch.shipmentStatus === 'Produced' ? '#2563eb' :
@@ -288,6 +323,19 @@ const RegisterBatch = () => {
                     ))}
                   </tbody>
                 </table>
+                {batches.length > 5 && (
+                  <div className="p-4 text-center border-t bg-gray-50">
+                    <p className="text-sm text-gray-600">
+                      Showing {Math.min(5, batches.length)} of {batches.length} batches. 
+                      <Link 
+                        to="/manufacturer/registered-batches"
+                        className="ml-1 font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        View all batches
+                      </Link>
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </Card>
@@ -384,6 +432,7 @@ const RegisterBatch = () => {
                   name="approvalCertId"
                   value={formData.approvalCertId}
                   onChange={handleChange}
+                  required
                   placeholder="e.g., CERT123"
                 />
               </div>
@@ -401,13 +450,16 @@ const RegisterBatch = () => {
                   name="storageConditions"
                   value={formData.storageConditions}
                   onChange={handleChange}
+                  required
                   placeholder="e.g., Store below 25°C"
+                  title="Include temperature information for proper environmental tracking"
                 />
                 <Input
                   label="Production Location"
                   name="productionLocation"
                   value={formData.productionLocation}
                   onChange={handleChange}
+                  required
                   placeholder="e.g., Kathmandu, Nepal"
                 />
               </div>

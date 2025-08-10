@@ -65,9 +65,8 @@ const registerProduct = async (req, res) => {
       .update(serialNumber + batchNumber + new Date().toISOString())
       .digest('hex');
 
-    // Update batch quantity
-    batch.quantityAvailable -= 1;
-    await batch.save();
+    // Update batch quantity using the new method
+    await batch.registerProduct(1);
 
     // Save product to MongoDB with additional blockchain data
     const newProduct = await Product.create({

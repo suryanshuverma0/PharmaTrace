@@ -72,6 +72,11 @@ const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
       path: '/manufacturer/products' 
     },
     { 
+      icon: <Package size={20} />, 
+      label: 'Batches', 
+      path: '/manufacturer/registered-batches' 
+    },
+    { 
       icon: <Route size={20} />, 
       label: 'Track Products', 
       path: '/manufacturer/track' 

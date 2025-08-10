@@ -26,9 +26,13 @@ import apiClient from '../../services/api/api';
 const ManufacturerDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     totalProducts: 0,
-    totalInTransit: 0,
     totalBatches: 0,
+    totalInTransit: 0,
+    totalDelivered: 0,
+    verifiedProducts: 0,
+    expiringBatches: 0,
     recentBatches: [],
+    recentProducts: [],
   });
   const [manufacturerData, setManufacturerData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,11 +48,14 @@ const ManufacturerDashboard = () => {
         ]);
 
         setDashboardData({
-          totalProducts: dashboardResponse.data.totalProducts,
-          recentProducts: dashboardResponse.data.recentProducts,
+          totalProducts: dashboardResponse.data.totalProducts || 0,
+          totalBatches: dashboardResponse.data.totalBatches || 0,
           totalInTransit: dashboardResponse.data.totalInTransit || 0,
+          totalDelivered: dashboardResponse.data.totalDelivered || 0,
+          verifiedProducts: dashboardResponse.data.verifiedProducts || 0,
+          expiringBatches: dashboardResponse.data.expiringBatches || 0,
+          recentProducts: dashboardResponse.data.recentProducts || [],
           recentBatches: dashboardResponse.data.recentBatches || [],
-          totalBatches: dashboardResponse.data.recentBatches?.length || 0,
         });
 
         setManufacturerData(profileResponse.data);
@@ -61,39 +68,39 @@ const ManufacturerDashboard = () => {
     fetchData();
   }, []);
 
-  // Dummy data for other stats
+  // Enhanced stats with meaningful and easily fetchable data
   const stats = [
     { 
       label: 'Total Products',
       value: dashboardData.totalProducts.toLocaleString(),
-      change: '+12.5%',
-      trend: 'up',
+      change: dashboardData.totalProducts > 0 ? '+12.5%' : '0%',
+      trend: dashboardData.totalProducts > 0 ? 'up' : 'neutral',
       icon: <Boxes className="w-6 h-6" />,
       color: 'blue'
     },
     { 
-      label: 'In Transit',
-      value: dashboardData.totalInTransit.toLocaleString(),
-      change: '+3.2%',
-      trend: 'up',
-      icon: <Truck className="w-6 h-6" />,
-      color: 'indigo'
+      label: 'Total Batches',
+      value: dashboardData.totalBatches.toLocaleString(),
+      change: dashboardData.totalBatches > 0 ? '+5.8%' : '0%',
+      trend: dashboardData.totalBatches > 0 ? 'up' : 'neutral',
+      icon: <Box className="w-6 h-6" />,
+      color: 'purple'
     },
     { 
-      label: 'Verified',
-      value: '892',
-      change: '+8.1%',
-      trend: 'up',
+      label: 'Delivered',
+      value: dashboardData.totalDelivered.toLocaleString(),
+      change: dashboardData.totalDelivered > 0 ? '+8.1%' : '0%',
+      trend: dashboardData.totalDelivered > 0 ? 'up' : 'neutral',
       icon: <CheckCircle className="w-6 h-6" />,
       color: 'emerald'
     },
     { 
-      label: 'Issues Reported',
-      value: '2',
-      change: '-25%',
-      trend: 'down',
+      label: 'Expiring Soon',
+      value: dashboardData.expiringBatches.toLocaleString(),
+      change: dashboardData.expiringBatches > 0 ? 'Within 30 days' : 'None',
+      trend: dashboardData.expiringBatches > 0 ? 'warning' : 'neutral',
       icon: <AlertTriangle className="w-6 h-6" />,
-      color: 'amber'
+      color: dashboardData.expiringBatches > 0 ? 'amber' : 'gray'
     }
   ];
 
@@ -164,33 +171,99 @@ const ManufacturerDashboard = () => {
 
       {/* Stats Grid */}
       {!loading && (
-        <div className="grid grid-cols-1 gap-6 mx-6 mb-8 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat, index) => (
+        <div className="mx-6 mb-8">
+          <div className="grid grid-cols-1 gap-6 mb-6 sm:grid-cols-2 lg:grid-cols-4">
+            {stats.map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="p-6 bg-white border shadow-lg rounded-2xl border-gray-200/50"
+              >
+                <div className="flex items-center justify-between">
+                  <div className={`p-3 rounded-xl bg-${stat.color}-100`}>
+                    <div className={`text-${stat.color}-600`}>{stat.icon}</div>
+                  </div>
+                  <span className={`px-2.5 py-1 text-sm rounded-full ${
+                    stat.trend === 'up' 
+                      ? 'bg-emerald-100 text-emerald-800' 
+                      : stat.trend === 'warning'
+                      ? 'bg-amber-100 text-amber-800'
+                      : stat.trend === 'down'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {stat.change}
+                  </span>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-3xl font-bold text-gray-900">{stat.value}</h3>
+                  <p className="text-gray-600">{stat.label}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Additional Stats Row */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <motion.div
-              key={stat.label}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="p-6 bg-white border shadow-lg rounded-2xl border-gray-200/50"
+              transition={{ delay: 0.4 }}
+              className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl"
             >
-              <div className="flex items-center justify-between">
-                <div className={`p-3 rounded-xl bg-${stat.color}-100`}>
-                  <div className={`text-${stat.color}-600`}>{stat.icon}</div>
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Truck className="w-5 h-5 text-blue-600" />
                 </div>
-                <span className={`px-2.5 py-1 text-sm rounded-full ${
-                  stat.trend === 'up' 
-                    ? 'bg-emerald-100 text-emerald-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {stat.change}
-                </span>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-3xl font-bold text-gray-900">{stat.value}</h3>
-                <p className="text-gray-600">{stat.label}</p>
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {dashboardData.totalInTransit.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-600">In Transit</p>
+                </div>
               </div>
             </motion.div>
-          ))}
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {dashboardData.verifiedProducts.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-600">Verified Products</p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {((dashboardData.totalDelivered / Math.max(dashboardData.totalBatches, 1)) * 100).toFixed(1)}%
+                  </p>
+                  <p className="text-sm text-gray-600">Success Rate</p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       )}
 

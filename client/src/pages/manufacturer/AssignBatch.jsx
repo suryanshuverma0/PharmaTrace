@@ -7,6 +7,7 @@ import Button from "../../components/UI/Button";
 import Select from "../../components/UI/Select";
 import Alert from "../../components/UI/Alert";
 import RecentAssignments from "../../components/manufacturer/RecentAssignments";
+import toast from "react-hot-toast";
 
 const DUMMY_ASSIGNED_BATCHES = [
   {
@@ -206,6 +207,7 @@ const AssignBatch = () => {
       }
 
       setSuccess("Batch assigned to distributor successfully!");
+      toast.success("Batch assigned successfully!");
       
       // Reset form
       setSelectedBatch("");
@@ -319,7 +321,7 @@ const AssignBatch = () => {
                   { value: "", label: "-- Select Batch --" },
                   ...(batches || []).map((batch) => ({
                     value: batch._id,
-                    label: `${batch.batchNumber} (${batch.quantityAvailable} available)`,
+                    label: `${batch.batchNumber} (${batch.quantityRemainingForAssignment || batch.quantityProduced - (batch.quantityAssigned || 0)} remaining for assignment)`,
                   })),
                 ]}
               />

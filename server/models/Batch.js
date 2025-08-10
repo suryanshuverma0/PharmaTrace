@@ -35,6 +35,24 @@ const batchSchema = new mongoose.Schema({
       return this.quantityProduced;
     },
     min: 0,
+    description: 'Quantity available for individual product registration'
+  },
+
+  quantityAssigned: {
+    type: Number,
+    default: 0,
+    min: 0,
+    description: 'Total quantity assigned to distributors in batches'
+  },
+
+  // Virtual field to calculate remaining quantity for assignment
+  quantityRemaining: {
+    type: Number,
+    default: function() {
+      return this.quantityProduced - this.quantityAssigned;
+    },
+    min: 0,
+    description: 'Quantity remaining for batch assignment to distributors'
   },
 
   dosageForm: {
@@ -107,6 +125,9 @@ const batchSchema = new mongoose.Schema({
       timestamp: { type: Date, default: Date.now },
       from: { type: String, required: true },
       to: { type: String, required: true },
+  // Addresses (wallets) for more precise matching
+  fromAddress: { type: String },
+  toAddress: { type: String },
       status: { type: String, required: true },
       quantity: { type: String, required: true },
       remarks: String,
@@ -190,11 +211,49 @@ batchSchema.virtual('isOnBlockchain').get(function() {
   return !!(this.txHash && this.blockNumber);
 });
 
+// Virtual for remaining quantity calculation
+batchSchema.virtual('quantityRemainingForAssignment').get(function() {
+  return Math.max(0, (this.quantityProduced || 0) - (this.quantityAssigned || 0));
+});
+
+// Virtual for total products registered
+batchSchema.virtual('totalProductsRegistered').get(function() {
+  return (this.quantityProduced || 0) - (this.quantityAvailable || 0);
+});
+
 // Method to sync with blockchain
 batchSchema.methods.syncWithBlockchain = async function() {
   // This method can be used to verify batch data against blockchain
   // Implementation would depend on your specific blockchain setup
   this.lastBlockchainSync = new Date();
+  return this.save();
+};
+
+// Method to register a product (reduces quantityAvailable)
+batchSchema.methods.registerProduct = async function(quantity = 1) {
+  if (this.quantityAvailable < quantity) {
+    throw new Error('Insufficient quantity available for product registration');
+  }
+  this.quantityAvailable -= quantity;
+  return this.save();
+};
+
+// Method to assign quantity to distributor (increases quantityAssigned)
+batchSchema.methods.assignToDistributor = async function(quantity) {
+  const remaining = this.quantityRemainingForAssignment;
+  if (remaining < quantity) {
+    throw new Error(`Cannot assign ${quantity} units. Only ${remaining} units remaining for assignment`);
+  }
+  this.quantityAssigned = (this.quantityAssigned || 0) + quantity;
+  return this.save();
+};
+
+// Method to unassign quantity (decreases quantityAssigned) - for cancellations
+batchSchema.methods.unassignFromDistributor = async function(quantity) {
+  if ((this.quantityAssigned || 0) < quantity) {
+    throw new Error('Cannot unassign more than currently assigned');
+  }
+  this.quantityAssigned = Math.max(0, (this.quantityAssigned || 0) - quantity);
   return this.save();
 };
 

@@ -60,10 +60,13 @@ const getManufacturerDashboard = async (req, res) => {
       return res.status(400).json({ message: 'Invalid manufacturer ID format' });
     }
 
-
     // Count total products for the manufacturer
     const totalProducts = await Product.countDocuments({ manufacturerId });
     console.log("Total products:", totalProducts);
+
+    // Count total batches for the manufacturer
+    const totalBatches = await Batch.countDocuments({ manufacturerId });
+    console.log("Total batches:", totalBatches);
 
     // Count batches with shipmentStatus "In Transit"
     const totalInTransit = await Batch.countDocuments({
@@ -71,6 +74,31 @@ const getManufacturerDashboard = async (req, res) => {
       shipmentStatus: { $regex: '^In.*Transit$', $options: 'i' }
     });
     console.log("Total in-transit batches:", totalInTransit);
+
+    // Count batches delivered successfully
+    const totalDelivered = await Batch.countDocuments({
+      manufacturerId,
+      shipmentStatus: 'Delivered'
+    });
+    console.log("Total delivered batches:", totalDelivered);
+
+    // Count verified products 
+    const verifiedProducts = await Product.countDocuments({
+      manufacturerId,
+      verificationStatus: 'Verified'
+    });
+    console.log("Verified products:", verifiedProducts);
+
+    // Count batches expiring in next 30 days
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    
+    const expiringBatches = await Batch.countDocuments({
+      manufacturerId,
+      expiryDate: { $lte: thirtyDaysFromNow, $gte: new Date() },
+      shipmentStatus: { $nin: ['Delivered', 'Recalled'] }
+    });
+    console.log("Expiring batches:", expiringBatches);
 
     // Debug: Check batches for the manufacturer
     const batchesCheck = await Batch.find({ manufacturerId }).lean();
@@ -163,7 +191,11 @@ const getManufacturerDashboard = async (req, res) => {
 
     res.status(200).json({
       totalProducts,
+      totalBatches,
       totalInTransit,
+      totalDelivered,
+      verifiedProducts,
+      expiringBatches,
       recentProducts,
       recentBatches,
     });

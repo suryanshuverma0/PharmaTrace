@@ -30,6 +30,7 @@ import JourneyDetails from '../pages/consumer/JourneyDetails';
 import ManufacturerDashboard from '../pages/manufacturer/ManufacturerDashboard';
 import RegisterProduct from '../pages/manufacturer/RegisterProduct';
 import RegisterBatch from '../pages/manufacturer/RegisterBatch';
+import RegisteredBatch from '../pages/manufacturer/RegisteredBatch';
 import ProductsList from '../pages/manufacturer/ProductsList';
 import TrackProducts from '../pages/manufacturer/TrackProducts';
 import QRCodeManager from '../pages/manufacturer/QRCodeManager';
@@ -77,6 +78,7 @@ const AppRoutes = () => {
           <Route path="dashboard" element={<ManufacturerDashboard />} />
           <Route path="register" element={<RegisterProduct />} />
           <Route path="register/batch" element={<RegisterBatch />} />
+          <Route path="registered-batches" element={<RegisteredBatch />} />
           <Route path="products" element={<ProductsList />} />
           <Route path="assign-batch" element={<AssignBatch />} />
           <Route path="assigned-batches" element={<AssignedBatches />} />

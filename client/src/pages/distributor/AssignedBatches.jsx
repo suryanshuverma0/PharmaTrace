@@ -35,18 +35,26 @@ const AssignedBatches = () => {
         const latestQualityCheck = batch.shipmentHistory.find(h => h.qualityCheck)?.qualityCheck;
         
         return {
-          _id: batch.batchId, // Using batchId as _id since it appears unique
+          _id: batch.batchId,
           batchNumber: batch.batchId,
           productDetails: batch.product,
           status: batch.status,
           manufacturer: batch.manufacturer,
-          assignedQuantity: batch.quantity,
+          // New fields from updated API
+          remainingQuantity: batch.quantity,
+          totalAssignedToDistributor: batch.totalAssignedToDistributor,
+          shippedOutByDistributor: batch.shippedOutByDistributor,
           serialNumber: batch.serialNumber,
+          storageConditions: batch.storageConditions,
+          manufactureDate: batch.manufactureDate,
+          expiryDate: batch.expiryDate,
+          dosageForm: batch.dosageForm,
+          strength: batch.strength,
+          productionLocation: batch.productionLocation,
+          approvalCertId: batch.approvalCertId,
           assignedAt: latestHistory?.timestamp || new Date().toISOString(),
-          manufactureDate: latestHistory?.timestamp,
-          expiryDate: null, // Add if available in your data
           environmentalConditions: latestEnvConditions || null,
-          qualityCheck: latestQualityCheck ? {
+            qualityCheck: latestQualityCheck ? {
             result: latestQualityCheck.result,
             performedBy: latestQualityCheck.performedBy || 'QA Team',
             date: latestQualityCheck.date
@@ -142,10 +150,12 @@ const AssignedBatches = () => {
                             <Calendar className="w-4 h-4" />
                             <span>Mfg: {new Date(batch.manufactureDate).toLocaleDateString()}</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>Exp: {new Date(batch.expiryDate).toLocaleDateString()}</span>
-                          </div>
+                          {batch.expiryDate && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>Exp: {new Date(batch.expiryDate).toLocaleDateString()}</span>
+                            </div>
+                          )}
                           <div className="flex items-center gap-1">
                             <Building2 className="w-4 h-4" />
                             <span>From: {batch.manufacturer}</span>
@@ -167,24 +177,43 @@ const AssignedBatches = () => {
 
               {/* Batch Details */}
               <div className="p-6 bg-gray-50">
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="p-4 bg-white rounded-xl">
                     <div className="flex items-center gap-2 mb-2 text-gray-600">
                       <Package className="w-5 h-5" />
-                      <span className="font-medium">Assigned Quantity</span>
+                      <span className="font-medium">Remaining (You Hold)</span>
                     </div>
-                    <p className="text-2xl font-semibold">{batch.assignedQuantity}</p>
+                    <p className="text-2xl font-semibold">{batch.remainingQuantity}</p>
+                    <p className="mt-1 text-sm text-gray-500">of {batch.totalAssignedToDistributor} assigned</p>
+                  </div>
+                  <div className="p-4 bg-white rounded-xl">
+                    <div className="flex items-center gap-2 mb-2 text-gray-600">
+                      <Package className="w-5 h-5" />
+                      <span className="font-medium">Shipped Out</span>
+                    </div>
+                    <p className="text-2xl font-semibold">{batch.shippedOutByDistributor || 0}</p>
                   </div>
 
-                  {batch.environmentalConditions && (
+                  {batch.storageConditions && batch.storageConditions.trim() !== '' && (
                     <div className="p-4 bg-white rounded-xl">
                       <div className="flex items-center gap-2 mb-2 text-gray-600">
                         <ThermometerIcon className="w-5 h-5" />
                         <span className="font-medium">Storage Conditions</span>
                       </div>
                       <div className="space-y-1">
-                        <p>Temperature: {batch.environmentalConditions.temperature}</p>
-                        <p>Humidity: {batch.environmentalConditions.humidity}</p>
+                        <p>{batch.storageConditions}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {batch.productionLocation && (
+                    <div className="p-4 bg-white rounded-xl">
+                      <div className="flex items-center gap-2 mb-2 text-gray-600">
+                        <Building2 className="w-5 h-5" />
+                        <span className="font-medium">Production Location</span>
+                      </div>
+                      <div className="space-y-1">
+                        <p>{batch.productionLocation}</p>
                       </div>
                     </div>
                   )}
@@ -238,14 +267,14 @@ const AssignedBatches = () => {
                               {event.remarks && (
                                 <p className="mt-1">{event.remarks}</p>
                               )}
-                              {event.environmentalConditions && (
+                              {/* {event.environmentalConditions && (
                                 <div className="p-2 mt-2 rounded-lg bg-gray-50">
                                   <p className="font-medium">Environmental Conditions:</p>
                                   <p>Temperature: {event.environmentalConditions.temperature}</p>
                                   <p>Humidity: {event.environmentalConditions.humidity}</p>
                                   <p>Status: {event.environmentalConditions.status}</p>
                                 </div>
-                              )}
+                              )} */}
                               {event.qualityCheck && (
                                 <div className="p-2 mt-2 rounded-lg bg-gray-50">
                                   <p className="font-medium">Quality Check:</p>
