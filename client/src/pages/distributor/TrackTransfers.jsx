@@ -24,6 +24,12 @@ const TrackTransfers = () => {
       setError(null);
       const res = await apiClient.get('/distributer/transfers');
       
+      // Check if there are any transfers
+      if (!res.data.transfers || res.data.transfers.length === 0) {
+        setTransfers([]);
+        return;
+      }
+      
       // Group and aggregate transfers by batchId
       const grouped = {};
       (res.data.transfers || []).forEach(t => {
@@ -81,7 +87,7 @@ const TrackTransfers = () => {
         batch.distributions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
         // Calculate success rate
-        batch.successRate = (delivered / batch.total) * 100;
+        batch.successRate = batch.total > 0 ? (delivered / batch.total) * 100 : 0;
         
         // Add distribution statistics
         batch.stats = {
@@ -264,6 +270,15 @@ const TrackTransfers = () => {
         <div className="flex items-center justify-center h-64 text-red-500">
           <AlertCircle className="w-6 h-6 mr-2" />
           {error}
+        </div>
+      ) : filteredTransfers.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+          <Package className="w-12 h-12 mb-4 text-gray-300" />
+          <h3 className="mb-2 text-lg font-medium">No Outgoing Transfers</h3>
+          <p className="text-center text-gray-400">
+            You haven't distributed any batches to pharmacies yet.<br />
+            Once you start distributing, your transfer history will appear here.
+          </p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

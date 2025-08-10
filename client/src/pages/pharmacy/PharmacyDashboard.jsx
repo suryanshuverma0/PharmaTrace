@@ -1,16 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from '../../components/UI/Card';
-import { Button } from '../../components/UI/Button';
-import { FaBox, FaCheckCircle, FaExclamationTriangle, FaQrcode, FaClock, FaWarehouse } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { pharmacyAPI } from '../../services/api/pharmacyAPI';
+import React, { useState, useEffect } from "react";
+import { Card } from "../../components/UI/Card";
+import { Button } from "../../components/UI/Button";
+import {
+  FaBox,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaQrcode,
+  FaClock,
+  FaWarehouse,
+} from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { pharmacyAPI } from "../../services/api/pharmacyAPI";
+import ReceiptConfirmationModal from "../../components/modals/ReceiptConfirmationModal";
+import toast from "react-hot-toast";
 
 const PharmacyDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [confirmingReceipt, setConfirmingReceipt] = useState(null);
+  const [selectedBatch, setSelectedBatch] = useState(null);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -22,55 +33,88 @@ const PharmacyDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await pharmacyAPI.getDashboardData();
-      
+
       if (response.success) {
         setDashboardData(response.data);
       } else {
-        throw new Error(response.message || 'Failed to fetch dashboard data');
+        throw new Error(response.message || "Failed to fetch dashboard data");
       }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error("Error fetching dashboard data:", error);
       setError(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleConfirmReceipt = async (distributionId) => {
+  const handleConfirmReceipt = async (verificationData) => {
     try {
-      setConfirmingReceipt(distributionId);
-      const response = await pharmacyAPI.confirmReceipt(distributionId);
-      
+      setConfirmingReceipt(selectedBatch.distributionId);
+      const response = await pharmacyAPI.confirmReceipt(
+        selectedBatch.distributionId,
+        verificationData
+      );
+
       if (response.success) {
         // Refresh dashboard data
         await fetchDashboardData();
-        alert('Receipt confirmed successfully!');
+        setShowConfirmationModal(false);
+        setSelectedBatch(null);
+        
+        // Show success toast
+        toast.success(
+          `Receipt confirmed successfully! ${
+            response.data.damageReported ? "Issues reported and logged." : ""
+          }`,
+          {
+            duration: 4000,
+            position: 'top-right',
+          }
+        );
       } else {
-        throw new Error(response.message || 'Failed to confirm receipt');
+        throw new Error(response.message || "Failed to confirm receipt");
       }
     } catch (error) {
-      console.error('Error confirming receipt:', error);
-      alert(`Error: ${error.message}`);
+      console.error("Error confirming receipt:", error);
+      toast.error(`Error: ${error.message}`, {
+        duration: 5000,
+        position: 'top-right',
+      });
     } finally {
       setConfirmingReceipt(null);
     }
   };
 
+  const openConfirmationModal = (batch) => {
+    setSelectedBatch(batch);
+    setShowConfirmationModal(true);
+  };
+
+  const closeConfirmationModal = () => {
+    setShowConfirmationModal(false);
+    setSelectedBatch(null);
+    setConfirmingReceipt(null);
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'in_transit': return 'bg-blue-100 text-blue-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "in_transit":
+        return "bg-blue-100 text-blue-800";
+      case "delivered":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getExpiryColor = (daysUntilExpiry) => {
-    if (daysUntilExpiry <= 7) return 'text-red-600 font-bold';
-    if (daysUntilExpiry <= 30) return 'text-yellow-600 font-semibold';
-    return 'text-green-600';
+    if (daysUntilExpiry <= 7) return "text-red-600 font-bold";
+    if (daysUntilExpiry <= 30) return "text-yellow-600 font-semibold";
+    return "text-green-600";
   };
 
   if (loading) {
@@ -88,21 +132,28 @@ const PharmacyDashboard = () => {
     return (
       <div className="p-6 text-center">
         <FaExclamationTriangle className="w-16 h-16 mx-auto mb-4 text-red-500" />
-        <h2 className="mb-2 text-xl font-semibold text-gray-900">Error Loading Dashboard</h2>
+        <h2 className="mb-2 text-xl font-semibold text-gray-900">
+          Error Loading Dashboard
+        </h2>
         <p className="mb-4 text-gray-600">{error}</p>
         <Button onClick={fetchDashboardData}>Try Again</Button>
       </div>
     );
   }
 
-  const { pharmacy, stats, incomingBatches, inventory, expiryAlerts } = dashboardData || {};
+  const { pharmacy, stats, incomingBatches, inventory, expiryAlerts } =
+    dashboardData || {};
 
   return (
     <div className="space-y-6">
       {/* Pharmacy Info Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{pharmacy?.name || 'Pharmacy Dashboard'}</h1>
-        <p className="text-gray-600">License: {pharmacy?.license} | Location: {pharmacy?.location}</p>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {pharmacy?.name || "Pharmacy Dashboard"}
+        </h1>
+        <p className="text-gray-600">
+          License: {pharmacy?.license} | Location: {pharmacy?.location}
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -113,8 +164,12 @@ const PharmacyDashboard = () => {
               <FaClock className="w-6 h-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Incoming Batches</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.totalIncoming || 0}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Incoming Batches
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {stats?.totalIncoming || 0}
+              </p>
             </div>
           </div>
         </Card>
@@ -125,8 +180,12 @@ const PharmacyDashboard = () => {
               <FaWarehouse className="w-6 h-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Inventory Items</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.totalInventory || 0}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Inventory Items
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {stats?.totalInventory || 0}
+              </p>
             </div>
           </div>
         </Card>
@@ -138,7 +197,9 @@ const PharmacyDashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Expiry Alerts</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.totalExpiryAlerts || 0}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {stats?.totalExpiryAlerts || 0}
+              </p>
             </div>
           </div>
         </Card>
@@ -150,7 +211,9 @@ const PharmacyDashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Units</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.totalValue || 0}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {stats?.totalValue || 0}
+              </p>
             </div>
           </div>
         </Card>
@@ -171,31 +234,46 @@ const PharmacyDashboard = () => {
         {incomingBatches && incomingBatches.length > 0 ? (
           <div className="space-y-4">
             {incomingBatches.map((batch) => (
-              <div key={batch.distributionId} className="p-4 border border-gray-200 rounded-lg">
+              <div
+                key={batch.distributionId}
+                className="p-4 border border-gray-200 rounded-lg"
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <h3 className="font-medium text-gray-900">{batch.product}</h3>
-                    <p className="text-sm text-gray-600">Batch: {batch.batchId}</p>
+                    <h3 className="font-medium text-gray-900">
+                      {batch.product}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Batch: {batch.batchId}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(batch.status)}`}>
-                      {batch.status.replace('_', ' ').toUpperCase()}
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
+                        batch.status
+                      )}`}
+                    >
+                      {batch.status.replace("_", " ").toUpperCase()}
                     </span>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4 mb-3 text-sm text-gray-600">
                   <div>
-                    <span className="font-medium">Quantity:</span> {batch.quantity} units
+                    <span className="font-medium">Quantity:</span>{" "}
+                    {batch.quantity} units
                   </div>
                   <div>
-                    <span className="font-medium">From:</span> {batch.distributor}
+                    <span className="font-medium">From:</span>{" "}
+                    {batch.distributor}
                   </div>
                   <div>
-                    <span className="font-medium">Assigned:</span> {new Date(batch.assignedAt).toLocaleDateString()}
+                    <span className="font-medium">Assigned:</span>{" "}
+                    {new Date(batch.assignedAt).toLocaleDateString()}
                   </div>
                   <div>
-                    <span className="font-medium">Expires:</span> {new Date(batch.expiryDate).toLocaleDateString()}
+                    <span className="font-medium">Expires:</span>{" "}
+                    {new Date(batch.expiryDate).toLocaleDateString()}
                   </div>
                 </div>
 
@@ -205,11 +283,11 @@ const PharmacyDashboard = () => {
                   </p>
                 )}
 
-                {batch.status === 'in_transit' && (
+                <div className="flex justify-end">
                   <Button
-                    onClick={() => handleConfirmReceipt(batch.distributionId)}
+                    onClick={() => openConfirmationModal(batch)}
                     disabled={confirmingReceipt === batch.distributionId}
-                    className="w-full"
+                    className="max-w-[250px]"
                   >
                     {confirmingReceipt === batch.distributionId ? (
                       <>
@@ -219,11 +297,11 @@ const PharmacyDashboard = () => {
                     ) : (
                       <>
                         <FaCheckCircle className="w-4 h-4 mr-2" />
-                        Confirm Receipt
+                        Verify & Confirm Receipt
                       </>
                     )}
                   </Button>
-                )}
+                </div>
               </div>
             ))}
           </div>
@@ -243,10 +321,10 @@ const PharmacyDashboard = () => {
               <FaExclamationTriangle className="w-5 h-5 mr-2" />
               Expiry Alerts
             </h2>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
-              onClick={() => navigate('/pharmacy/expiry-alerts')}
+              onClick={() => navigate("/pharmacy/expiry-alerts")}
             >
               View All
             </Button>
@@ -254,14 +332,23 @@ const PharmacyDashboard = () => {
 
           <div className="space-y-3">
             {expiryAlerts.slice(0, 3).map((alert) => (
-              <div key={alert.distributionId} className="p-3 bg-white border border-yellow-200 rounded-lg">
+              <div
+                key={alert.distributionId}
+                className="p-3 bg-white border border-yellow-200 rounded-lg"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-gray-900">{alert.product}</p>
-                    <p className="text-sm text-gray-600">Batch: {alert.batchId}</p>
+                    <p className="text-sm text-gray-600">
+                      Batch: {alert.batchId}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className={`text-sm font-semibold ${getExpiryColor(alert.daysUntilExpiry)}`}>
+                    <p
+                      className={`text-sm font-semibold ${getExpiryColor(
+                        alert.daysUntilExpiry
+                      )}`}
+                    >
                       {alert.daysUntilExpiry} days left
                     </p>
                     <p className="text-xs text-gray-500">
@@ -282,10 +369,10 @@ const PharmacyDashboard = () => {
             <FaWarehouse className="w-5 h-5 mr-2 text-green-600" />
             Recent Inventory
           </h2>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
-            onClick={() => navigate('/pharmacy/inventory')}
+            onClick={() => navigate("/pharmacy/inventory")}
           >
             View All Inventory
           </Button>
@@ -294,14 +381,21 @@ const PharmacyDashboard = () => {
         {inventory && inventory.length > 0 ? (
           <div className="space-y-3">
             {inventory.slice(0, 5).map((item) => (
-              <div key={item.distributionId} className="p-3 border border-gray-200 rounded-lg">
+              <div
+                key={item.distributionId}
+                className="p-3 border border-gray-200 rounded-lg"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-gray-900">{item.product}</p>
-                    <p className="text-sm text-gray-600">Batch: {item.batchId}</p>
+                    <p className="text-sm text-gray-600">
+                      Batch: {item.batchId}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">{item.quantity} units</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {item.quantity} units
+                    </p>
                     <p className="text-xs text-gray-500">
                       Received: {new Date(item.receivedAt).toLocaleDateString()}
                     </p>
@@ -320,27 +414,29 @@ const PharmacyDashboard = () => {
 
       {/* Quick Actions */}
       <Card className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
+          Quick Actions
+        </h2>
         <div className="grid gap-4 md:grid-cols-3">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/pharmacy/expiry-alerts')}
+          <Button
+            variant="outline"
+            onClick={() => navigate("/pharmacy/expiry-alerts")}
             className="flex items-center justify-center p-4"
           >
             <FaExclamationTriangle className="w-5 h-5 mr-2" />
             View Expiry Alerts
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/pharmacy/inventory')}
+          <Button
+            variant="outline"
+            onClick={() => navigate("/pharmacy/inventory")}
             className="flex items-center justify-center p-4"
           >
             <FaWarehouse className="w-5 h-5 mr-2" />
             Manage Inventory
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/consumer/verify')}
+          <Button
+            variant="outline"
+            onClick={() => navigate("/consumer/verify")}
             className="flex items-center justify-center p-4"
           >
             <FaQrcode className="w-5 h-5 mr-2" />
@@ -348,6 +444,15 @@ const PharmacyDashboard = () => {
           </Button>
         </div>
       </Card>
+
+      {/* Receipt Confirmation Modal */}
+      <ReceiptConfirmationModal
+        batch={selectedBatch}
+        isOpen={showConfirmationModal}
+        onClose={closeConfirmationModal}
+        onConfirm={handleConfirmReceipt}
+        isLoading={confirmingReceipt === selectedBatch?.distributionId}
+      />
     </div>
   );
 };

@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 import { pharmacyDistributionApi } from '../../services/api/pharmacyDistribution';
+import apiClient from '../../services/api/api';
 import { format } from 'date-fns';
 
 const DistributeBatches = () => {
@@ -24,14 +25,13 @@ const DistributeBatches = () => {
   // Fetch available batches and pharmacies
   useEffect(() => {
     const fetchData = async () => {
-
-   
       try {
         setLoading(true);
         setError(null);
 
+        // Use the consistent distributor batch system
         const [batchesRes, pharmaciesRes] = await Promise.all([
-          pharmacyDistributionApi.getAvailableBatches(),
+          apiClient.get('/distributer/batches'), // Use distributor batches endpoint
           pharmacyDistributionApi.getApprovedPharmacies()
         ]);
 
@@ -39,7 +39,9 @@ const DistributeBatches = () => {
           console.warn('No batch data in response:', batchesRes);
           setBatches([]);
         } else {
-          setBatches(batchesRes.data.batches);
+          // Filter only batches with remaining quantity > 0
+          const availableBatches = batchesRes.data.batches.filter(batch => batch.quantity > 0);
+          setBatches(availableBatches);
         }
 
         if (!pharmaciesRes?.pharmacies) {
@@ -78,35 +80,27 @@ const DistributeBatches = () => {
 
     try {
       setDistributing(true);
-      // Prepare the assignment data with all required fields
-      await pharmacyDistributionApi.assignToPharmacy({
-        batchAssignmentId: batch.batchId, // Required field from the API
-        pharmacistId: selectedPharmacy,   // Required field from the API
-        quantity: parseInt(quantity),      // Required field from the API
-        remarks: remarks || '',
-        expectedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
-        transportationMethod: 'Standard Ground',
-        storageRequirements: JSON.stringify({
-          temperature: '25°C',
-          humidity: '60%',
-          lightExposure: 'Store in a dark place',
-          specialInstructions: 'Handle with care'
-        }),
-        // Additional metadata
-        batchNumber: batch.batchNumber,
-        status: 'pending',
-        distributor: {
-          name: user.distributor?.companyName || 'Unknown Distributor',
-          id: user.distributor?.id,
-          type: 'Distributor'
-        }
+      
+      // Find selected pharmacy details
+      const selectedPharmacyDetails = pharmacies.find(p => p.id === selectedPharmacy);
+      const pharmacyAddress = selectedPharmacyDetails?.name || selectedPharmacy;
+      
+      // Use the consistent distributor batch endpoint
+      await apiClient.post('/distributer/distribute-batch', {
+        batchNumber: batch.batchId, // Use batchId as batchNumber
+        pharmacyAddress: pharmacyAddress,
+        quantity: parseInt(quantity),
+        remarks: remarks || `Distribution to ${selectedPharmacyDetails?.name || 'pharmacy'}`
       });
 
       toast.success('Successfully distributed to pharmacy');
       
-      // Refresh available batches
-      const { data } = await pharmacyDistributionApi.getAvailableBatches(user._id);
-      setBatches(data.batches);
+      // Refresh available batches using consistent endpoint
+      const response = await apiClient.get('/distributer/batches');
+      if (response?.data?.batches) {
+        const availableBatches = response.data.batches.filter(batch => batch.quantity > 0);
+        setBatches(availableBatches);
+      }
 
       // Reset form
       setQuantity('');
@@ -149,7 +143,7 @@ const DistributeBatches = () => {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold">{batch.product}</h3>
-                <p className="text-sm text-gray-600">Batch: {batch.batchNumber}</p>
+                <p className="text-sm text-gray-600">Batch: {batch.batchId}</p>
               </div>
               <div className="px-3 py-1 text-sm text-blue-700 rounded-full bg-blue-50">
                 {batch.quantity} available
@@ -160,7 +154,7 @@ const DistributeBatches = () => {
               <div>
                 <p>Manufacturing Date:</p>
                 <p className="font-medium text-gray-900">
-                  {format(new Date(batch.manufacturingDate), 'MMM dd, yyyy')}
+                  {format(new Date(batch.manufactureDate), 'MMM dd, yyyy')}
                 </p>
               </div>
               <div>
@@ -246,8 +240,25 @@ const DistributionHistory = () => {
     const fetchHistory = async () => {
       try {
         setLoading(true);
-        const { data } = await pharmacyDistributionApi.getDistributionHistory();
-        setDistributions(data.history);
+        // Use consistent distributor transfers endpoint
+        const response = await apiClient.get('/distributer/transfers');
+        const transfers = response.data.transfers || [];
+        
+        // Transform transfers to match expected distribution format
+        const formattedDistributions = transfers.map(transfer => ({
+          id: `${transfer.batchId}-${transfer.timestamp}`,
+          assignedAt: transfer.timestamp,
+          batchNumber: transfer.batchId,
+          pharmacy: {
+            name: transfer.to,
+            location: 'N/A' // Location not available in transfer data
+          },
+          quantity: transfer.quantity,
+          status: transfer.status.toLowerCase().replace(' ', '_'),
+          lastUpdated: transfer.timestamp
+        }));
+        
+        setDistributions(formattedDistributions);
       } catch (err) {
         console.error('Error fetching history:', err);
         setError(err.response?.data?.message || 'Failed to load history');
@@ -257,7 +268,7 @@ const DistributionHistory = () => {
     };
 
     fetchHistory();
-  }, [user._id]);
+  }, [user]);
 
   if (loading) {
     return (

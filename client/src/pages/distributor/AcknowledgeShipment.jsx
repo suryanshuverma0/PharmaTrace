@@ -44,19 +44,20 @@ const AcknowledgeShipment = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold mb-4">Acknowledge Shipments</h2>
+      <h2 className="mb-4 text-2xl font-bold">Acknowledge Shipments</h2>
       {notification && (
-        <div className="p-2 bg-green-100 text-green-800 rounded">{notification}</div>
+        <div className="p-2 text-green-800 bg-green-100 rounded">{notification}</div>
       )}
       {shipments.length === 0 ? (
-        <div className="p-4 text-center text-gray-500 bg-gray-50 rounded">No shipments to acknowledge.</div>
+        <div className="p-4 text-center text-gray-500 rounded bg-gray-50">No shipments to acknowledge.</div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {shipments.map((shipment) => (
             <Card key={shipment.batchId} className="flex flex-col gap-2">
               <div className="font-semibold">Batch ID: {shipment.batchId}</div>
               <div>Product: {shipment.product}</div>
-              <div>Quantity: {shipment.quantity}</div>
+              <div>Assigned Quantity: {shipment.totalAssignedToDistributor || shipment.quantity}</div>
+              <div>Remaining: {shipment.quantity}</div>
               <div>Status: <span className={`font-bold ${shipment.status === 'Received' ? 'text-green-600' : 'text-yellow-600'}`}>{shipment.status}</span></div>
               {shipment.status === 'In Transit' && (
                 <Button variant="primary" onClick={() => handleAcknowledge(shipment.batchId)}>
@@ -69,20 +70,21 @@ const AcknowledgeShipment = () => {
       )}
 
       {/* Show acknowledged shipments */}
-      <h3 className="text-xl font-semibold mt-8">Acknowledged Shipments</h3>
+      {/* <h3 className="mt-8 text-base font-semibold">Recent Acknowledged Shipments</h3> */}
       {acknowledged.length === 0 ? (
-        <div className="p-4 text-center text-gray-400 bg-gray-50 rounded">No acknowledged shipments yet.</div>
+        <div className="p-4 text-center text-gray-400 rounded bg-gray-50">No acknowledged shipments yet.</div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {acknowledged.map((shipment) => (
             <Card key={shipment.batchId} className="flex flex-col gap-2 opacity-70">
               <div className="font-semibold">Batch ID: {shipment.batchId}</div>
               <div>Product: {shipment.product}</div>
-              <div>Quantity: {shipment.quantity}</div>
+              <div>Assigned Quantity: {shipment.totalAssignedToDistributor || shipment.quantity}</div>
+              <div>Remaining: {shipment.quantity}</div>
               <div>Status: <span className="font-bold text-green-600">{shipment.status}</span></div>
               <div className="mt-2">
-                <div className="font-semibold mb-1">Shipment History:</div>
-                <ul className="list-disc ml-6 text-xs">
+                <div className="mb-1 font-semibold">Shipment History:</div>
+                <ul className="ml-6 text-xs list-disc">
                   {(shipment.shipmentHistory || []).map((h, idx) => (
                     <li key={idx}>
                       {h.timestamp ? new Date(h.timestamp).toLocaleString() : ''} | {h.from} → {h.to} | Qty: {h.quantity} | <span className={h.status === 'Delivered' ? 'text-green-600' : 'text-yellow-600'}>{h.status}</span> {h.remarks ? `| ${h.remarks}` : ''}

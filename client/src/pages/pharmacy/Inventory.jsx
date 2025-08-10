@@ -99,17 +99,8 @@ const Inventory = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigate('/pharmacy/dashboard')}
-          >
-            <FaArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-              <FaWarehouse className="w-6 h-6 mr-2 text-green-600" />
+            <h1 className="flex items-center text-2xl font-bold text-gray-900">
               Inventory Management
             </h1>
             <p className="text-gray-600">Manage your pharmacy inventory</p>
@@ -123,14 +114,14 @@ const Inventory = () => {
 
       {/* Search and Filters */}
       <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col gap-4 md:flex-row">
           <div className="flex-1">
             <div className="relative">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <FaSearch className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
               <input
                 type="text"
                 placeholder="Search by product name or batch ID..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -155,10 +146,6 @@ const Inventory = () => {
               <option value="desc">Descending</option>
               <option value="asc">Ascending</option>
             </select>
-            <Button onClick={fetchInventory}>
-              <FaWarehouse className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
           </div>
         </div>
       </Card>
@@ -233,7 +220,7 @@ const Inventory = () => {
         {filteredAndSortedInventory.length === 0 ? (
           <div className="py-12 text-center text-gray-500">
             <FaBox className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Inventory Items</h3>
+            <h3 className="mb-2 text-lg font-medium text-gray-900">No Inventory Items</h3>
             <p className="text-gray-600">
               {searchTerm 
                 ? 'No items match your search criteria.' 
@@ -272,10 +259,10 @@ const Inventory = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
                     <div>
                       <span className="font-medium text-gray-600">Quantity:</span>
-                      <p className="text-gray-900 font-semibold">{item.quantity} units</p>
+                      <p className="font-semibold text-gray-900">{item.quantity} units</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">Expiry Date:</span>
@@ -298,7 +285,7 @@ const Inventory = () => {
                   </div>
 
                   {item.distributor && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="pt-3 mt-3 border-t border-gray-200">
                       <p className="text-sm text-gray-600">
                         <span className="font-medium">Distributor:</span> {item.distributor}
                       </p>
@@ -309,36 +296,6 @@ const Inventory = () => {
             })}
           </div>
         )}
-      </Card>
-
-      {/* Actions */}
-      <Card className="p-6 bg-gray-50">
-        <h3 className="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h3>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Button 
-            variant="outline"
-            onClick={() => navigate('/pharmacy/expiry-alerts')}
-            className="flex items-center justify-center p-4"
-          >
-            <FaCalendarAlt className="w-5 h-5 mr-2" />
-            View Expiry Alerts
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={() => navigate('/pharmacy/dashboard')}
-            className="flex items-center justify-center p-4"
-          >
-            <FaArrowLeft className="w-5 h-5 mr-2" />
-            Back to Dashboard
-          </Button>
-          <Button 
-            onClick={fetchInventory}
-            className="flex items-center justify-center p-4"
-          >
-            <FaWarehouse className="w-5 h-5 mr-2" />
-            Refresh Inventory
-          </Button>
-        </div>
       </Card>
     </div>
   );

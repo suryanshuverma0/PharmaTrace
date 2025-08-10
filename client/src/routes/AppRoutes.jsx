@@ -1,6 +1,7 @@
 import PharmacyLayout from '../layout/PharmacyLayout';
 import PharmacyDashboard from '../pages/pharmacy/PharmacyDashboard';
 import ExpiryAlerts from '../pages/pharmacy/ExpiryAlerts';
+import Inventory from '../pages/pharmacy/Inventory';
 
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
@@ -110,7 +111,7 @@ const AppRoutes = () => {
         <Route path="/pharmacy" element={<PharmacyLayout />}>
           <Route index element={<PharmacyDashboard />} />
           <Route path="dashboard" element={<PharmacyDashboard />} />
-          <Route path="inventory" element={<PharmacyDashboard />} />
+          <Route path="inventory" element={<Inventory />} />
           <Route path="verify" element={<VerifyDrug />} />
           <Route path="expiry-alerts" element={<ExpiryAlerts />} />
         </Route>

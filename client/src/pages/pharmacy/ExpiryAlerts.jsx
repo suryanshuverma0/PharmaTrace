@@ -96,17 +96,8 @@ const ExpiryAlerts = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigate('/pharmacy/dashboard')}
-          >
-            <FaArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-              <FaExclamationTriangle className="w-6 h-6 mr-2 text-yellow-600" />
+            <h1 className="flex items-center text-2xl font-bold text-gray-900">
               Expiry Alerts
             </h1>
             <p className="text-gray-600">Manage medicines approaching expiration</p>
@@ -120,14 +111,14 @@ const ExpiryAlerts = () => {
 
       {/* Search and Filters */}
       <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col gap-4 md:flex-row">
           <div className="flex-1">
             <div className="relative">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <FaSearch className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
               <input
                 type="text"
                 placeholder="Search by product name or batch ID..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -144,17 +135,13 @@ const ExpiryAlerts = () => {
               <option value="30">Warning (≤30 days)</option>
               <option value="90">Normal (≤90 days)</option>
             </select>
-            <Button onClick={fetchExpiryAlerts}>
-              <FaCalendarAlt className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
           </div>
         </div>
       </Card>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-4 bg-red-50 border-red-200">
+        <Card className="p-4 border-red-200 bg-red-50">
           <div className="flex items-center">
             <div className="p-3 bg-red-100 rounded-lg">
               <FaExclamationTriangle className="w-6 h-6 text-red-600" />
@@ -169,7 +156,7 @@ const ExpiryAlerts = () => {
           </div>
         </Card>
 
-        <Card className="p-4 bg-yellow-50 border-yellow-200">
+        <Card className="p-4 border-yellow-200 bg-yellow-50">
           <div className="flex items-center">
             <div className="p-3 bg-yellow-100 rounded-lg">
               <FaExclamationTriangle className="w-6 h-6 text-yellow-600" />
@@ -184,7 +171,7 @@ const ExpiryAlerts = () => {
           </div>
         </Card>
 
-        <Card className="p-4 bg-green-50 border-green-200">
+        <Card className="p-4 border-green-200 bg-green-50">
           <div className="flex items-center">
             <div className="p-3 bg-green-100 rounded-lg">
               <FaCalendarAlt className="w-6 h-6 text-green-600" />
@@ -207,7 +194,7 @@ const ExpiryAlerts = () => {
         {filteredAlerts.length === 0 ? (
           <div className="py-12 text-center text-gray-500">
             <FaBox className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Expiry Alerts</h3>
+            <h3 className="mb-2 text-lg font-medium text-gray-900">No Expiry Alerts</h3>
             <p className="text-gray-600">
               {searchTerm || filterDays !== 'all' 
                 ? 'No alerts match your current filters.' 
@@ -244,7 +231,7 @@ const ExpiryAlerts = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
                   <div>
                     <span className="font-medium text-gray-600">Quantity:</span>
                     <p className="text-gray-900">{alert.quantity} units</p>
@@ -270,7 +257,7 @@ const ExpiryAlerts = () => {
                 </div>
 
                 {alert.distributor && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="pt-3 mt-3 border-t border-gray-200">
                     <p className="text-sm text-gray-600">
                       <span className="font-medium">Distributor:</span> {alert.distributor}
                     </p>
@@ -280,36 +267,6 @@ const ExpiryAlerts = () => {
             ))}
           </div>
         )}
-      </Card>
-
-      {/* Actions */}
-      <Card className="p-6 bg-gray-50">
-        <h3 className="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h3>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Button 
-            variant="outline"
-            onClick={() => navigate('/pharmacy/inventory')}
-            className="flex items-center justify-center p-4"
-          >
-            <FaBox className="w-5 h-5 mr-2" />
-            View Full Inventory
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={() => navigate('/pharmacy/dashboard')}
-            className="flex items-center justify-center p-4"
-          >
-            <FaArrowLeft className="w-5 h-5 mr-2" />
-            Back to Dashboard
-          </Button>
-          <Button 
-            onClick={fetchExpiryAlerts}
-            className="flex items-center justify-center p-4"
-          >
-            <FaCalendarAlt className="w-5 h-5 mr-2" />
-            Refresh Alerts
-          </Button>
-        </div>
       </Card>
     </div>
   );

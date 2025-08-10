@@ -6,8 +6,31 @@ const User = require('../models/User');
 
 // Get pharmacy dashboard data
 const getPharmacyDashboard = async (req, res) => {
-  try {
-    // Set no-cache headers
+    })
+    .populate('manufacturerId', 'name')
+    .lean();
+
+    console.log('Total batches with shipment history:', allBatches.length);
+
+    // Find all batches that have shipments to this pharmacy
+    const batches = await Batch.find({
+      shipmentHistory: {
+        $elemMatch: {
+          $and: [
+            {
+              $or: [
+                { to: pharmacyAddress },
+                { toAddress: pharmacyAddress },
+                { to: pharmacist.pharmacyName }
+              ]
+            },
+            {
+              status: { $in: ['Delivered', 'Received', 'delivered', 'received', 'In Transit', 'in transit'] }
+            }
+          ]
+        }
+      }
+    })  // Set no-cache headers
     res.set({
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
@@ -46,28 +69,14 @@ const getPharmacyDashboard = async (req, res) => {
       location: pharmacist.pharmacyLocation
     });
 
-    // Find all batches first for debugging
-    const allBatches = await Batch.find({})
-      .populate('manufacturerId', 'name')
-      .lean();
-
-    console.log('Total batches with shipment history:', allBatches.length);
-
     // Find all batches that have shipments to this pharmacy
     const batches = await Batch.find({
       shipmentHistory: {
         $elemMatch: {
-          $and: [
-            {
-              $or: [
-                { to: pharmacyAddress },
-                { toAddress: pharmacyAddress },
-                { to: pharmacist.pharmacyName }
-              ]
-            },
-            {
-              status: { $in: ['Delivered', 'Received', 'delivered', 'received', 'In Transit', 'in transit'] }
-            }
+          $or: [
+            { to: pharmacyAddress },
+            { toAddress: pharmacyAddress },
+            { to: pharmacist.pharmacyName }
           ]
         }
       }
@@ -165,7 +174,7 @@ const getPharmacyDashboard = async (req, res) => {
   }
 };
 
-// Confirm receipt of a batch with verification
+// Confirm receipt of a batch
 const confirmReceipt = async (req, res) => {
   try {
     // Set no-cache headers
@@ -176,15 +185,6 @@ const confirmReceipt = async (req, res) => {
     });
 
     const { distributionId } = req.params;
-    const { 
-      verificationDetails = {},
-      environmentalConditions = {},
-      qualityCheckNotes = '',
-      receivedQuantity,
-      damageReported = false,
-      damageDetails = ''
-    } = req.body;
-    
     const pharmacyUserId = req.user.userId;
 
     if (!distributionId) {
@@ -196,7 +196,7 @@ const confirmReceipt = async (req, res) => {
 
     // Find pharmacist record
     const pharmacist = await Pharmacist.findOne({ user: pharmacyUserId })
-      .populate('user', 'address name');
+      .populate('user', 'address');
 
     if (!pharmacist) {
       return res.status(404).json({
@@ -208,195 +208,72 @@ const confirmReceipt = async (req, res) => {
     const pharmacyAddress = pharmacist.user?.address || pharmacist.pharmacyLocation;
 
     // Parse distributionId to get batchId and timestamp (format: batchId_timestamp)
-    const splitIndex = distributionId.indexOf('_');
-    const batchId = distributionId.substring(0, splitIndex);
-    const timestamp = distributionId.substring(splitIndex + 1);
-    
-    console.log('=== CONFIRM RECEIPT DEBUG ===');
-    console.log('Distribution ID:', distributionId);
-    console.log('Parsed Batch ID:', batchId);
-    console.log('Parsed Timestamp:', timestamp);
-    console.log('Pharmacy Address:', pharmacyAddress);
-    console.log('Pharmacy Name:', pharmacist.pharmacyName);
+    const [batchId, timestamp] = distributionId.split('_');
     
     // Find the batch
-    const batch = await Batch.findById(batchId)
-      .populate('manufacturerId', 'name');
-      
+    const batch = await Batch.findById(batchId);
     if (!batch) {
-      console.log('Batch not found for ID:', batchId);
       return res.status(404).json({
         success: false,
         message: 'Batch not found'
       });
     }
 
-    console.log('Found batch:', {
-      id: batch._id,
-      batchNumber: batch.batchNumber,
-      shipmentHistoryCount: batch.shipmentHistory?.length || 0
-    });
-
-    // Log all shipment entries for debugging
-    batch.shipmentHistory.forEach((entry, index) => {
-      console.log(`Shipment ${index}:`, {
-        timestamp: entry.timestamp,
-        timestampString: entry.timestamp.toString(),
-        to: entry.to,
-        toAddress: entry.toAddress,
-        status: entry.status
-      });
-    });
-
     // Find the specific shipment entry in shipmentHistory
-    // Try multiple approaches to match the timestamp and pharmacy
-    const shipmentIndex = batch.shipmentHistory.findIndex(entry => {
-      const entryTimeString = entry.timestamp.toString();
-      const isTimestampMatch = entryTimeString === timestamp || 
-                              entry.timestamp.getTime() === new Date(timestamp).getTime();
-      
-      const isPharmacyMatch = entry.to === pharmacyAddress || 
-                             entry.toAddress === pharmacyAddress || 
-                             entry.to === pharmacist.pharmacyName;
-      
-      console.log(`Checking shipment entry:`, {
-        entryTimeString,
-        timestamp,
-        isTimestampMatch,
-        isPharmacyMatch,
-        entryTo: entry.to,
-        entryToAddress: entry.toAddress
-      });
-      
-      return isTimestampMatch && isPharmacyMatch;
-    });
+    const shipmentIndex = batch.shipmentHistory.findIndex(entry => 
+      entry.timestamp.getTime() === new Date(timestamp).getTime() &&
+      (entry.to === pharmacyAddress || entry.toAddress === pharmacyAddress || entry.to === pharmacist.pharmacyName)
+    );
 
     if (shipmentIndex === -1) {
-      console.log('=== SHIPMENT NOT FOUND ===');
-      console.log('Could not find matching shipment entry');
-      console.log('Available shipments to this pharmacy:');
-      
-      const pharmacyShipments = batch.shipmentHistory.filter(entry => 
-        entry.to === pharmacyAddress || 
-        entry.toAddress === pharmacyAddress || 
-        entry.to === pharmacist.pharmacyName
-      );
-      
-      pharmacyShipments.forEach((entry, index) => {
-        console.log(`Available shipment ${index}:`, {
-          timestamp: entry.timestamp.toString(),
-          to: entry.to,
-          toAddress: entry.toAddress,
-          status: entry.status,
-          quantity: entry.quantity
-        });
-      });
-      
       return res.status(404).json({
         success: false,
-        message: 'Shipment record not found. Please check the shipment details.',
-        debug: {
-          batchId,
-          timestamp,
-          pharmacyAddress,
-          availableShipments: pharmacyShipments.length
-        }
+        message: 'Shipment record not found'
       });
     }
 
-    const originalShipment = batch.shipmentHistory[shipmentIndex];
+    const shipment = batch.shipmentHistory[shipmentIndex];
 
     // Check if already confirmed
-    if (['delivered', 'received'].includes(originalShipment.status?.toLowerCase())) {
+    if (['delivered', 'received'].includes(shipment.status?.toLowerCase())) {
       return res.status(400).json({
         success: false,
-        message: 'Batch already confirmed as received'
+        message: 'Batch already confirmed as delivered'
       });
     }
 
-    // Validate received quantity
-    const expectedQuantity = Number(originalShipment.quantity) || 0;
-    const actualReceivedQty = receivedQuantity ? Number(receivedQuantity) : expectedQuantity;
-    
-    if (actualReceivedQty > expectedQuantity) {
-      return res.status(400).json({
-        success: false,
-        message: `Received quantity (${actualReceivedQty}) cannot exceed shipped quantity (${expectedQuantity})`
-      });
-    }
-
-    // Determine quality check result
-    const qualityResult = damageReported ? 'Fail' : 'Pass';
-    const quantityDiscrepancy = actualReceivedQty !== expectedQuantity;
-    
-    // Update the existing shipment entry with confirmation details (don't create new entry)
-    batch.shipmentHistory[shipmentIndex].status = 'Received';
-    batch.shipmentHistory[shipmentIndex].quantity = actualReceivedQty.toString();
+    // Update the shipment status to delivered
+    batch.shipmentHistory[shipmentIndex].status = 'Delivered';
     batch.shipmentHistory[shipmentIndex].lastUpdated = new Date();
-    batch.shipmentHistory[shipmentIndex].remarks = `Receipt confirmed by pharmacy. ${quantityDiscrepancy ? `Quantity discrepancy: Expected ${expectedQuantity}, Received ${actualReceivedQty}. ` : ''}${damageReported ? `Damage reported: ${damageDetails}. ` : ''}${qualityCheckNotes || 'Standard verification completed.'}`;
-    
-    // Add detailed verification data to the existing entry
-    batch.shipmentHistory[shipmentIndex].actor = {
-      name: pharmacist.pharmacyName,
-      type: 'Pharmacy',
-      license: pharmacist.licenseNumber,
-      location: pharmacist.pharmacyLocation,
-      verifiedBy: pharmacist.user?.name || 'Pharmacy Staff'
-    };
-    
-    batch.shipmentHistory[shipmentIndex].environmentalConditions = {
-      temperature: environmentalConditions.temperature || '22°C',
-      humidity: environmentalConditions.humidity || '60%',
-      status: environmentalConditions.status || 'Normal',
-      checkTime: new Date(),
-      location: 'Pharmacy Storage'
-    };
-    
-    batch.shipmentHistory[shipmentIndex].qualityCheck = {
-      performedBy: pharmacist.user?.name || pharmacist.pharmacyName,
-      date: new Date(),
-      result: qualityResult,
-      notes: qualityCheckNotes || 'Visual inspection completed',
-      damageReported,
-      damageDetails: damageReported ? damageDetails : null,
-      quantityVerified: true,
-      expectedQuantity,
-      receivedQuantity: actualReceivedQty,
-      quantityDiscrepancy,
-      verificationMethod: verificationDetails.method || 'Manual Count',
-      packageIntegrity: verificationDetails.packageIntegrity || 'Good',
-      sealStatus: verificationDetails.sealStatus || 'Intact'
-    };
 
-    batch.shipmentHistory[shipmentIndex].verification = {
-      verifiedAt: new Date(),
-      verifiedBy: {
-        userId: pharmacyUserId,
-        name: pharmacist.user?.name || pharmacist.pharmacyName,
-        role: 'Pharmacist',
-        license: pharmacist.licenseNumber
+    // Add confirmation entry to shipment history
+    batch.shipmentHistory.push({
+      timestamp: new Date(),
+      from: pharmacist.pharmacyName,
+      to: pharmacist.pharmacyName,
+      status: 'Received',
+      quantity: shipment.quantity,
+      remarks: `Receipt confirmed by pharmacy`,
+      actor: {
+        name: pharmacist.pharmacyName,
+        type: 'Pharmacy',
+        license: pharmacist.licenseNumber,
+        location: pharmacist.pharmacyLocation
       },
-      batchInfo: {
-        batchNumber: batch.batchNumber,
-        manufacturer: batch.manufacturerId?.name || 'Unknown',
-        expiryDate: batch.expiryDate
+      environmentalConditions: {
+        temperature: '25°C',
+        humidity: '60%',
+        status: 'Normal'
       },
-      receiptConfirmed: true,
-      digitalSignature: `PH_${pharmacist.licenseNumber}_${Date.now()}`
-    };
+      qualityCheck: {
+        performedBy: pharmacist.pharmacyName,
+        date: new Date(),
+        result: 'Pass',
+        notes: 'Products received in good condition'
+      }
+    });
 
-    // Save the batch with new shipment history
     await batch.save();
-
-    // Log the confirmation for audit trail
-    console.log('=== PHARMACY RECEIPT CONFIRMATION ===');
-    console.log(`Pharmacy: ${pharmacist.pharmacyName}`);
-    console.log(`Batch: ${batch.batchNumber}`);
-    console.log(`Expected Qty: ${expectedQuantity}, Received Qty: ${actualReceivedQty}`);
-    console.log(`Quality Check: ${qualityResult}`);
-    console.log(`Damage Reported: ${damageReported}`);
-    console.log(`Verified By: ${pharmacist.user?.name || pharmacist.pharmacyName}`);
-    console.log('==========================================');
 
     res.json({
       success: true,
@@ -404,15 +281,8 @@ const confirmReceipt = async (req, res) => {
       data: {
         distributionId,
         batchId: batch.batchNumber,
-        batchNumber: batch.batchNumber,
-        status: 'received',
-        confirmedAt: new Date(),
-        confirmedBy: pharmacist.user?.name || pharmacist.pharmacyName,
-        expectedQuantity,
-        receivedQuantity: actualReceivedQty,
-        qualityCheck: qualityResult,
-        damageReported,
-        verification: batch.shipmentHistory[shipmentIndex].verification
+        status: 'delivered',
+        confirmedAt: new Date()
       }
     });
 
