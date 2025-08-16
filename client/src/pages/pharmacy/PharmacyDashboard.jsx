@@ -412,39 +412,6 @@ const PharmacyDashboard = () => {
         )}
       </Card>
 
-      {/* Quick Actions */}
-      <Card className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">
-          Quick Actions
-        </h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/pharmacy/expiry-alerts")}
-            className="flex items-center justify-center p-4"
-          >
-            <FaExclamationTriangle className="w-5 h-5 mr-2" />
-            View Expiry Alerts
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/pharmacy/inventory")}
-            className="flex items-center justify-center p-4"
-          >
-            <FaWarehouse className="w-5 h-5 mr-2" />
-            Manage Inventory
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/consumer/verify")}
-            className="flex items-center justify-center p-4"
-          >
-            <FaQrcode className="w-5 h-5 mr-2" />
-            Verify Product
-          </Button>
-        </div>
-      </Card>
-
       {/* Receipt Confirmation Modal */}
       <ReceiptConfirmationModal
         batch={selectedBatch}

@@ -121,7 +121,7 @@ const ProfileDropdown = ({ user,  onDisconnect }) => {
       case "distributor":
         navigate("/distributor/dashboard");
         break;
-      case "pharmacy":
+      case "pharmacist":
         navigate("/pharmacy/dashboard");
         break;
       case "consumer":
@@ -238,16 +238,16 @@ const Navbar = () => {
 
   const navItems = [
     { name: "Home", link: "/" },
-    {
-      name: "Platform",
-      link: "#platform",
-      dropdown: [
-        { name: "For Manufacturers", link: "/manufacturer/dashboard" },
-        { name: "For Distributors", link: "/distributor/dashboard" },
-        { name: "For Pharmacies", link: "/pharmacy/dashboard" },
-        { name: "For Patients", link: "/consumer" },
-      ],
-    },
+    // {
+    //   name: "Platform",
+    //   link: "#platform",
+    //   dropdown: [
+    //     { name: "For Manufacturers", link: "/manufacturer/dashboard" },
+    //     { name: "For Distributors", link: "/distributor/dashboard" },
+    //     { name: "For Pharmacies", link: "/pharmacy/dashboard" },
+    //     { name: "For Patients", link: "/consumer" },
+    //   ],
+    // },
     { name: "Features", link: "/feature" },
     { name: "About", link: "/about" },
   ];

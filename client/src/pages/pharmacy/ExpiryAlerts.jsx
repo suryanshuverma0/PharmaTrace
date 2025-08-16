@@ -11,23 +11,25 @@ const ExpiryAlerts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterDays, setFilterDays] = useState('all');
+  const [filterDays, setFilterDays] = useState('30'); // Changed default from 'all' to '30'
+  const [alertThresholdDays, setAlertThresholdDays] = useState(30);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchExpiryAlerts();
-  }, []);
+    fetchExpiryAlerts(alertThresholdDays);
+  }, [alertThresholdDays]);
 
-  const fetchExpiryAlerts = async () => {
+  const fetchExpiryAlerts = async (days = 30) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await pharmacyAPI.getExpiryAlerts();
+      const response = await pharmacyAPI.getExpiryAlerts(days);
       
       if (response.success) {
         setExpiryAlerts(response.data.alerts || []);
+        console.log('Expiry alerts response:', response.data);
       } else {
         throw new Error(response.message || 'Failed to fetch expiry alerts');
       }
@@ -37,6 +39,11 @@ const ExpiryAlerts = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleThresholdChange = (days) => {
+    setAlertThresholdDays(days);
+    setFilterDays(days.toString());
   };
 
   const getExpiryColor = (daysUntilExpiry) => {
@@ -127,6 +134,16 @@ const ExpiryAlerts = () => {
           <div className="flex gap-2">
             <select
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+              value={alertThresholdDays}
+              onChange={(e) => handleThresholdChange(parseInt(e.target.value))}
+            >
+              <option value="7">Show items expiring in 7 days</option>
+              <option value="30">Show items expiring in 30 days</option>
+              <option value="90">Show items expiring in 90 days</option>
+              <option value="365">Show items expiring in 1 year</option>
+            </select>
+            <select
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               value={filterDays}
               onChange={(e) => setFilterDays(e.target.value)}
             >
@@ -135,7 +152,17 @@ const ExpiryAlerts = () => {
               <option value="30">Warning (≤30 days)</option>
               <option value="90">Normal (≤90 days)</option>
             </select>
+            <Button
+              variant="outline"
+              onClick={() => fetchExpiryAlerts(alertThresholdDays)}
+              className="flex items-center gap-2"
+            >
+              Refresh
+            </Button>
           </div>
+        </div>
+        <div className="mt-2 text-sm text-gray-600">
+          Currently showing items expiring within {alertThresholdDays} days
         </div>
       </Card>
 

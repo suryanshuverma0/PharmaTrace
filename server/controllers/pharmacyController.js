@@ -439,6 +439,9 @@ const getExpiryAlerts = async (req, res) => {
     const pharmacyUserId = req.user.userId;
     const { days = 30 } = req.query; // Default to 30 days
 
+    console.log('=== EXPIRY ALERTS DEBUG ===');
+    console.log('Alert threshold days:', days);
+
     // Find pharmacist record
     const pharmacist = await Pharmacist.findOne({ user: pharmacyUserId })
       .populate('user', 'address');
@@ -451,6 +454,9 @@ const getExpiryAlerts = async (req, res) => {
     }
 
     const pharmacyAddress = pharmacist.user?.address || pharmacist.pharmacyLocation;
+
+    console.log('Pharmacy address:', pharmacyAddress);
+    console.log('Pharmacy name:', pharmacist.pharmacyName);
 
     // Find all batches that have deliveries to this pharmacy
     const batches = await Batch.find({
@@ -474,8 +480,13 @@ const getExpiryAlerts = async (req, res) => {
     .populate('manufacturerId', 'name')
     .lean();
 
+    console.log('Found batches for expiry check:', batches.length);
+
     const today = new Date();
     const alertThreshold = new Date(today.getTime() + (parseInt(days) * 24 * 60 * 60 * 1000));
+    
+    console.log('Today:', today.toDateString());
+    console.log('Alert threshold:', alertThreshold.toDateString());
     
     const expiryAlerts = [];
 
@@ -483,19 +494,27 @@ const getExpiryAlerts = async (req, res) => {
       const product = await Product.findOne({ batchId: batch._id }).lean();
       const expiryDate = product?.expiryDate || batch.expiryDate;
       
-      if (!expiryDate) continue;
+      if (!expiryDate) {
+        console.log(`No expiry date for batch ${batch.batchNumber}`);
+        continue;
+      }
       
       const expiry = new Date(expiryDate);
-      if (expiry <= alertThreshold && expiry > today) {
+      const daysUntilExpiry = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+      
+      console.log(`Batch ${batch.batchNumber}: expires in ${daysUntilExpiry} days (${expiry.toDateString()})`);
+      
+      // Check if within alert threshold OR if it's expired
+      if (expiry <= alertThreshold || expiry <= today) {
         // Find delivered shipments to this pharmacy
         const deliveredShipments = (batch.shipmentHistory || []).filter(entry => 
           (entry.to === pharmacyAddress || entry.toAddress === pharmacyAddress || entry.to === pharmacist.pharmacyName) &&
           ['delivered', 'received', 'Delivered', 'Received'].includes(entry.status)
         );
 
+        console.log(`Batch ${batch.batchNumber} within threshold, found ${deliveredShipments.length} delivered shipments`);
+
         for (const shipment of deliveredShipments) {
-          const daysUntilExpiry = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-          
           expiryAlerts.push({
             distributionId: `${batch._id}_${shipment.timestamp}`,
             batchId: batch.batchNumber,
@@ -506,7 +525,7 @@ const getExpiryAlerts = async (req, res) => {
             manufacturer: batch.manufacturerId?.name || 'Unknown',
             distributor: shipment.from || 'Unknown',
             receivedAt: shipment.timestamp,
-            alertLevel: daysUntilExpiry <= 7 ? 'critical' : daysUntilExpiry <= 15 ? 'warning' : 'info'
+            alertLevel: daysUntilExpiry <= 0 ? 'expired' : daysUntilExpiry <= 7 ? 'critical' : daysUntilExpiry <= 15 ? 'warning' : 'info'
           });
         }
       }
@@ -514,13 +533,23 @@ const getExpiryAlerts = async (req, res) => {
 
     const sortedAlerts = expiryAlerts.sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
 
+    console.log('Final expiry alerts count:', sortedAlerts.length);
+    console.log('=== END EXPIRY ALERTS DEBUG ===');
+
     res.json({
       success: true,
       data: {
         alerts: sortedAlerts,
         totalAlerts: sortedAlerts.length,
-        criticalAlerts: sortedAlerts.filter(alert => alert.alertLevel === 'critical').length,
-        warningAlerts: sortedAlerts.filter(alert => alert.alertLevel === 'warning').length
+        criticalAlerts: sortedAlerts.filter(alert => alert.alertLevel === 'critical' || alert.alertLevel === 'expired').length,
+        warningAlerts: sortedAlerts.filter(alert => alert.alertLevel === 'warning').length,
+        alertThresholdDays: parseInt(days),
+        debugInfo: {
+          batchesFound: batches.length,
+          alertThreshold: alertThreshold.toISOString(),
+          pharmacyAddress,
+          pharmacyName: pharmacist.pharmacyName
+        }
       }
     });
 
