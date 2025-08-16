@@ -179,10 +179,10 @@ const ManufacturerDashboard = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="p-6 bg-white border shadow-lg rounded-2xl border-gray-200/50"
+                className="p-4 bg-white border shadow-lg rounded-2xl border-gray-200/50"
               >
                 <div className="flex items-center justify-between">
-                  <div className={`p-3 rounded-xl bg-${stat.color}-100`}>
+                  <div className={`p-2 rounded-xl bg-${stat.color}-100`}>
                     <div className={`text-${stat.color}-600`}>{stat.icon}</div>
                   </div>
                   <span className={`px-2.5 py-1 text-sm rounded-full ${
@@ -211,7 +211,7 @@ const ManufacturerDashboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl"
+              className="p-4 border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl"
             >
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -230,7 +230,7 @@ const ManufacturerDashboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl"
+              className="p-4 border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl"
             >
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-green-100 rounded-lg">
@@ -249,7 +249,7 @@ const ManufacturerDashboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl"
+              className="p-4 border border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl"
             >
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-purple-100 rounded-lg">
