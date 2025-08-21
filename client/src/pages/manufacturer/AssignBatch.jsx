@@ -159,8 +159,7 @@ const AssignBatch = () => {
         setAssigning(false);
         return;
       }
-
-      if (parseInt(quantity) > batch.quantityAvailable) {
+      if (parseInt(quantity) > batch.quantityRemainingForAssignment) {
         setError("Assigned quantity exceeds available quantity.");
         setAssigning(false);
         return;

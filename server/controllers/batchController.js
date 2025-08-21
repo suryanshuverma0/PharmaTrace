@@ -338,9 +338,10 @@ const assignBatchToDistributor = async (req, res) => {
       throw new Error("Batch not found");
     }
 
-    // Check if quantity is available
-    if (batch.quantityAvailable < quantity) {
-      throw new Error(`Insufficient quantity available. Only ${batch.quantityAvailable} units left`);
+    // Check if quantity is available for assignment (should be based on quantityProduced - quantityAssigned)
+    const remainingForAssignment = batch.quantityProduced - (batch.quantityAssigned || 0);
+    if (remainingForAssignment < quantity) {
+      throw new Error(`Insufficient quantity available for assignment. Only ${remainingForAssignment} units left`);
     }
 
     // Get manufacturer details
@@ -367,10 +368,7 @@ const assignBatchToDistributor = async (req, res) => {
       throw new Error("Cannot assign batch without associated product");
     }
 
-    // Use the new method to assign quantity to distributor
-    await batch.assignToDistributor(quantity);
-      
-      // Prepare shipment entry
+    // Prepare shipment entry
       const shipmentEntry = {
         timestamp: new Date(),
         from: manufacturer.companyName,
@@ -404,12 +402,13 @@ const assignBatchToDistributor = async (req, res) => {
         }
       };
 
-      // Update batch with shipment history and status
+      // Update batch with shipment history, status, and assigned quantity
       const updatedBatch = await Batch.findOneAndUpdate(
         { batchNumber: batchId },
         { 
           $set: {
             shipmentStatus: status,
+            quantityAssigned: (batch.quantityAssigned || 0) + quantity,
             updatedAt: new Date()
           },
           $push: { shipmentHistory: shipmentEntry }

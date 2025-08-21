@@ -162,7 +162,11 @@ const RegisterProduct = () => {
           productId: data.productId,
         };
 
-        const qrDataUrl = await generateQRCode(JSON.stringify(qrData));
+        console.log("QR DATA HERE", qrData)
+
+        const qrDataUrl = await generateQRCode(qrData);
+
+        console.log("qrDataUrl", qrDataUrl)
         setGeneratedQR(qrDataUrl);
         setShowQRModal(true);
         setAlert({

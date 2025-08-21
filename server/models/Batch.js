@@ -240,7 +240,7 @@ batchSchema.methods.registerProduct = async function(quantity = 1) {
 
 // Method to assign quantity to distributor (increases quantityAssigned)
 batchSchema.methods.assignToDistributor = async function(quantity) {
-  const remaining = this.quantityRemainingForAssignment;
+  const remaining = (this.quantityProduced || 0) - (this.quantityAssigned || 0);
   if (remaining < quantity) {
     throw new Error(`Cannot assign ${quantity} units. Only ${remaining} units remaining for assignment`);
   }

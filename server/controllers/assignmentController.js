@@ -29,11 +29,14 @@ const assignBatchToDistributor = async (req, res) => {
       });
     }
 
-    // Check available quantity
-    if (batch.quantityAvailable < quantity) {
+    // Check available quantity for assignment (should be based on quantityProduced - quantityAssigned)
+    const remainingForAssignment = batch.quantityProduced - (batch.quantityAssigned || 0);
+    if (remainingForAssignment < quantity) {
       return res.status(400).json({
-        message: "Insufficient quantity available",
-        available: batch.quantityAvailable
+        message: "Insufficient quantity available for assignment",
+        available: remainingForAssignment,
+        quantityProduced: batch.quantityProduced,
+        quantityAssigned: batch.quantityAssigned || 0
       });
     }
 
@@ -41,19 +44,6 @@ const assignBatchToDistributor = async (req, res) => {
     const distributor = await Distributor.findById(distributorId);
     if (!distributor) {
       return res.status(404).json({ message: "Distributor not found" });
-    }
-
-    // Get unassigned products from this batch
-    const unassignedProducts = await Product.find({
-      batchId: batch._id,
-      status: 'produced',
-      currentHolder: batch.manufacturerId
-    }).limit(quantity);
-
-    if (unassignedProducts.length < quantity) {
-      return res.status(400).json({
-        message: "Not enough unassigned products in batch"
-      });
     }
 
     // Create batch assignment record
@@ -65,7 +55,6 @@ const assignBatchToDistributor = async (req, res) => {
       quantity,
       remarks,
       status: 'assigned',
-      productIds: unassignedProducts.map(p => p._id),
       assignedAt: new Date(),
       shipmentStatus: 'Assigned',
       distributor: {
@@ -75,33 +64,8 @@ const assignBatchToDistributor = async (req, res) => {
       }
     });
 
-    // Update products' status and holder
-    await Product.updateMany(
-      { _id: { $in: unassignedProducts.map(p => p._id) } },
-      { 
-        $set: {
-          status: 'assigned',
-          currentHolder: distributor._id,
-          assignedToDistributor: distributor._id
-        },
-        $push: {
-          history: {
-            timestamp: new Date(),
-            action: 'assigned_to_distributor',
-            from: batch.manufacturerId,
-            to: distributor._id,
-            location: distributor.address,
-            actor: {
-              id: req.user.userId,
-              type: 'manufacturer'
-            }
-          }
-        }
-      }
-    );
-
-    // Update batch available quantity
-    batch.quantityAvailable -= quantity;
+    // Update batch assigned quantity (not available quantity)
+    batch.quantityAssigned = (batch.quantityAssigned || 0) + quantity;
     batch.assignments = batch.assignments || [];
     batch.assignments.push(assignment._id);
 
@@ -159,25 +123,6 @@ const updateAssignmentStatus = async (req, res) => {
     assignment.status = status;
     if (remarks) assignment.remarks = remarks;
     assignment.lastUpdated = new Date();
-
-    // Update products status
-    await Product.updateMany(
-      { _id: { $in: assignment.productIds } },
-      {
-        $set: { status: status.toLowerCase() },
-        $push: {
-          history: {
-            timestamp: new Date(),
-            action: `status_updated_to_${status.toLowerCase()}`,
-            actor: {
-              id: req.user.userId,
-              type: 'manufacturer'
-            },
-            remarks
-          }
-        }
-      }
-    );
 
     await assignment.save();
 
