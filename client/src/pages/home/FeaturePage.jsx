@@ -118,7 +118,7 @@ const FeaturePage = () => {
             variants={itemVariants}
           >
            {` Discover the innovative features that make ${siteConfig?.siteName} the leading solution 
-            for pharmaceutical supply chain management`}
+            for pharmaceutical supply chain management.`}
           </motion.p>
         </motion.div>
       </section>
