@@ -44,6 +44,7 @@ const authMiddleware = (roles = []) => {
 
       next();
     } catch (err) {
+      console.log("Error in auth middleware:", err);
       if (err.name === 'JsonWebTokenError') {
         return res.status(401).json({
           message: 'Invalid token format or signature',

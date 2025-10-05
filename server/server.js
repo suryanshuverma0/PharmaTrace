@@ -15,7 +15,6 @@ const connect_db = require('./config/db');
 dotenv.config();
 connect_db();
 
-
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -33,6 +32,7 @@ app.use("/api/distribution", require("./routes/distributionRoutes"));
 app.use("/api/verification", verificationRoutes);
 
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
