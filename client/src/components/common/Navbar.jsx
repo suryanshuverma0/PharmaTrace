@@ -137,15 +137,15 @@ const ProfileDropdown = ({ user,  onDisconnect }) => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 focus:outline-none  shadow-lg ${
-          isOpen ? "bg-gray-100" : "bg-gray-50 "
+        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 focus:outline-none shadow-lg transition-all duration-200 ${
+          isOpen ? "bg-gray-100" : "bg-gray-50"
         }`}
       >
         <div className="flex items-center gap-2">
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100">
             <User className="w-5 h-5 text-primary-600" />
           </div>
-          <span className="hidden md:inline">{user?.name || "Profile"}</span>
+          <span className="hidden sm:inline">{user?.name || "Profile"}</span>
         </div>
         <ChevronDown
           className={`w-4 h-4 transition-transform ${
@@ -155,7 +155,7 @@ const ProfileDropdown = ({ user,  onDisconnect }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-10 w-full py-2 mt-2 space-y-2.5 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+        <div className="absolute right-0 z-[9998] w-full py-2 mt-2 space-y-2.5 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
           <div className="px-4 pb-2 text-sm text-gray-900 border-b">
             <div className="py-2 text-xs text-gray-500 ">Welcome!</div>
 
@@ -237,7 +237,7 @@ const Navbar = () => {
   }, []);
 
   const navItems = [
-    { name: "Home", link: "/" },
+    // { name: "Home", link: "/" },
     // {
     //   name: "Platform",
     //   link: "#platform",
@@ -248,14 +248,14 @@ const Navbar = () => {
     //     { name: "For Patients", link: "/consumer" },
     //   ],
     // },
-    { name: "Features", link: "/feature" },
-    { name: "About", link: "/about" },
+    // { name: "Features", link: "/feature" },
+    // { name: "About", link: "/about" },
   ];
 
   return (
     <>
       <nav
-        className={`fixed z-50 w-full transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-[9997] w-full transition-all duration-300 ${
           isScrolled
             ? "bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100"
             : "bg-white/90 backdrop-blur-sm shadow-md"
@@ -346,19 +346,21 @@ const Navbar = () => {
               {isAuthenticated ? (
                 <ProfileDropdown user={user} isAuthenticated={isAuthenticated} onDisconnect={disconnectWallet} />
               ) : (
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
                   <button
                     onClick={() => openConnectModal()}
-                    className="items-center hidden gap-2 px-4 py-3 text-[15px] font-medium text-white rounded-lg shadow-md md:flex bg-primary-600 hover:bg-primary-700 focus:outline-none0"
+                    className="flex items-center gap-2 px-4 py-3 text-[15px] font-medium text-white rounded-lg shadow-md bg-primary-600 hover:bg-primary-700 focus:outline-none transition-all duration-200"
                   >
                     <Wallet className="w-5 h-5" />
-                    Connect Wallet
+                    <span className="hidden sm:inline">Connect Wallet</span>
+                    <span className="sm:hidden">Connect</span>
                   </button>
                   <button
                     onClick={() => openRegisterModal()}
-                    className="items-center hidden gap-2 px-4 py-2.5 text-[15px] font-medium border rounded-lg md:flex text-primary-600 border-primary-600 hover:bg-primary-50 focus:outline-none"
+                    className="flex items-center gap-2 px-4 py-2.5 text-[15px] font-medium border rounded-lg text-primary-600 border-primary-600 hover:bg-primary-50 focus:outline-none transition-all duration-200"
                   >
-                    Register
+                    <span className="hidden sm:inline">Register</span>
+                    <span className="sm:hidden">Sign Up</span>
                   </button>
                 </div>
               )}
@@ -392,66 +394,128 @@ const Navbar = () => {
           </div>
         </div>
 
+        {/* Mobile menu backdrop */}
+        {isOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+
         {/* Mobile menu */}
         <div
-          className={`lg:hidden transition-all duration-300 ${
-            isOpen
-              ? "max-h-screen opacity-100"
-              : "max-h-0 opacity-0 overflow-hidden"
+          className={`lg:hidden fixed top-0 right-0 w-80 max-w-[85vw] bg-white shadow-2xl h-screen transform transition-transform duration-300 ease-in-out ${
+            isOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <div className="border-t border-gray-100 bg-white/95 backdrop-blur-md">
-            <div className="px-4 py-6 space-y-2">
-              {navItems.map((item) => (
-                <div key={item.name}>
-                  <Link
-                    to={item.link}
-                    className="flex items-center justify-between px-4 py-3 font-medium text-gray-700 transition-all duration-200 rounded-lg hover:text-blue-600 hover:bg-blue-50/50"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <span>{item.name}</span>
-                    {item.dropdown && <ChevronDown size={16} />}
-                  </Link>
-                  {item.dropdown && (
-                    <div className="mt-2 ml-4 space-y-1">
-                      {item.dropdown.map((subItem) => (
-                        <Link
-                          key={subItem.name}
-                          to={subItem.link}
-                          className="block px-4 py-2 text-sm text-gray-600 transition-all duration-200 rounded-lg hover:text-blue-600 hover:bg-blue-50/50"
-                          onClick={() => setIsOpen(false)}
-                        >
-                          {subItem.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+          {/* Mobile menu header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <PharmaChainLogo className="w-8 h-8" />
+              <span className="text-lg font-semibold text-gray-900">
+                {siteConfig?.siteName}
+              </span>
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-2 text-gray-500 transition-colors rounded-lg hover:bg-gray-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-              {/* Mobile buttons */}
-              <div className="pt-4 space-y-3 border-t border-gray-200">
-                <button
-                  className="w-full px-4 py-3 font-medium text-center text-gray-700 transition-all duration-200 rounded-lg hover:text-blue-600 hover:bg-blue-50/50"
-                  onClick={() => {
-                    navigate("/login");
-                    setIsOpen(false);
-                  }}
-                >
-                  Sign In
-                </button>
-                <button
-                  className="w-full px-6 py-3 font-semibold text-white transition-all duration-300 transform rounded-full shadow-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:scale-105"
-                  onClick={() => {
-                    navigate("/connect-wallet");
-                    setIsOpen(false);
-                  }}
-                >
-                  <div className="flex items-center justify-center">
-                    <Wallet size={20} className="mr-2" />
-                    <span>Connect Wallet</span>
+          {/* Mobile menu content */}
+          <div className="flex flex-col h-full overflow-y-auto">
+            <div className="flex-1 px-6 py-2">
+        
+              {/* Mobile authentication section */}
+              <div className="pt-2 border-t border-gray-200">
+                <h3 className="mb-4 text-sm font-semibold tracking-wider text-gray-500 uppercase">
+                  Account
+                </h3>
+                <div className="space-y-3">
+                {isAuthenticated ? (
+                  <div className="space-y-3">
+                    {/* Mobile Profile Section */}
+                    <div className="flex items-center gap-3 px-4 py-4 border border-blue-100 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100">
+                        <User className="w-6 h-6 text-primary-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">{user?.name || "Profile"}</p>
+                        <p className="text-sm text-gray-600 capitalize">{user?.role}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Mobile Dashboard Button */}
+                    <button
+                      className="w-full px-4 py-3 font-medium text-center text-white transition-all duration-200 shadow-lg rounded-xl bg-primary-600 hover:bg-primary-700 hover:shadow-xl"
+                      onClick={() => {
+                        switch (user?.role) {
+                          case "manufacturer":
+                            navigate("/manufacturer/dashboard");
+                            break;
+                          case "distributor":
+                            navigate("/distributor/dashboard");
+                            break;
+                          case "pharmacist":
+                            navigate("/pharmacy/dashboard");
+                            break;
+                          case "consumer":
+                            navigate("/consumer/dashboard");
+                            break;
+                          default:
+                            navigate("/");
+                        }
+                        setIsOpen(false);
+                      }}
+                    >
+                      Go to Dashboard
+                    </button>
+                    
+                    {/* Mobile Disconnect Button */}
+                    <button
+                      className="w-full px-4 py-3 font-medium text-center text-red-600 transition-all duration-200 border border-red-200 rounded-xl hover:bg-red-50"
+                      onClick={() => {
+                        disconnectWallet();
+                        setIsOpen(false);
+                      }}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <LogOut className="w-4 h-4" />
+                        <span>Disconnect Wallet</span>
+                      </div>
+                    </button>
                   </div>
-                </button>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Mobile Connect Wallet Button */}
+                    <button
+                      className="w-full px-4 py-3 font-semibold text-white transition-all duration-300 transform shadow-lg rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 hover:shadow-xl hover:scale-105"
+                      onClick={() => {
+                        openConnectModal();
+                        setIsOpen(false);
+                      }}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Wallet className="w-5 h-5" />
+                        <span>Connect Wallet</span>
+                      </div>
+                    </button>
+                    
+                    {/* Mobile Register Button */}
+                    <button
+                      className="w-full px-4 py-3 font-medium transition-all duration-200 border rounded-xl text-primary-600 border-primary-300 hover:bg-primary-50 hover:border-primary-400"
+                      onClick={() => {
+                        openRegisterModal();
+                        setIsOpen(false);
+                      }}
+                    >
+                      Register
+                    </button>
+                  </div>
+                )}
+                </div>
               </div>
             </div>
           </div>

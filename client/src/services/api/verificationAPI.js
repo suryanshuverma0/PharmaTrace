@@ -1,18 +1,12 @@
 // API service for product verification
-const API_BASE_URL = 'http://localhost:3000/api';
+import apiClient from './api';
 
 export const verificationAPI = {
   // Verify product by serial number
   verifyProduct: async (serialNumber) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/verification/verify/${serialNumber}`);
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to verify product');
-      }
-      
-      return data;
+      const response = await apiClient.get(`/verification/verify/${serialNumber}`);
+      return response.data;
     } catch (error) {
       console.error('Error verifying product:', error);
       throw error;
@@ -22,14 +16,8 @@ export const verificationAPI = {
   // Get product journey details
   getProductJourney: async (serialNumber) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/verification/journey/${serialNumber}`);
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to get product journey');
-      }
-      
-      return data;
+      const response = await apiClient.get(`/verification/journey/${serialNumber}`);
+      return response.data;
     } catch (error) {
       console.error('Error getting product journey:', error);
       throw error;

@@ -32,14 +32,14 @@ const Modal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black bg-opacity-60">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 overflow-y-auto bg-black bg-opacity-60">
       <div
         className="fixed inset-0 transition-opacity "
         onClick={onClose}
       ></div>
 
       <div
-        className={`z-50 w-full ${sizes[size]} p-6 max-h-[90vh] bg-white rounded-2xl shadow-xl ${className}`}
+        className={`z-50 w-full ${sizes[size]} p-6 max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-xl ${className}`}
       >
         <div className="flex items-center justify-between mb-4">
           {title && (

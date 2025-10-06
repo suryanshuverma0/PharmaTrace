@@ -1,30 +1,23 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Scan, Package, ArrowRight, X, AlertTriangle, CheckCircle, XCircle, Camera } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import QrScanner from 'qr-scanner';
+import { Search, Scan, Package, ArrowRight, X, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Card } from "../../components/UI/Card";
 import { Input } from "../../components/UI/Input";
 import { Button } from "../../components/UI/Button";
-import { Modal } from "../../components/UI/Modal";
 import { Badge } from "../../components/UI/Badge";
 import { verificationAPI } from "../../services/api/verificationAPI";
+import QRScannerModal from "../../components/modals/QRScannerModal";
 
 const VerifyDrug = () => {
   const navigate = useNavigate();
-  const videoRef = useRef(null);
-  const qrScannerRef = useRef(null);
+  const location = useLocation();
   const [verificationMethod, setVerificationMethod] = useState(null);
-  const [showScanner, setShowScanner] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
   const [serialNumber, setSerialNumber] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
   const [error, setError] = useState(null);
-  const [scannerError, setScannerError] = useState(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [availableCameras, setAvailableCameras] = useState([]);
-  const [selectedCamera, setSelectedCamera] = useState(null);
-  const [isMobile, setIsMobile] = useState(false);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -38,269 +31,33 @@ const VerifyDrug = () => {
     },
   };
 
-  // Detect mobile device
+  // Handle state from landing page navigation
   useEffect(() => {
-    const checkMobile = () => {
-      const userAgent = navigator.userAgent.toLowerCase();
-      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent) ||
-                           ('ontouchstart' in window) ||
-                           (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
-      setIsMobile(isMobileDevice);
-    };
-    
-    checkMobile();
-  }, []);
-
-  // Get available cameras
-  const getAvailableCameras = async () => {
-    try {
-      const cameras = await QrScanner.listCameras(true);
-      console.log('Available cameras:', cameras);
-      setAvailableCameras(cameras);
+    if (location.state?.serialNumber) {
+      setSerialNumber(location.state.serialNumber);
+      setVerificationMethod('manual');
       
-      // For mobile devices, prefer back camera
-      if (isMobile && cameras.length > 0) {
-        // Look for back/environment camera
-        const backCamera = cameras.find(camera => 
-          camera.label.toLowerCase().includes('back') ||
-          camera.label.toLowerCase().includes('rear') ||
-          camera.label.toLowerCase().includes('environment') ||
-          camera.id.includes('environment')
-        );
-        
-        if (backCamera) {
-          setSelectedCamera(backCamera.id);
-          console.log('Selected back camera:', backCamera.label);
-        } else {
-          // Fallback to first available camera
-          setSelectedCamera(cameras[0].id);
-          console.log('Selected default camera:', cameras[0].label);
-        }
-      } else if (cameras.length > 0) {
-        // For desktop, use first available camera
-        setSelectedCamera(cameras[0].id);
+      // Auto-verify if requested
+      if (location.state.autoVerify) {
+        performVerification(location.state.serialNumber);
       }
-    } catch (error) {
-      console.error('Failed to get cameras:', error);
-      setScannerError('Failed to access camera devices');
+      
+      // Clear the state to prevent re-triggering
+      window.history.replaceState({}, document.title);
     }
+  }, [location.state]);
+
+  // Handle QR scan result from modal
+  const handleScanResult = (serialNum, rawData) => {
+    console.log('Scanned serial number:', serialNum);
+    setSerialNumber(serialNum);
+    setVerificationMethod('manual');
+    performVerification(serialNum);
   };
 
-  // Initialize QR Scanner with mobile optimization
-  const initializeScanner = async () => {
-    if (!videoRef.current) return;
 
-    try {
-      setScannerError(null);
-      setIsScanning(true);
 
-      // Stop existing scanner if any
-      if (qrScannerRef.current) {
-        qrScannerRef.current.stop();
-        qrScannerRef.current.destroy();
-      }
 
-      // Get available cameras first
-      await getAvailableCameras();
-
-      // Create new QR scanner with mobile-optimized settings
-      qrScannerRef.current = new QrScanner(
-        videoRef.current,
-        (result) => {
-          console.log('QR Code detected:', result.data);
-          handleQRResult(result.data);
-        },
-        {
-          returnDetailedScanResult: true,
-          highlightScanRegion: true,
-          highlightCodeOutline: true,
-          // Mobile optimizations
-          preferredCamera: selectedCamera || (isMobile ? 'environment' : 'user'),
-          maxScansPerSecond: isMobile ? 5 : 10, // Lower scan rate for mobile to save battery
-          calculateScanRegion: (video) => {
-            // Custom scan region for mobile - center square
-            if (isMobile) {
-              const smallerDimension = Math.min(video.videoWidth, video.videoHeight);
-              const scanSize = smallerDimension * 0.8;
-              return {
-                x: (video.videoWidth - scanSize) / 2,
-                y: (video.videoHeight - scanSize) / 2,
-                width: scanSize,
-                height: scanSize,
-              };
-            }
-            return null; // Use default for desktop
-          }
-        }
-      );
-
-      // Set camera if available
-      if (selectedCamera && availableCameras.length > 0) {
-        await qrScannerRef.current.setCamera(selectedCamera);
-      }
-
-      await qrScannerRef.current.start();
-    } catch (error) {
-      console.error('Failed to start QR scanner:', error);
-      let errorMessage = 'Failed to access camera. ';
-      
-      if (error.name === 'NotAllowedError') {
-        errorMessage += 'Please allow camera permissions and try again.';
-      } else if (error.name === 'NotFoundError') {
-        errorMessage += 'No camera found on this device.';
-      } else if (error.name === 'NotSupportedError') {
-        errorMessage += 'Camera not supported in this browser.';
-      } else {
-        errorMessage += 'Please check camera permissions and try again.';
-      }
-      
-      setScannerError(errorMessage);
-      setIsScanning(false);
-    }
-  };
-
-  // Stop QR Scanner
-  const stopScanner = () => {
-    if (qrScannerRef.current) {
-      qrScannerRef.current.stop();
-      qrScannerRef.current.destroy();
-      qrScannerRef.current = null;
-    }
-    setIsScanning(false);
-    setScannerError(null);
-  };
-
-  // Switch camera (for devices with multiple cameras)
-  const switchCamera = async () => {
-    if (!qrScannerRef.current || availableCameras.length <= 1) return;
-
-    try {
-      const currentIndex = availableCameras.findIndex(camera => camera.id === selectedCamera);
-      const nextIndex = (currentIndex + 1) % availableCameras.length;
-      const nextCamera = availableCameras[nextIndex];
-      
-      setSelectedCamera(nextCamera.id);
-      await qrScannerRef.current.setCamera(nextCamera.id);
-      
-      console.log('Switched to camera:', nextCamera.label);
-    } catch (error) {
-      console.error('Failed to switch camera:', error);
-      setScannerError('Failed to switch camera');
-    }
-  };
-
-  // Handle QR scan result with comprehensive error handling
-  const handleQRResult = async (qrData) => {
-    try {
-      console.log('Raw QR data:', qrData);
-      
-      // Validate QR data is not empty or just whitespace
-      if (!qrData || typeof qrData !== 'string' || qrData.trim().length === 0) {
-        setError('Invalid QR code: No data found');
-        return;
-      }
-
-      // Provide haptic feedback on mobile
-      if (isMobile && 'vibrate' in navigator) {
-        navigator.vibrate(200);
-      }
-      
-      // Stop scanner immediately when QR is detected
-      stopScanner();
-      setShowScanner(false);
-      
-      let serialNum = '';
-      let qrType = 'unknown';
-      
-      // Try to parse as JSON first
-      try {
-        const parsedData = JSON.parse(qrData);
-        console.log('Parsed QR data:', parsedData);
-        qrType = 'json';
-        
-        // Validate JSON structure
-        if (typeof parsedData !== 'object' || parsedData === null) {
-          throw new Error('Invalid JSON structure in QR code');
-        }
-        
-        // Extract serial number from various possible fields
-        serialNum = parsedData.serialNumber || parsedData.productId || parsedData.id;
-        
-        // If still no serial number, check if there's a verification URL
-        if (!serialNum && parsedData.verificationUrl) {
-          const urlMatch = parsedData.verificationUrl.match(/\/verify\/([^/?]+)/);
-          if (urlMatch && urlMatch[1] !== 'undefined') {
-            serialNum = urlMatch[1];
-          }
-        }
-        
-        // Additional validation for expected QR format
-        if (!serialNum && !parsedData.verificationUrl) {
-          throw new Error('QR code does not contain required product information');
-        }
-        
-      } catch (jsonError) {
-        console.log('Not JSON format, trying other formats...');
-        
-        // If not JSON, check if it's a URL or plain text
-        if (qrData.includes('verify/') || qrData.includes('verification/')) {
-          qrType = 'url';
-          const urlMatch = qrData.match(/\/verify(?:ication)?\/([^/?]+)/);
-          if (urlMatch && urlMatch[1] !== 'undefined') {
-            serialNum = urlMatch[1];
-          }
-        } else if (qrData.length >= 3 && qrData.length <= 100) {
-          // Accept as plain serial number if reasonable length
-          qrType = 'plain';
-          serialNum = qrData.trim();
-        } else {
-          // Invalid format
-          setError(`Invalid QR code format. Expected product QR code, but found: ${qrData.length > 50 ? qrData.substring(0, 50) + '...' : qrData}`);
-          return;
-        }
-      }
-
-      console.log('Extracted serial number:', serialNum, 'Type:', qrType);
-
-      // Validate serial number
-      if (!serialNum || serialNum === 'undefined' || serialNum === 'null') {
-        setError('Invalid QR code: No valid serial number found. Please ensure you\'re scanning a product verification QR code.');
-        return;
-      }
-
-      // Additional validation for serial number format
-      if (serialNum.length < 3) {
-        setError('Invalid serial number: Too short. Please check the QR code.');
-        return;
-      }
-
-      if (serialNum.length > 100) {
-        setError('Invalid serial number: Too long. Please check the QR code.');
-        return;
-      }
-
-      // Check for suspicious characters that might indicate corrupted QR
-      const suspiciousPattern = /[<>{}[\]\\]/;
-      if (suspiciousPattern.test(serialNum)) {
-        setError('Invalid serial number format. Please try scanning again.');
-        return;
-      }
-
-      setSerialNumber(serialNum);
-      await performVerification(serialNum);
-
-    } catch (error) {
-      console.error('Error processing QR result:', error);
-      setError(`Failed to process QR code: ${error.message || 'Unknown error occurred'}`);
-      
-      // Restore scanner if needed for retry
-      setTimeout(() => {
-        if (!showScanner) {
-          setShowScanner(false);
-        }
-      }, 100);
-    }
-  };
 
   // Perform verification with comprehensive error handling
   const performVerification = async (serialNum) => {
@@ -390,64 +147,30 @@ const VerifyDrug = () => {
     await performVerification(trimmedSerial);
   };
 
-  // Start QR scanning with mobile optimization
-  const startQRScanning = async () => {
+  // Start QR scanning
+  const startQRScanning = () => {
     setVerificationMethod("qr");
-    setShowScanner(true);
-    
-    // Prevent body scroll on mobile when modal is open
-    if (isMobile) {
-      document.body.style.overflow = 'hidden';
-    }
-    
-    // Small delay to ensure modal is rendered
-    setTimeout(() => {
-      initializeScanner();
-    }, 100);
+    setShowQRModal(true);
   };
-
-  // Close scanner modal
-  const closeScannerModal = () => {
-    stopScanner();
-    setShowScanner(false);
-    
-    // Restore body scroll on mobile
-    if (isMobile) {
-      document.body.style.overflow = 'auto';
-    }
-  };
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopScanner();
-      // Restore body scroll in case component unmounts while modal is open
-      if (isMobile) {
-        document.body.style.overflow = 'auto';
-      }
-    };
-  }, [isMobile]);
 
   const resetVerification = () => {
     setVerificationMethod(null);
     setSerialNumber("");
     setVerificationResult(null);
     setError(null);
-    setScannerError(null);
-    stopScanner();
   };
 
   return (
     <motion.div
-      className="max-w-5xl min-h-screen mx-auto"
+      className="flex flex-col items-center justify-center max-w-5xl min-h-screen px-6 mx-auto sm:justify-start"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
       {/* Header */}
-      <div className="text-center">
+      <div className="mt-32 text-center">
         <motion.h1
-          className="text-3xl font-bold text-gray-900"
+          className="text-2xl font-bold text-gray-900"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -455,7 +178,7 @@ const VerifyDrug = () => {
           Verify Your Medication
         </motion.h1>
         <motion.p
-          className="mt-3 text-lg text-gray-600"
+          className="mt-3 text-sm text-gray-600"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
@@ -466,7 +189,7 @@ const VerifyDrug = () => {
       </div>
 
       {!verificationResult ? (
-        <div className="grid grid-cols-1 gap-8 mt-8 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-8 px-5 mt-8 mb-10 md:grid-cols-2">
           {/* QR Code Scanner Option */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -476,7 +199,7 @@ const VerifyDrug = () => {
             <Card className="transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-gray-50 to-white">
               <button
                 onClick={startQRScanning}
-                className="w-full p-8 text-left"
+                className="w-full p-3 text-left sm:p-6"
               >
                 <div className="flex flex-col items-center space-y-4 text-center">
                   <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-100">
@@ -504,7 +227,7 @@ const VerifyDrug = () => {
             <Card className="transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-gray-50 to-white">
               <button
                 onClick={() => setVerificationMethod("manual")}
-                className="w-full p-8 text-left"
+                className="w-full p-3 text-left sm:p-6"
               >
                 <div className="flex flex-col items-center space-y-4 text-center">
                   <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-100">
@@ -531,7 +254,7 @@ const VerifyDrug = () => {
               animate={{ opacity: 1, y: 0 }}
             >
               <Card className="overflow-hidden">
-                <div className="p-8 bg-gradient-to-br from-primary-50 to-white">
+                <div className="">
                   <h3 className="mb-6 text-xl font-semibold text-gray-900">
                     Enter Serial Number
                   </h3>
@@ -602,9 +325,9 @@ const VerifyDrug = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Card className="overflow-hidden">
-            <div className="p-8">
-              <div className="flex items-start justify-between mb-8">
+          <Card className="mt-4 overflow-hidden">
+            <div className="p-2 pt-2 md:p-4">
+              <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center space-x-4">
                   <div className="relative">
                     {verificationResult.isAuthentic ? (
@@ -625,7 +348,7 @@ const VerifyDrug = () => {
                       </>
                     )}
                   </div>
-                  <p className="text-gray-600">
+                  <p className="hidden text-gray-600 sm:block">
                     Verified on {new Date().toLocaleDateString()}
                   </p>
                 </div>
@@ -634,10 +357,9 @@ const VerifyDrug = () => {
                   onClick={resetVerification}
                   className="rounded-full hover:bg-gray-100"
                 >
-                  <X className="w-5 h-5" />
+                  <X  className="w-5 h-5" />
                 </Button>
               </div>
-
               <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                 <div className="space-y-6">
                   <div className="pb-6 border-b border-gray-100">
@@ -729,9 +451,9 @@ const VerifyDrug = () => {
 
                   {/* Enhanced error messages for different scenarios */}
                   {verificationResult.success === false && (
-                    <div className="p-6 border border-red-200 rounded-lg bg-red-50">
+                    <div className="p-4 border border-red-200 rounded-lg bg-red-50">
                       <div className="flex items-start">
-                        <XCircle className="w-6 h-6 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                        {/* <XCircle className="w-6 h-6 text-red-600 mt-0.5 mr-3 flex-shrink-0" /> */}
                         <div className="flex-1">
                           <h4 className="text-lg font-semibold text-red-800">
                             {verificationResult.error === 'NOT_FOUND' ? 'Product Not Found' : 'Verification Failed'}
@@ -858,143 +580,14 @@ const VerifyDrug = () => {
             </div>
           </Card>
         </motion.div>
-      )}      {/* QR Scanner Modal */}
-      <Modal
-        isOpen={showScanner}
-        onClose={closeScannerModal}
-        title="Scan QR Code"
-      >
-        <div className="p-4 sm:p-6">
-          <div className="flex flex-col items-center space-y-6">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100">
-              <Scan className="w-6 h-6 text-primary-600" />
-            </div>
-            
-            <p className="text-sm text-center text-gray-600 sm:text-base">
-              {isScanning ? 'Position the QR code within the frame' : 'Preparing camera...'}
-            </p>
+      )}
 
-            <div className="relative w-full max-w-[280px] sm:max-w-[300px] mx-auto aspect-square">
-              {/* Video Element for QR Scanner */}
-              <video
-                ref={videoRef}
-                className="absolute inset-0 object-cover w-full h-full bg-black rounded-2xl"
-                muted
-                playsInline
-                style={{ 
-                  transform: isMobile ? 'scaleX(-1)' : 'none' // Mirror for mobile front camera
-                }}
-              />
-
-              {/* Camera Switch Button (for mobile with multiple cameras) */}
-              {isMobile && availableCameras.length > 1 && isScanning && (
-                <button
-                  onClick={switchCamera}
-                  className="absolute z-10 p-2 text-white transition-colors rounded-full bg-black/50 top-4 right-4 hover:bg-black/70"
-                  title="Switch Camera"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-              )}
-
-              {/* Scan Region Indicator for Mobile */}
-              {isMobile && isScanning && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-48 h-48 border-2 border-white border-dashed rounded-lg opacity-50"></div>
-                </div>
-              )}
-
-              {/* Overlay and Corner Markers */}
-              <div className="absolute inset-0 rounded-2xl">
-                {/* Corner Markers */}
-                <div className="absolute w-6 h-6 border-t-4 border-l-4 border-white shadow-lg top-4 left-4"></div>
-                <div className="absolute w-6 h-6 border-t-4 border-r-4 border-white shadow-lg top-4 right-4"></div>
-                <div className="absolute w-6 h-6 border-b-4 border-l-4 border-white shadow-lg bottom-4 left-4"></div>
-                <div className="absolute w-6 h-6 border-b-4 border-r-4 border-white shadow-lg bottom-4 right-4"></div>
-
-                {/* Status Indicator */}
-                <div className="absolute inset-x-0 bottom-0 p-4 text-center bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
-                  <p className="text-sm font-medium text-white">
-                    {isScanning ? 
-                      (isMobile ? 'Hold steady and scan QR code' : 'Scanning for QR codes...') : 
-                      'Initializing camera...'}
-                  </p>
-                  {/* Camera info for debugging */}
-                  {isScanning && selectedCamera && availableCameras.length > 0 && (
-                    <p className="mt-1 text-xs text-white/75">
-                      {availableCameras.find(c => c.id === selectedCamera)?.label || 'Camera active'}
-                      {isMobile && availableCameras.length > 1 && ' • Tap to switch'}
-                    </p>
-                  )}
-                </div>
-
-                {/* Loading indicator when not scanning */}
-                {!isScanning && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl">
-                    <div className="flex flex-col items-center space-y-3">
-                      <Camera className="w-8 h-8 text-white animate-pulse" />
-                      <p className="text-sm text-white">
-                        {isMobile ? 'Starting camera...' : 'Accessing camera...'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Error message */}
-            {scannerError && (
-              <div className="flex items-start p-3 text-red-700 bg-red-100 border border-red-200 rounded-lg">
-                <AlertTriangle className="flex-shrink-0 w-5 h-5 mt-0.5 mr-2" />
-                <div className="text-sm">
-                  <p className="font-medium">{scannerError}</p>
-                  {isMobile && (
-                    <p className="mt-1 text-red-600">
-                      Try refreshing the page or switching to manual entry if camera issues persist.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Mobile-specific tips */}
-            {isMobile && isScanning && !scannerError && (
-              <div className="p-3 text-blue-700 bg-blue-100 border border-blue-200 rounded-lg">
-                <div className="text-sm">
-                  <p className="font-medium">Mobile scanning tips:</p>
-                  <ul className="mt-1 ml-4 list-disc">
-                    <li>Hold phone steady and ensure good lighting</li>
-                    <li>Position QR code within the dashed square</li>
-                    {availableCameras.length > 1 && <li>Tap the switch button to change camera</li>}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col justify-center w-full gap-3 sm:flex-row">
-              <Button
-                variant="secondary"
-                onClick={closeScannerModal}
-                className="w-full px-6 sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  closeScannerModal();
-                  setVerificationMethod("manual");
-                }}
-                className="w-full px-6 sm:w-auto"
-              >
-                Manual Entry Instead
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Modal>
+      {/* QR Scanner Modal */}
+      <QRScannerModal
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        onScanSuccess={handleScanResult}
+      />
 
       {/* <style jsx>{`
         .scanning-line {

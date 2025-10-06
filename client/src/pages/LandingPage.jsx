@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { Scan, Search, CheckCircle } from "lucide-react";
 import { useWalletModal } from "../context/WalletModalContext";
 import { siteConfig } from "../constants/data";
+import QRScannerModal from "../components/modals/QRScannerModal";
 
 // Custom SVG Logo Component
 export const PharmaChainLogo = ({ className = "w-12 h-12" }) => (
@@ -35,8 +37,19 @@ export const PharmaChainLogo = ({ className = "w-12 h-12" }) => (
 
 const LandingPage = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const { openConnectModal, openRegisterModal } = useWalletModal();
   const navigate = useNavigate();
+
+  const openQRScanner = () => {
+    setShowQRScanner(true);
+  };
+
+  const handleScanResult = (serialNumber, rawData) => {
+    console.log('Scanned serial number:', serialNumber);
+    // Navigate to verification page with the scanned serial number
+    navigate('/verify-product', { state: { serialNumber, autoVerify: true } });
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -139,17 +152,12 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Banner Section */}
-      <section className="relative overflow-hidden">
+      <section className="overflow-hidden ">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500">
           <div className="absolute inset-0 bg-black opacity-20"></div>
-          <div className="absolute inset-0">
-            <div className="absolute w-32 h-32 bg-white rounded-full top-10 left-10 opacity-5 animate-pulse"></div>
-            <div className="absolute w-24 h-24 delay-1000 bg-white rounded-full top-40 right-20 opacity-5 animate-pulse"></div>
-            <div className="absolute w-40 h-40 bg-white rounded-full bottom-20 left-1/3 opacity-5 animate-pulse delay-2000"></div>
-          </div>
         </div>
 
-        <div className="relative z-10 px-6 py-24 mx-auto max-w-7xl sm:py-56 lg:px-8">
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 mx-auto max-w-7xl lg:px-8">
           <motion.div className="text-center" initial="hidden" animate="visible" variants={containerVariants}>
             <motion.div className="flex justify-center mb-8" variants={itemVariants}>
               <PharmaChainLogo className="w-20 h-20 text-white" />
@@ -162,55 +170,19 @@ const LandingPage = () => {
             </motion.p>
             <motion.div className="flex items-center justify-center mt-10 gap-x-6" variants={itemVariants}>
               <motion.button
-                className="px-6 py-3 text-lg font-semibold text-blue-600 transition-all duration-300 bg-white rounded-full shadow-xl hover:bg-blue-50 hover:shadow-2xl"
+                className="inline-flex items-center px-6 py-3 text-lg font-semibold text-blue-600 transition-all duration-300 bg-white rounded-full shadow-xl hover:bg-blue-50 hover:shadow-2xl"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={openConnectModal}
+                onClick={openQRScanner}
               >
-                Get Started
-              </motion.button>
-              <motion.button
-                className="px-6 py-3 text-lg font-semibold text-white transition-all duration-300 border-2 border-white rounded-full hover:bg-white hover:text-blue-600"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/about")}
-              >
-                Learn More
+                <Scan className="w-5 h-5 mr-2" />
+                Quick Verify
               </motion.button>
             </motion.div>
           </motion.div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-24 bg-white">
-        <div className="px-6 mx-auto max-w-7xl lg:px-8">
-          <motion.div className="text-center" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={containerVariants}>
-            <motion.h2 className="text-4xl font-bold tracking-tight text-gray-800 sm:text-[45px]" variants={itemVariants}>
-              Key Features
-            </motion.h2>
-            <motion.p className="max-w-2xl mx-auto mt-6 text-lg text-gray-600" variants={itemVariants}>
-              Discover the powerful capabilities that make PharmaTrace the leading solution for pharmaceutical supply chain management.
-            </motion.p>
-          </motion.div>
-          <motion.div className="grid grid-cols-1 gap-8 mt-16 sm:grid-cols-2 lg:grid-cols-3" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={containerVariants}>
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                className="relative p-8 py-10 transition-all duration-300 bg-white border border-gray-100 shadow-lg rounded-2xl hover:shadow-2xl"
-                variants={cardVariants}
-                whileHover="hover"
-              >
-                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 text-blue-600 bg-blue-50 rounded-xl">
-                  {feature.icon}
-                </div>
-                <h3 className="mb-4 text-[22px] font-semibold text-center text-gray-800">{feature.title}</h3>
-                <p className="leading-relaxed text-center text-gray-600">{feature.description}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
 
       {/* Roles Section */}
       <section className="py-24 bg-gray-50">
@@ -242,9 +214,151 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* Quick Verification Section */}
+      <QuickVerificationSection />
+
       {/* Connect Wallet Section */}
       <ConnectWalletCTASection />
+
+      {/* QR Scanner Modal */}
+      <QRScannerModal
+        isOpen={showQRScanner}
+        onClose={() => setShowQRScanner(false)}
+        onScanResult={handleScanResult}
+        title="Scan Medication QR Code"
+        description="Position the QR code from your medication package within the frame"
+      />
     </div>
+  );
+};
+
+export const QuickVerificationSection = () => {
+  const navigate = useNavigate();
+  const [showQRScanner, setShowQRScanner] = useState(false);
+
+  const handleScanResult = (serialNumber, rawData) => {
+    console.log('Scanned serial number:', serialNumber);
+    // Navigate to verification page with the scanned serial number
+    navigate('/verify-product', { state: { serialNumber, autoVerify: true } });
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { delayChildren: 0.2, staggerChildren: 0.1 } },
+  };
+
+  const itemVariants = {
+    hidden: { y: 30, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { duration: 0.6, ease: "easeOut" } },
+  };
+
+  return (
+    <>
+      <section className="py-24 bg-gray-50">
+        <div className="px-6 mx-auto max-w-7xl lg:px-8">
+          <motion.div 
+            className="text-center" 
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true, amount: 0.3 }} 
+            variants={containerVariants}
+          >
+            <motion.h2 
+              className="text-4xl font-bold tracking-tight text-gray-800 sm:text-[45px]" 
+              variants={itemVariants}
+            >
+              Quick Verification
+            </motion.h2>
+            <motion.p 
+              className="max-w-2xl mx-auto mt-6 text-lg text-gray-600" 
+              variants={itemVariants}
+            >
+              Instantly verify your medication's authenticity and safety with our advanced scanning technology.
+            </motion.p>
+          </motion.div>
+
+          <motion.div 
+            className="grid grid-cols-1 gap-8 mt-16 sm:grid-cols-2 lg:grid-cols-3" 
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true, amount: 0.1 }} 
+            variants={containerVariants}
+          >
+            {/* QR Scanner Card */}
+            <motion.div
+              className="relative p-8 py-10 transition-all duration-300 bg-white border border-gray-100 shadow-lg cursor-pointer rounded-2xl hover:shadow-2xl group"
+              variants={itemVariants}
+              whileHover={{ y: -10, scale: 1.02 }}
+              onClick={() => setShowQRScanner(true)}
+            >
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 text-blue-600 transition-colors duration-300 bg-blue-50 rounded-xl group-hover:bg-blue-600 group-hover:text-white">
+                <Scan className="w-8 h-8" />
+              </div>
+              <h3 className="mb-4 text-[22px] font-semibold text-center text-gray-800">Scan QR Code</h3>
+              <p className="leading-relaxed text-center text-gray-600">
+                Use your device's camera to scan the QR code on your medication package for instant verification.
+              </p>
+              <div className="flex items-center justify-center mt-6">
+                <span className="px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-300 rounded-full bg-blue-50 group-hover:bg-blue-100">
+                  Quick & Easy
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Manual Entry Card */}
+            <motion.div
+              className="relative p-8 py-10 transition-all duration-300 bg-white border border-gray-100 shadow-lg cursor-pointer rounded-2xl hover:shadow-2xl group"
+              variants={itemVariants}
+              whileHover={{ y: -10, scale: 1.02 }}
+              onClick={() => navigate('/verify-product')}
+            >
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 text-green-600 transition-colors duration-300 bg-green-50 rounded-xl group-hover:bg-green-600 group-hover:text-white">
+                <Search className="w-8 h-8" />
+              </div>
+              <h3 className="mb-4 text-[22px] font-semibold text-center text-gray-800">Manual Entry</h3>
+              <p className="leading-relaxed text-center text-gray-600">
+                Enter the serial number manually to verify your medication's authenticity and track its journey.
+              </p>
+              <div className="flex items-center justify-center mt-6">
+                <span className="px-4 py-2 text-sm font-medium text-green-600 transition-colors duration-300 rounded-full bg-green-50 group-hover:bg-green-100">
+                  Alternative Method
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Learn More Card */}
+            <motion.div
+              className="relative p-8 py-10 transition-all duration-300 bg-white border border-gray-100 shadow-lg cursor-pointer rounded-2xl hover:shadow-2xl group sm:col-span-2 lg:col-span-1"
+              variants={itemVariants}
+              whileHover={{ y: -10, scale: 1.02 }}
+              onClick={() => navigate('/about')}
+            >
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 text-purple-600 transition-colors duration-300 bg-purple-50 rounded-xl group-hover:bg-purple-600 group-hover:text-white">
+                <CheckCircle className="w-8 h-8" />
+              </div>
+              <h3 className="mb-4 text-[22px] font-semibold text-center text-gray-800">How It Works</h3>
+              <p className="leading-relaxed text-center text-gray-600">
+                Learn about our blockchain-powered verification system and how it protects patients from counterfeit drugs.
+              </p>
+              <div className="flex items-center justify-center mt-6">
+                <span className="px-4 py-2 text-sm font-medium text-purple-600 transition-colors duration-300 rounded-full bg-purple-50 group-hover:bg-purple-100">
+                  Learn More
+                </span>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* QR Scanner Modal */}
+      <QRScannerModal
+        isOpen={showQRScanner}
+        onClose={() => setShowQRScanner(false)}
+        onScanResult={handleScanResult}
+        title="Scan Medication QR Code"
+        description="Position the QR code from your medication package within the frame"
+      />
+    </>
   );
 };
 

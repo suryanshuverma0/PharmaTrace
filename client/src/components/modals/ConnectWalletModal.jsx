@@ -88,7 +88,7 @@ const ConnectWalletModal = () => {
           <div className="p-4 mb-4 rounded-full bg-primary-100">
             <FaWallet className="w-8 h-8 text-primary-600" />
           </div>
-          <h2 className="mb-2 text-2xl font-bold text-gray-900">
+          <h2 className="mb-2 text-2xl font-bold text-center text-gray-900">
             Connect Your Wallet
           </h2>
           <p className="text-center text-gray-600">
@@ -120,9 +120,9 @@ const ConnectWalletModal = () => {
             disabled={isLoading || checkAccountLoading}
           >
             <div className="flex items-center">
-              <FaEthereum className="w-8 h-8 mr-3 text-orange-600" />
+              <FaEthereum className="w-6 h-6 mr-3 text-orange-600" />
               <div className="text-left">
-                <h3 className="font-semibold text-gray-900">MetaMask</h3>
+                <h3 className="text-sm font-semibold text-gray-900">MetaMask</h3>
                 <p className="text-sm text-gray-600">
                 {isLoading ? "Connecting...": "Connect using browser wallet"}
                   
@@ -131,11 +131,11 @@ const ConnectWalletModal = () => {
             </div>
 
             {checkAccountLoading ? (
-              <span className="transition-opacity duration-200 opacity-0 text-primary-600 group-hover:opacity-100">
+              <span className="text-xs transition-opacity duration-200 opacity-100 sm:text-base text-primary-600 group-hover:opacity-100">
                 Loading...
               </span>
             ) : (
-              <span className="transition-opacity duration-200 opacity-0 text-primary-600 group-hover:opacity-100">
+              <span className="text-xs transition-opacity duration-200 opacity-100 sm:text-base text-primary-600 group-hover:opacity-100">
                 Connect →
               </span>
             )}

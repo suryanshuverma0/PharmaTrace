@@ -43,7 +43,7 @@ const App = () => {
   return (
     <>
       <AppRoutes />
-      <VerifyProductButton />
+      {/* <VerifyProductButton /> */}
       <Modals />
       <Toaster position="top-center" reverseOrder={false} toastOptions={{ duration: 5000 }} />
 

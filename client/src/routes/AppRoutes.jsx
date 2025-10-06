@@ -65,7 +65,6 @@ const AppRoutes = () => {
       <Route path="/consumer" element={<ConsumerLayout />}>
         <Route index element={<ConsumerDashboard />} />
         <Route path="dashboard" element={<ConsumerDashboard />} />
-        <Route path="verify" element={<VerifyDrug />} />
         <Route path="journey/:serialNumber" element={<JourneyDetails />} />
         <Route path="vault" element={<div>Vault Placeholder</div>} />
         <Route path="history" element={<div>History Placeholder</div>} />

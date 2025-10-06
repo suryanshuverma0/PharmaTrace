@@ -79,7 +79,7 @@ const JourneyDetails = () => {
               <h2 className="mb-2 text-xl font-semibold text-gray-900">Unable to Load Journey</h2>
               <p className="mb-4 text-gray-600">{error}</p>
               <button
-                onClick={() => navigate('/consumer/verify')}
+                onClick={() => navigate('/verify-product')}
                 className="px-4 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600"
               >
                 Back to Verification
@@ -331,7 +331,7 @@ const JourneyDetails = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <button 
-                onClick={() => navigate('/consumer/verify')}
+                onClick={() => navigate('/verify-product')}
                 className="flex items-center px-3 py-2 text-gray-600 transition-colors rounded-lg hover:text-gray-900 hover:bg-gray-100"
               >
                 <ChevronLeft className="w-5 h-5 mr-1" />
@@ -584,7 +584,7 @@ const JourneyDetails = () => {
                               <p className="mb-4 text-gray-700 print:print-step-details print:mb-2">{step.details}</p>
 
                               {/* Additional Details */}
-                              <div className="grid gap-4 p-4 rounded-lg bg-gray-50 md:grid-cols-3 print:print-step-extras print:grid-cols-2 print:gap-2 print:p-2">
+                              {/* <div className="grid gap-4 p-4 rounded-lg bg-gray-50 md:grid-cols-3 print:print-step-extras print:grid-cols-2 print:gap-2 print:p-2">
                                 {step.temperature && (
                                   <div className="flex items-center space-x-2 text-sm print:text-xs">
                                     <AlertTriangle className="w-4 h-4 text-blue-500 print:hidden" />
@@ -621,7 +621,7 @@ const JourneyDetails = () => {
                                     <span className="text-green-600 print:text-green-700">🔍 QC: {step.qualityCheck.result}</span>
                                   </div>
                                 )}
-                              </div>
+                              </div> */}
                             </div>
                           </div>
                         );

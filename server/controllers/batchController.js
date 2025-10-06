@@ -123,27 +123,6 @@ const registerBatch = async (req, res) => {
       
       // Initial shipment status
       shipmentStatus: 'Produced',
-      shipmentHistory: [{
-        timestamp: new Date(),
-        from: manufacturer.companyName,
-        to: manufacturer.companyName,
-        status: 'Produced',
-        quantity: quantityProduced.toString(),
-        remarks: 'Initial batch production',
-        actor: {
-          name: manufacturer.companyName || 'Unknown Manufacturer',
-          type: 'Manufacturer',
-          license: approvalCertId || manufacturer.licenseNumber || 'N/A',
-          location: productionLocation || manufacturer.address || 'N/A'
-        },
-        environmentalConditions,
-        qualityCheck: {
-          performedBy: manufacturer.companyName || req.user.name || 'System',
-          date: new Date(),
-          result: 'Pass',
-          notes: 'Initial quality check passed'
-        }
-      }],
     });
 
     await batch.save();
