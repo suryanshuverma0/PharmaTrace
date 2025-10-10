@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Users, TrendingUp, Award } from 'lucide-react';
+import { QrCode, Scan, Shield, Eye, CheckCircle, ArrowRight, Factory, Truck, Building, User } from 'lucide-react';
 import { siteConfig } from '../../constants/data';
 
 const AboutPage = () => {
@@ -24,28 +24,49 @@ const AboutPage = () => {
     }
   };
 
-  const stats = [
-    { icon: <Shield size={24} />, value: "100%", label: "Secure Transactions" },
-    { icon: <Users size={24} />, value: "10K+", label: "Active Users" },
-    { icon: <TrendingUp size={24} />, value: "50M+", label: "Products Tracked" },
-    { icon: <Award size={24} />, value: "99.9%", label: "Accuracy Rate" }
+  const supplyChainSteps = [
+    {
+      icon: <Factory size={32} />,
+      title: "Manufacturer",
+      description: "Creates product with unique QR code and blockchain record"
+    },
+    {
+      icon: <Truck size={32} />,
+      title: "Distributor", 
+      description: "Receives and transfers products with verified authenticity"
+    },
+    {
+      icon: <Building size={32} />,
+      title: "Pharmacy",
+      description: "Final verification before dispensing to patients"
+    },
+    {
+      icon: <User size={32} />,
+      title: "Consumer",
+      description: "Scans QR code to verify complete supply chain history"
+    }
   ];
 
-  const timeline = [
+  const verificationFeatures = [
     {
-      year: "2023",
-      title: "Project Inception",
-      description: "PharmaTrace was conceived with the vision of revolutionizing pharmaceutical supply chains"
+      icon: <QrCode size={24} />,
+      title: "QR Code Generation",
+      description: "Each product gets a unique QR code linked to blockchain"
     },
     {
-      year: "2024",
-      title: "Platform Development",
-      description: "Launched our blockchain-based solution with core tracking and verification features"
+      icon: <Scan size={24} />,
+      title: "Instant Scanning", 
+      description: "Scan any product to view its complete journey"
     },
     {
-      year: "2025",
-      title: "Global Expansion",
-      description: "Expanded our services globally, partnering with major pharmaceutical companies"
+      icon: <Shield size={24} />,
+      title: "Tamper Detection",
+      description: "Blockchain ensures no data can be altered or faked"
+    },
+    {
+      icon: <Eye size={24} />,
+      title: "Full Transparency",
+      description: "See every step from manufacturing to your hands"
     }
   ];
 
@@ -59,122 +80,203 @@ const AboutPage = () => {
         </div>
         
         <motion.div 
-          className="container relative px-6 mx-auto text-center text-white"
+          className="container relative px-4 mx-auto text-center text-white"
           initial="hidden"
           animate="visible"
           variants={containerVariants}
         >
           <motion.h1 
-            className="mb-6 text-4xl font-bold md:text-5xl"
+            className="mb-6 text-3xl font-bold md:text-5xl"
             variants={itemVariants}
           >
-            Transforming Pharmaceutical Supply Chain
+            How PharmaTrace Works
           </motion.h1>
           <motion.p 
-            className="max-w-3xl mx-auto text-xl text-blue-100"
+            className="max-w-3xl mx-auto text-lg text-blue-100 md:text-xl"
             variants={itemVariants}
           >
-            Building trust and transparency in the pharmaceutical industry through 
-            innovative blockchain technology
+            Scan any product QR code to instantly verify its authenticity and 
+            track its complete journey through the supply chain
           </motion.p>
         </motion.div>
       </section>
 
-<div className='mx-auto max-w-7xl '>
+      <div className='px-4 mx-auto max-w-7xl'>
 
-  {/* Mission Section */}
-      <section className="py-20">
-        <div className="container px-6 mx-auto">
-          <motion.div 
-            className="grid items-center grid-cols-1 gap-12 md:grid-cols-2"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={containerVariants}
-          >
-            <motion.div variants={itemVariants}>
-              <h2 className="mb-6 text-3xl font-bold text-gray-800">Our Mission</h2>
-              <p className="mb-6 leading-relaxed text-gray-600">
-               {` ${siteConfig?.siteName} is dedicated to revolutionizing the pharmaceutical supply chain 
-                through blockchain technology. We aim to create a transparent, secure, and 
-                efficient ecosystem that ensures the authenticity of medications from 
-                manufacturer to patient.`}
-              </p>
-              <p className="leading-relaxed text-gray-600">
-                By leveraging advanced blockchain solutions, we're building a future where 
-                drug counterfeiting is eliminated, supply chain inefficiencies are minimized, 
-                and patient safety is guaranteed.
-              </p>
-            </motion.div>
-            <motion.div 
-              className="grid grid-cols-2 gap-6"
-              variants={containerVariants}
-            >
-              {stats.map((stat, index) => (
-                <motion.div
-                  key={index}
-                  className="p-6 transition-shadow duration-300 bg-white shadow-lg rounded-xl hover:shadow-xl"
-                  variants={itemVariants}
-                >
-                  <div className="mb-4 text-blue-600">{stat.icon}</div>
-                  <div className="mb-1 text-2xl font-bold text-gray-800">{stat.value}</div>
-                  <div className="text-sm text-gray-600">{stat.label}</div>
-                </motion.div>
-              ))}
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Timeline Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container px-6 mx-auto">
+        {/* How It Works Section */}
+        <section className="py-16 md:py-20">
           <motion.div
-            className="mb-16 text-center"
+            className="mb-12 text-center md:mb-16"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={containerVariants}
           >
             <motion.h2 
-              className="mb-4 text-3xl font-bold text-gray-800"
+              className="mb-4 text-2xl font-bold text-gray-800 md:text-3xl"
               variants={itemVariants}
             >
-              Our Journey
+              Supply Chain Flow
             </motion.h2>
             <motion.p 
-              className="max-w-2xl mx-auto text-gray-600"
+              className="max-w-2xl mx-auto text-sm text-gray-600 md:text-base"
               variants={itemVariants}
             >
-              From concept to reality, we're building the future of pharmaceutical supply chain management
+              Track your product's journey from manufacturer to your hands
             </motion.p>
           </motion.div>
 
           <motion.div 
-            className="max-w-4xl mx-auto"
+            className="grid grid-cols-1 gap-8 md:grid-cols-4 md:gap-4"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={containerVariants}
           >
-            {timeline.map((item, index) => (
-              <motion.div 
+            {supplyChainSteps.map((step, index) => (
+              <motion.div
                 key={index}
-                className="relative flex gap-8 mb-12"
+                className="relative text-center"
                 variants={itemVariants}
               >
-                <div className="w-24 pt-2 font-bold text-blue-600">{item.year}</div>
-                <div className="flex-1 pb-12 relative before:absolute before:left-[-24px] before:top-3 before:w-4 before:h-4 before:bg-blue-600 before:rounded-full before:z-10 before:border-4 before:border-white after:absolute after:left-[-22px] after:top-3 after:w-0.5 after:h-full after:bg-gray-200">
-                  <h3 className="mb-2 text-xl font-semibold text-gray-800">{item.title}</h3>
-                  <p className="text-gray-600">{item.description}</p>
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center justify-center w-16 h-16 mb-4 text-blue-600 bg-blue-100 rounded-full md:w-20 md:h-20">
+                    {step.icon}
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold text-gray-800">{step.title}</h3>
+                  <p className="max-w-xs text-sm text-gray-600">{step.description}</p>
                 </div>
+                {index < supplyChainSteps.length - 1 && (
+                  <div className="absolute hidden w-full md:block top-10 left-full">
+                    <ArrowRight className="mx-auto text-gray-300" size={20} />
+                  </div>
+                )}
               </motion.div>
             ))}
           </motion.div>
-        </div>
-      </section>
-</div>
-      
+        </section>
+
+        {/* Verification Features */}
+        <section className="py-16 -mx-4 md:py-20 bg-gray-50">
+          <div className="px-4">
+            <motion.div
+              className="mb-12 text-center md:mb-16"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={containerVariants}
+            >
+              <motion.h2 
+                className="mb-4 text-2xl font-bold text-gray-800 md:text-3xl"
+                variants={itemVariants}
+              >
+                Verification Process
+              </motion.h2>
+              <motion.p 
+                className="max-w-2xl mx-auto text-sm text-gray-600 md:text-base"
+                variants={itemVariants}
+              >
+                Simple steps to verify product authenticity and supply chain transparency
+              </motion.p>
+            </motion.div>
+
+            <motion.div 
+              className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 md:gap-8"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={containerVariants}
+            >
+              {verificationFeatures.map((feature, index) => (
+                <motion.div
+                  key={index}
+                  className="p-6 transition-shadow bg-white shadow-lg rounded-xl hover:shadow-xl"
+                  variants={itemVariants}
+                >
+                  <div className="mb-4 text-blue-600">{feature.icon}</div>
+                  <h3 className="mb-2 text-lg font-semibold text-gray-800">{feature.title}</h3>
+                  <p className="text-sm text-gray-600">{feature.description}</p>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+
+        {/* How to Scan Section */}
+        <section className="py-16 md:py-20">
+          <motion.div 
+            className="grid items-center grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={containerVariants}
+          >
+            <motion.div variants={itemVariants}>
+              <h2 className="mb-6 text-2xl font-bold text-gray-800 md:text-3xl">
+                How to Verify Products
+              </h2>
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white bg-blue-600 rounded-full">
+                    1
+                  </div>
+                  <div>
+                    <h3 className="mb-1 font-semibold text-gray-800">Find the QR Code</h3>
+                    <p className="text-sm text-gray-600">Look for the unique QR code on the product packaging</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4">
+                  <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white bg-blue-600 rounded-full">
+                    2
+                  </div>
+                  <div>
+                    <h3 className="mb-1 font-semibold text-gray-800">Scan with Your Phone</h3>
+                    <p className="text-sm text-gray-600">Use our scanner or any QR code reader app</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4">
+                  <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white bg-blue-600 rounded-full">
+                    3
+                  </div>
+                  <div>
+                    <h3 className="mb-1 font-semibold text-gray-800">View Supply Chain</h3>
+                    <p className="text-sm text-gray-600">See the complete journey and verify authenticity</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4">
+                  <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 text-white bg-green-600 rounded-full">
+                    <CheckCircle size={16} />
+                  </div>
+                  <div>
+                    <h3 className="mb-1 font-semibold text-gray-800">Confirmed Authentic</h3>
+                    <p className="text-sm text-gray-600">Get instant confirmation of product authenticity</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              className="p-8 text-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl"
+              variants={itemVariants}
+            >
+              <QrCode size={64} className="mx-auto mb-6 text-blue-600" />
+              <h3 className="mb-4 text-xl font-semibold text-gray-800">
+                Try Scanning Now
+              </h3>
+              <p className="mb-6 text-sm text-gray-600">
+                Experience transparency in pharmaceutical supply chain
+              </p>
+              <div className="p-4 bg-white border-2 border-blue-300 border-dashed rounded-lg">
+                <p className="text-sm font-medium text-blue-600">Scan any product QR code</p>
+                <p className="mt-1 text-xs text-gray-500">Instant verification & history</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        </section>
+      </div>
     </div>
   );
 };

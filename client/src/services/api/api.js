@@ -20,5 +20,26 @@ apiClient.interceptors.request.use((config) => {
   return config;
 }, (error) => Promise.reject(error));
 
+// Handle 401 responses and remove invalid tokens
+apiClient.interceptors.response.use(
+  (response) => {
+    // Return successful responses as-is
+    return response;
+  },
+  (error) => {
+    // Check if the error is a 401 (Unauthorized)
+    if (error.response?.status === 401) {
+      // Remove token from localStorage
+      localStorage.removeItem('token');
+      
+      // Optionally redirect to login page
+      // window.location.href = '/login';
+      
+      console.log('Token expired or invalid. Removed from localStorage.');
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
 export default apiClient;

@@ -41,18 +41,35 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token && isConnected) {
-      setIsAuthenticated(true);
-    } else {
+    // If we have a valid token, set authenticated immediately
+    // Don't wait for wallet connection check for existing sessions
+    if (token) {
+      const decodedToken = decodeToken(token);
+      if (decodedToken && decodedToken.exp * 1000 > Date.now()) {
+        setIsAuthenticated(true);
+        return;
+      } else {
+        // Token is expired, remove it
+        localStorage.removeItem("token");
+      }
+    }
+    
+    // Only set to false if we don't have a valid token AND connection check is complete
+    if (!checkAccountLoading) {
       setIsAuthenticated(false);
     }
-  }, [isConnected]);
+  }, [isConnected, checkAccountLoading]);
   
 
-  useEffect(()=>{
-    const token = localStorage.getItem('token')
-    isAuthenticated && token && setUser(decodeToken(token))
-  }, [isAuthenticated])
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (isAuthenticated && token) {
+      const decodedUser = decodeToken(token);
+      if (decodedUser && !user) {
+        setUser(decodedUser);
+      }
+    }
+  }, [isAuthenticated, user])
 
   const checkConnection = async () => {
     try {

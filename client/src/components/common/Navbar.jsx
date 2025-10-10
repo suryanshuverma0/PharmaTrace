@@ -171,16 +171,6 @@ const ProfileDropdown = ({ user,  onDisconnect }) => {
             Dashboard
           </button>
 
-          <button
-            onClick={() => {
-              navigate("/settings");
-              setIsOpen(false);
-            }}
-            className="flex items-center w-full gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-          >
-            <Settings className="w-4 h-4" />
-            Settings
-          </button>
 
           <button
             onClick={() => {

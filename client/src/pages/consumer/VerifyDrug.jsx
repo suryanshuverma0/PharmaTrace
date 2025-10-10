@@ -582,12 +582,7 @@ const VerifyDrug = () => {
         </motion.div>
       )}
 
-      {/* QR Scanner Modal */}
-      <QRScannerModal
-        isOpen={showQRModal}
-        onClose={() => setShowQRModal(false)}
-        onScanSuccess={handleScanResult}
-      />
+     
 
       {/* <style jsx>{`
         .scanning-line {
@@ -610,6 +605,13 @@ const VerifyDrug = () => {
           }
         }
       `}</style> */}
+
+       {/* QR Scanner Modal */}
+      <QRScannerModal
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        onScanSuccess={handleScanResult}
+      />
     </motion.div>
   );
 };

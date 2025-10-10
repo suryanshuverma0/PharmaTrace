@@ -17,10 +17,12 @@ import {
   Package
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import  Button from '../UI/Button';
 
 const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
   const location = useLocation();
+  const { user, disconnectWallet } = useAuth();
 
   const sidebarVariants = {
     expanded: {
@@ -141,8 +143,8 @@ const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
                 exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <h3 className="font-semibold text-gray-900">PharmaCorp Inc.</h3>
-                <p className="text-sm text-gray-500">Manufacturer</p>
+                <h3 className="font-semibold text-gray-900">{user?.name || "Manufacturer"}</h3>
+                <p className="text-sm text-gray-500 capitalize">{user?.role || "Manufacturer"}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -183,7 +185,10 @@ const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
 
       {/* Bottom Section */}
       <div className="p-4 border-t border-gray-200">
-        <button className="flex items-center w-full px-4 py-3 space-x-3 text-red-600 transition-all duration-200 rounded-lg hover:bg-red-50">
+        <button 
+          onClick={disconnectWallet}
+          className="flex items-center w-full px-4 py-3 space-x-3 text-red-600 transition-all duration-200 rounded-lg hover:bg-red-50"
+        >
           <div className="flex-shrink-0">
             <LogOut size={20} />
           </div>
