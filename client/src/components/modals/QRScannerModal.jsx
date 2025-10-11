@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, AlertTriangle, Camera, Scan, Image, Upload } from "lucide-react";
+import LocationPermissionModal from "./LocationPermissionModal";
+import { useLocationTracking } from "../../hooks/useLocationTracking";
 
 // Mock Button component
 const Button = ({ children, variant = "primary", className = "", onClick, disabled }) => {
@@ -28,6 +30,12 @@ const QRScannerModal = ({
   title = "Scan QR Code",
   description = "Position the QR code within the frame"
 }) => {
+  // Location tracking hook
+  const { 
+    showPermissionModal, 
+    handlePermissionRequest,
+    checkLocationPermission 
+  } = useLocationTracking();
   const videoRef = useRef(null);
   const qrScannerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -145,6 +153,9 @@ const QRScannerModal = ({
       if (isMobile) {
         document.body.style.overflow = 'hidden';
       }
+      
+      // Check location permission when modal opens
+      checkLocationPermission();
       
       if (scanMode === 'camera') {
         setTimeout(() => {
@@ -389,6 +400,17 @@ const QRScannerModal = ({
           </div>
         </motion.div>
       </div>
+
+      {/* Location Permission Modal */}
+      {showPermissionModal && (
+        <LocationPermissionModal
+          isOpen={showPermissionModal}
+          onAccept={handlePermissionRequest}
+          onDecline={handlePermissionRequest}
+          title="Enable Location Tracking"
+          description="Help improve pharmaceutical supply chain monitoring by allowing us to track where medications are being verified"
+        />
+      )}
     </AnimatePresence>
   );
 };

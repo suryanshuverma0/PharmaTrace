@@ -89,12 +89,12 @@ const batchSchema = new mongoose.Schema({
   // Blockchain-related fields
   txHash: {
     type: String,
-    index: true, // For faster blockchain transaction lookups
+    // index: true, // Removed to avoid duplicate index warning - defined separately below
   },
 
   blockNumber: {
     type: Number,
-    index: true,
+    // index: true, // Removed to avoid duplicate index warning - defined separately below
   },
 
   blockHash: {

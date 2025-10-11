@@ -51,6 +51,11 @@ const ManufacturerSidebar = ({ isCollapsed, onToggle }) => {
     },
     { 
       icon: <ClipboardList size={20} />, 
+      label: 'Track Verification', 
+      path: '/manufacturer/track-products-verification' 
+    },
+    { 
+      icon: <ClipboardList size={20} />, 
       label: 'Register Batch', 
       path: '/manufacturer/register/batch' 
     },

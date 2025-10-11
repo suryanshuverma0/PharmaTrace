@@ -52,7 +52,7 @@ const registerUser = async (req, res) => {
     pharmacyLocation,
   } = req.body;
 
-  // Validate signature
+  // Validate signature (use original address case for signature verification)
   if (!verifySignature(address, message, signature)) {
     return res.status(401).json({ message: "Invalid signature" });
   }
@@ -82,17 +82,28 @@ const registerUser = async (req, res) => {
   }
 
   try {
-    // Check for existing user
-    const existing = await User.findOne({ address });
+    // Normalize address to lowercase for consistency
+    const normalizedAddress = address.toLowerCase();
+    
+    // Check for existing user (case-insensitive)
+    const existing = await User.findOne({ 
+      address: { $regex: new RegExp(`^${address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") }
+    });
+    
     if (existing) {
-      return res.status(400).json({ message: "User already registered" });
+      return res.status(400).json({ 
+        message: `User already registered with this wallet address as ${existing.role}`,
+        existingRole: existing.role,
+        existingName: existing.name,
+        attemptedRole: role
+      });
     }
 
-    // Create User
+    // Create User (with normalized address)
     const newUser = new User({
       name,
       role,
-      address,
+      address: normalizedAddress,
       email,
       phone,
       country,
@@ -180,9 +191,9 @@ const loginUser = async (req, res) => {
   }
 
   try {
-    // Case-insensitive address lookup
+    // Case-insensitive address lookup (escape special regex characters)
     const user = await User.findOne({
-      address: { $regex: new RegExp(`^${address}$`, "i") },
+      address: { $regex: new RegExp(`^${address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") },
     });
 
     if (!user) {

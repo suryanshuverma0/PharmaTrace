@@ -4,6 +4,70 @@ const User = require('../models/User');
 const Manufacturer = require('../models/Manufacturer');
 const Distributor = require('../models/Distributor');
 const Pharmacist = require('../models/Pharmacist');
+const ProductTracking = require('../models/ProductTracking');
+// const locationTrackingService = require('../services/locationTrackingService');
+
+// Helper function to track product verification
+async function trackProductVerification(req, trackingData) {
+  try {
+    // Extract location data from query parameters
+    const latitude = req.query?.latitude ? parseFloat(req.query.latitude) : null;
+    const longitude = req.query?.longitude ? parseFloat(req.query.longitude) : null;
+    const accuracy = req.query?.accuracy ? parseFloat(req.query.accuracy) : null;
+    const locationTimestamp = req.query?.locationTimestamp ? new Date(req.query.locationTimestamp) : null;
+
+    // Extract device information from query parameters
+    const deviceType = req.query?.deviceType || 'unknown';
+    const browser = req.query?.browser || 'Unknown';
+    const platform = req.query?.platform || 'Unknown';
+    const screenWidth = req.query?.screenWidth ? parseInt(req.query.screenWidth) : null;
+    const screenHeight = req.query?.screenHeight ? parseInt(req.query.screenHeight) : null;
+
+    // Get tracking type
+    const trackingType = req.query?.trackingType || trackingData.trackingType || 'manual_verification';
+
+    // Determine scan method based on tracking type
+    let scanMethod = 'manual_entry';
+    if (trackingType === 'qr_scan') {
+      scanMethod = 'camera_scan';
+    }
+
+    // Get client IP address
+    const ipAddress = req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+
+    // Create tracking record with simplified data structure
+    const trackingRecord = {
+      ...trackingData,
+      trackingType,
+      location: {
+        latitude,
+        longitude,
+        accuracy,
+        ipAddress: ipAddress.replace('::ffff:', '') // Clean IPv4-mapped IPv6 addresses
+      },
+      deviceInfo: {
+        deviceType,
+        browser: decodeURIComponent(browser),
+        platform,
+        screenWidth,
+        screenHeight
+      },
+      scanMethod,
+      scannedAt: new Date(),
+      locationTimestamp
+    };
+
+    // Create tracking record
+    const tracking = new ProductTracking(trackingRecord);
+    await tracking.save();
+    
+    console.log('✅ Tracking record saved successfully:', tracking._id);
+    return tracking;
+  } catch (error) {
+    console.error('❌ Error creating tracking record:', error);
+    throw error;
+  }
+}
 
 // Verify product by serial number
 exports.verifyProduct = async (req, res) => {
@@ -23,6 +87,24 @@ exports.verifyProduct = async (req, res) => {
       .lean();
 
     if (!product) {
+      // Track invalid serial number attempts for security monitoring
+      try {
+        await trackProductVerification(req, {
+          productId: null,
+          manufacturerId: null,
+          serialNumber: serialNumber,
+          productName: null,
+          verificationResult: {
+            isAuthentic: false,
+            status: 'not_found',
+            isExpired: false
+          }
+        });
+        console.log('🔍 Invalid serial number attempt tracked:', serialNumber);
+      } catch (trackingError) {
+        console.error('❌ Error tracking invalid serial number:', trackingError);
+      }
+
       return res.status(404).json({
         success: false,
         message: 'Product not found',
@@ -36,6 +118,24 @@ exports.verifyProduct = async (req, res) => {
       .lean();
 
     if (!batch) {
+      // Track batch not found for security monitoring
+      try {
+        await trackProductVerification(req, {
+          productId: product._id,
+          manufacturerId: null,
+          serialNumber: product.serialNumber,
+          productName: product.productName,
+          verificationResult: {
+            isAuthentic: false,
+            status: 'error',
+            isExpired: false
+          }
+        });
+        console.log('🔍 Batch not found tracked for product:', product.serialNumber);
+      } catch (trackingError) {
+        console.error('❌ Error tracking batch not found:', trackingError);
+      }
+
       return res.status(404).json({
         success: false,
         message: 'Batch information not found',
@@ -74,20 +174,21 @@ exports.verifyProduct = async (req, res) => {
     const hasValidBatch = batch && batch.batchNumber;
     const hasValidProduct = product && product.productName;
     
-    const isAuthentic = 
-      // product.verificationStatus === 'Verified' || 
-      // product.isAuthentic || 
-      // batch.blockchainVerified || 
+    const isAuthentic = Boolean(
+      // Basic blockchain verification
       (batch.txHash && batch.blockNumber) ||
-      // Additional authenticity checks for products with valid supply chain data
-      (hasValidShipmentHistory && hasQualityChecks && hasManufacturerInfo && hasValidBatch && hasValidProduct);
+      // Supply chain verification - product exists with valid batch and manufacturer
+      (hasValidBatch && hasValidProduct && hasManufacturerInfo) ||
+      // Additional verification through shipment history
+      (hasValidShipmentHistory && hasQualityChecks)
+    );
 
     // Calculate days until expiry
     const expiryDate = new Date(product.expiryDate || batch.expiryDate);
     const today = new Date();
     const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
 
-    // Prepare verification result
+    // Prepare verification result with only available data
     const verificationResult = {
       success: true,
       isAuthentic,
@@ -97,27 +198,37 @@ exports.verifyProduct = async (req, res) => {
         productName: product.productName,
         serialNumber: product.serialNumber,
         batchNumber: product.batchNumber,
-        manufactureDate: product.manufactureDate || batch.manufactureDate,
-        expiryDate: product.expiryDate || batch.expiryDate,
-        dosageForm: product.dosageForm || batch.dosageForm,
-        strength: product.strength || batch.strength,
-        packSize: product.packSize,
-        drugCode: product.drugCode,
-        storageCondition: product.storageCondition || batch.storageConditions,
-        price: product.price
+        ...(product.manufactureDate && { manufactureDate: product.manufactureDate }),
+        ...(batch.manufactureDate && { manufactureDate: batch.manufactureDate }),
+        ...(product.expiryDate && { expiryDate: product.expiryDate }),
+        ...(batch.expiryDate && { expiryDate: batch.expiryDate }),
+        ...(product.dosageForm && { dosageForm: product.dosageForm }),
+        ...(batch.dosageForm && { dosageForm: batch.dosageForm }),
+        ...(product.strength && { strength: product.strength }),
+        ...(batch.strength && { strength: batch.strength }),
+        ...(product.packSize && { packSize: product.packSize }),
+        ...(product.drugCode && { drugCode: product.drugCode }),
+        ...(product.storageCondition && { storageCondition: product.storageCondition }),
+        ...(batch.storageConditions && { storageCondition: batch.storageConditions }),
+        ...(product.price && { price: product.price })
       },
       manufacturer: {
-        name: manufacturer?.companyName || product.manufacturerName,
-        license: manufacturer?.registrationNumber || product.manufacturerLicense,
-        country: product.manufacturerCountry,
-        location: product.productionLocation
+        ...(manufacturer?.companyName && { name: manufacturer.companyName }),
+        ...(product.manufacturerName && { name: product.manufacturerName }),
+        ...(manufacturer?.registrationNumber && { license: manufacturer.registrationNumber }),
+        ...(product.manufacturerLicense && { license: product.manufacturerLicense }),
+        ...(product.manufacturerCountry && { country: product.manufacturerCountry }),
+        ...(product.productionLocation && { location: product.productionLocation })
       },
-      regulatory: {
-        approvalCertId: product.approvalCertId || batch.approvalCertId,
-        licenseNumber: product.regulatoryInfo?.licenseNumber,
-        issuedBy: product.regulatoryInfo?.issuedBy,
-        issuedDate: product.regulatoryInfo?.issuedDate,
-        validUntil: product.regulatoryInfo?.validUntil
+      ...(product.approvalCertId || batch.approvalCertId) && {
+        regulatory: {
+          ...(product.approvalCertId && { approvalCertId: product.approvalCertId }),
+          ...(batch.approvalCertId && { approvalCertId: batch.approvalCertId }),
+          ...(product.regulatoryInfo?.licenseNumber && { licenseNumber: product.regulatoryInfo.licenseNumber }),
+          ...(product.regulatoryInfo?.issuedBy && { issuedBy: product.regulatoryInfo.issuedBy }),
+          ...(product.regulatoryInfo?.issuedDate && { issuedDate: product.regulatoryInfo.issuedDate }),
+          ...(product.regulatoryInfo?.validUntil && { validUntil: product.regulatoryInfo.validUntil })
+        }
       },
       currentLocation: {
         location: currentLocation,
@@ -127,22 +238,69 @@ exports.verifyProduct = async (req, res) => {
           batch.createdAt
       },
       blockchain: {
-        verified: batch.blockchainVerified,
-        txHash: batch.txHash,
-        blockNumber: batch.blockNumber,
-        contractAddress: batch.contractAddress
+        verified: Boolean(batch.blockchainVerified),
+        ...(batch.txHash && { txHash: batch.txHash }),
+        ...(batch.blockNumber && { blockNumber: batch.blockNumber }),
+        ...(batch.contractAddress && { contractAddress: batch.contractAddress })
       },
       verification: {
         verifiedAt: new Date(),
-        verificationStatus: product.verificationStatus,
-        fingerprint: product.fingerprint || batch.digitalFingerprint
+        ...(product.verificationStatus && { verificationStatus: product.verificationStatus }),
+        ...(product.fingerprint && { fingerprint: product.fingerprint }),
+        ...(batch.digitalFingerprint && { fingerprint: batch.digitalFingerprint })
       }
     };
+
+    // Track this verification for analytics and security
+    try {
+      // Determine the status based on authenticity and expiry
+      let status = 'verified';
+      if (!isAuthentic) {
+        status = 'suspicious';
+      } else if (isExpired) {
+        status = 'expired';
+      }
+
+      await trackProductVerification(req, {
+        productId: product._id,
+        manufacturerId: batch.manufacturerId._id,
+        serialNumber: product.serialNumber,
+        productName: product.productName,
+        verificationResult: {
+          isAuthentic: Boolean(isAuthentic),
+          status: status,
+          isExpired: Boolean(isExpired)
+        }
+      });
+      console.log('✅ Product verification tracked successfully');
+    } catch (trackingError) {
+      console.error('❌ Error tracking verification:', trackingError);
+      // Don't fail the verification if tracking fails
+    }
 
     res.json(verificationResult);
 
   } catch (error) {
     console.error('Error verifying product:', error);
+    
+    // Track failed verification attempts for security monitoring
+    try {
+      await trackProductVerification(req, {
+        productId: null,
+        manufacturerId: null,
+        serialNumber: req.params.serialNumber,
+        productName: null,
+        verificationResult: {
+          isAuthentic: false,
+          status: 'error',
+          isExpired: false
+        }
+      });
+      console.log('🔍 Verification error tracked:', req.params.serialNumber);
+    } catch (trackingError) {
+      console.error('❌ Error tracking failed verification:', trackingError);
+    }
+
     res.status(500).json({
       success: false,
       message: 'Failed to verify product',

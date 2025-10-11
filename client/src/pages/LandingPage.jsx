@@ -97,8 +97,16 @@ const LandingPage = () => {
 
   const handleScanResult = (serialNumber, rawData) => {
     console.log("Scanned serial number:", serialNumber);
+    setShowQRScanner(false);
     // Navigate to verification page with the scanned serial number
-    navigate("/verify-product", { state: { serialNumber, autoVerify: true } });
+    navigate("/verify-drug", { 
+      state: { 
+        serialNumber, 
+        verificationMethod: 'qr', 
+        autoVerify: true,
+        fromLanding: true 
+      } 
+    });
   };
 
   const containerVariants = {
@@ -482,8 +490,16 @@ export const QuickVerificationSection = () => {
 
   const handleScanResult = (serialNumber, rawData) => {
     console.log("Scanned serial number:", serialNumber);
+    setShowQRScanner(false);
     // Navigate to verification page with the scanned serial number
-    navigate("/verify-product", { state: { serialNumber, autoVerify: true } });
+    navigate("/verify-drug", { 
+      state: { 
+        serialNumber, 
+        verificationMethod: 'qr',
+        autoVerify: true,
+        fromLanding: true 
+      } 
+    });
   };
 
   const containerVariants = {
@@ -619,6 +635,7 @@ export const QuickVerificationSection = () => {
         title="Scan Medication QR Code"
         description="Position the QR code from your medication package within the frame"
       />
+
     </>
   );
 };

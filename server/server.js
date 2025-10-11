@@ -31,8 +31,25 @@ app.use("/api/assignments", assignmentRoutes);
 app.use("/api/distribution", require("./routes/distributionRoutes"));
 app.use("/api/verification", verificationRoutes);
 
-const PORT = process.env.PORT || 5000;
+// Test route
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Server is working!', timestamp: new Date() });
+});
+
+// Check tracking records
+app.get('/api/tracking/check', async (req, res) => {
+  try {
+    const ProductTracking = require('./models/ProductTracking');
+    const latestTracking = await ProductTracking.find().sort({ scannedAt: -1 }).limit(5);
+    res.json({ success: true, count: latestTracking.length, records: latestTracking });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('🔥 SERVER WITH DEBUG LOGS STARTED!');
 });

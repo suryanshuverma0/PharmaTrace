@@ -8,6 +8,8 @@ import { Button } from "../../components/UI/Button";
 import { Badge } from "../../components/UI/Badge";
 import { verificationAPI } from "../../services/api/verificationAPI";
 import QRScannerModal from "../../components/modals/QRScannerModal";
+import LocationPermissionModal from "../../components/modals/LocationPermissionModal";
+import { useLocationTracking } from "../../hooks/useLocationTracking";
 
 const VerifyDrug = () => {
   const navigate = useNavigate();
@@ -18,6 +20,14 @@ const VerifyDrug = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
   const [error, setError] = useState(null);
+
+  // Location tracking hook
+  const { 
+    hasLocationPermission, 
+    showPermissionModal, 
+    handlePermissionRequest,
+    checkLocationPermission 
+  } = useLocationTracking();
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -64,8 +74,21 @@ const VerifyDrug = () => {
     setIsVerifying(true);
     setError(null);
 
+    // Check location permission before proceeding
+    checkLocationPermission();
+
     try {
-      const result = await verificationAPI.verifyProduct(serialNum);
+      // Import our enhanced verification API with location tracking
+      const { default: enhancedVerificationAPI } = await import('../../services/verificationAPI');
+      
+      // Determine tracking method based on verification method
+      let trackingMethod = 'manual_verification';
+      if (verificationMethod === 'qr') {
+        trackingMethod = 'qr_scan';
+      }
+
+      // Call verification with location tracking
+      const result = await enhancedVerificationAPI.verifyProduct(serialNum, trackingMethod);
       
       // Validate API response structure
       if (!result || typeof result !== 'object') {
@@ -73,6 +96,15 @@ const VerifyDrug = () => {
       }
 
       setVerificationResult(result);
+      
+      // Track successful verification in analytics
+      if (window.gtag) {
+        window.gtag('event', 'product_verified', {
+          event_category: 'verification',
+          event_label: trackingMethod,
+          value: result.isAuthentic ? 1 : 0
+        });
+      }
       
     } catch (error) {
       console.error('Verification error:', error);
@@ -149,6 +181,8 @@ const VerifyDrug = () => {
 
   // Start QR scanning
   const startQRScanning = () => {
+    // Check location permission before opening QR scanner
+    checkLocationPermission();
     setVerificationMethod("qr");
     setShowQRModal(true);
   };
@@ -348,9 +382,6 @@ const VerifyDrug = () => {
                       </>
                     )}
                   </div>
-                  <p className="hidden text-gray-600 sm:block">
-                    Verified on {new Date().toLocaleDateString()}
-                  </p>
                 </div>
                 <Button
                   variant="ghost"
@@ -611,6 +642,15 @@ const VerifyDrug = () => {
         isOpen={showQRModal}
         onClose={() => setShowQRModal(false)}
         onScanSuccess={handleScanResult}
+      />
+
+      {/* Location Permission Modal */}
+      <LocationPermissionModal
+        isOpen={showPermissionModal}
+        onAccept={handlePermissionRequest}
+        onDecline={handlePermissionRequest}
+        title="Enable Location Tracking"
+        description="Help improve pharmaceutical supply chain monitoring"
       />
     </motion.div>
   );

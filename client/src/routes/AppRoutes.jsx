@@ -44,6 +44,7 @@ import InventoryManagement from '../pages/distributor/InventoryManagement';
 import DistributeToPharmacists from '../pages/distributor/DistributeToPharmacists';
 import TrackTransfers from '../pages/distributor/TrackTransfers';
 import AssignBatch from '../pages/manufacturer/AssignBatch';
+import ProductVerificationTracking from '../pages/manufacturer/ProductVerificationTracking';
 
 const AppRoutes = () => {
   return (
@@ -85,6 +86,7 @@ const AppRoutes = () => {
           <Route path="track" element={<TrackProducts />} />
           <Route path="track/:serialNumber" element={<TrackProducts />} />
           <Route path="qr-codes" element={<QRCodeManager />} />
+          <Route path="track-products-verification" element={<ProductVerificationTracking />} />
           <Route path="settings" element={<div>Settings Placeholder</div>} />
         </Route>
       </Route>
