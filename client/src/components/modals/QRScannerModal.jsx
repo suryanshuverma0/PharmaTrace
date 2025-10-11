@@ -28,7 +28,8 @@ const QRScannerModal = ({
   onClose = () => {}, 
   onScanResult = (serial, raw) => console.log('Scanned:', serial, raw), 
   title = "Scan QR Code",
-  description = "Position the QR code within the frame"
+  description = "Position the QR code within the frame",
+  skipLocationCheck = false
 }) => {
   // Location tracking hook
   const { 
@@ -154,9 +155,11 @@ const QRScannerModal = ({
         document.body.style.overflow = 'hidden';
       }
       
-      // Check location permission when modal opens
-      checkLocationPermission();
-      
+      // Check location permission when modal opens (unless skipped)
+      if (!skipLocationCheck) {
+        checkLocationPermission();
+      }
+
       if (scanMode === 'camera') {
         setTimeout(() => {
           initializeScanner();
@@ -401,8 +404,8 @@ const QRScannerModal = ({
         </motion.div>
       </div>
 
-      {/* Location Permission Modal */}
-      {showPermissionModal && (
+      {/* Location Permission Modal - only show if not skipping location check */}
+      {!skipLocationCheck && showPermissionModal && (
         <LocationPermissionModal
           isOpen={showPermissionModal}
           onAccept={handlePermissionRequest}

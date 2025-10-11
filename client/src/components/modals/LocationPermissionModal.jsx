@@ -13,12 +13,12 @@ const LocationPermissionModal = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-2">
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="w-full max-w-sm bg-white shadow-2xl rounded-xl overflow-hidden max-h-[85vh] flex flex-col"
+          className="w-full max-w-lg md:max-w-sm bg-white shadow-2xl rounded-xl overflow-hidden max-h-[85vh] flex flex-col m-4 sm:m-6 lg:m-8"
         >
           {/* Header - Fixed */}
           <div className="flex-shrink-0 p-4 text-white bg-gradient-to-r from-blue-600 to-blue-700">

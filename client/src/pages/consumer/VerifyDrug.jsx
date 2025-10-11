@@ -57,6 +57,11 @@ const VerifyDrug = () => {
     }
   }, [location.state]);
 
+  // Check location permission when component mounts
+  useEffect(() => {
+    checkLocationPermission();
+  }, []);
+
   // Handle QR scan result from modal
   const handleScanResult = (serialNum, rawData) => {
     console.log('Scanned serial number:', serialNum);
@@ -641,7 +646,8 @@ const VerifyDrug = () => {
       <QRScannerModal
         isOpen={showQRModal}
         onClose={() => setShowQRModal(false)}
-        onScanSuccess={handleScanResult}
+        onScanResult={handleScanResult}
+        skipLocationCheck={true}
       />
 
       {/* Location Permission Modal */}
