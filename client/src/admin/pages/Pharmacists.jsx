@@ -25,7 +25,7 @@ const Pharmacists = () => {
   const [loading, setLoading] = useState(false);
 
   // UI state
-  const [filter, setFilter] = useState("pending");
+  const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 250);
 
@@ -101,9 +101,9 @@ const Pharmacists = () => {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-800">
+          <h1 className="text-2xl font-semibold text-gray-800 md:text-3xl">
             Pharmacists
           </h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -113,7 +113,7 @@ const Pharmacists = () => {
 
         <div className="flex items-center gap-3">
           {/* Stats */}
-          <div className="hidden md:flex items-center gap-5 bg-white border border-gray-200 rounded-xl px-5 py-2 shadow-sm">
+          <div className="items-center hidden gap-5 px-5 py-2 bg-white border border-gray-200 shadow-sm md:flex rounded-xl">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-600" />
               <span className="text-sm text-gray-700">
@@ -121,7 +121,7 @@ const Pharmacists = () => {
                 Approved
               </span>
             </div>
-            <div className="border-l h-5 border-gray-200" />
+            <div className="h-5 border-l border-gray-200" />
             <div className="flex items-center gap-2">
               <XCircle className="w-4 h-4 text-yellow-600" />
               <span className="text-sm text-gray-700">
@@ -130,23 +130,14 @@ const Pharmacists = () => {
               </span>
             </div>
           </div>
-
-          {/* Refresh */}
-          <button
-            onClick={fetchPharmacists}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-60"
-          >
-            {loading ? "Refreshing..." : "Refresh"}
-          </button>
         </div>
       </div>
 
       {/* Controls: search + filter */}
-      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between mb-4">
+      <div className="flex flex-col items-stretch justify-between gap-3 mb-4 md:flex-row md:items-center">
         <div className="flex-1">
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <Search className="w-4 h-4 text-gray-400" />
             </span>
             <input
@@ -159,7 +150,7 @@ const Pharmacists = () => {
               <button
                 onClick={() => setQuery("")}
                 aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-gray-100"
+                className="absolute p-1 -translate-y-1/2 rounded-md right-2 top-1/2 hover:bg-gray-100"
               >
                 <X className="w-4 h-4 text-gray-500" />
               </button>
@@ -173,7 +164,7 @@ const Pharmacists = () => {
             id="filter"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
+            className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
           >
             {FILTERS.map((f) => (
               <option key={f.key} value={f.key}>
@@ -185,8 +176,7 @@ const Pharmacists = () => {
       </div>
 
       {/* Pharmacist Table */}
-      <PharmacistTable pharmacists={filtered} refresh={fetchPharmacists} onRowClick={openModal} />
-
+      <PharmacistTable pharmacists={filtered} refresh={fetchPharmacists} onRowClick={openModal} setFilter={setFilter} />
 
       {/* Modal */}
       <PharmacistModal

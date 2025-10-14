@@ -82,7 +82,7 @@ exports.verifyProduct = async (req, res) => {
     }
 
     // Find the product by serial number
-    const product = await Product.findOne({ serialNumber })
+    let product = await Product.findOne({ serialNumber })
       .populate('manufacturerId', 'name address')
       .lean();
 
@@ -481,3 +481,348 @@ function getDefaultDetails(stepName, shipment) {
   };
   return detailsMap[stepName] || `Product processed at ${stepName}.`;
 }
+
+// New function for fingerprint-based verification with blockchain support
+exports.verifyProductByFingerprint = async (req, res) => {
+  try {
+    const { fingerprint } = req.params;
+
+    if (!fingerprint) {
+      return res.status(400).json({
+        success: false,
+        message: 'Digital fingerprint is required'
+      });
+    }
+
+    console.log("Verifying product with fingerprint:", fingerprint);
+
+    let product = null;
+    let batch = null;
+    let source = 'database';
+
+    // Try blockchain first
+    try {
+      console.log("Attempting blockchain verification...");
+      const { contract, batchContract } = require("../utils/blockchain");
+      
+      // Get product from blockchain using fingerprint
+      const blockchainProduct = await contract.getProductByFingerprint(fingerprint);
+      
+      if (blockchainProduct && blockchainProduct.serialNumber) {
+        console.log("Product found on blockchain:", blockchainProduct.serialNumber);
+        
+        // Format product data from blockchain
+        product = {
+          fingerprint: fingerprint,
+          productName: blockchainProduct.name,
+          serialNumber: blockchainProduct.serialNumber,
+          batchNumber: blockchainProduct.batchNumber,
+          manufactureDate: new Date(Number(blockchainProduct.manufactureDate) * 1000),
+          expiryDate: new Date(Number(blockchainProduct.expiryDate) * 1000),
+          manufacturerName: blockchainProduct.manufacturerName,
+          manufacturerLicense: blockchainProduct.manufacturerLicense,
+          productionLocation: blockchainProduct.productionLocation,
+          drugCode: blockchainProduct.drugCode,
+          dosageForm: blockchainProduct.dosageForm,
+          strength: blockchainProduct.strength,
+          storageCondition: blockchainProduct.storageCondition,
+          approvalCertId: blockchainProduct.approvalCertificateId,
+          manufacturerCountry: blockchainProduct.manufacturerCountry,
+          manufacturerAddress: blockchainProduct.manufacturerAddress,
+          registrationTimestamp: new Date(Number(blockchainProduct.registrationTimestamp) * 1000),
+          isActive: blockchainProduct.isActive
+        };
+
+        // Get batch data from blockchain
+        try {
+          const blockchainBatch = await batchContract.getBatch(blockchainProduct.batchNumber);
+          if (blockchainBatch && blockchainBatch.batchNumber) {
+            batch = {
+              digitalFingerprint: blockchainBatch.digitalFingerprint,
+              batchNumber: blockchainBatch.batchNumber,
+              manufactureDate: new Date(Number(blockchainBatch.manufactureDate) * 1000),
+              expiryDate: new Date(Number(blockchainBatch.expiryDate) * 1000),
+              quantityProduced: Number(blockchainBatch.quantityProduced),
+              quantityAvailable: Number(blockchainBatch.quantityAvailable),
+              dosageForm: blockchainBatch.dosageForm,
+              strength: blockchainBatch.strength,
+              storageConditions: blockchainBatch.storageConditions,
+              productionLocation: blockchainBatch.productionLocation,
+              approvalCertId: blockchainBatch.approvalCertId,
+              manufacturerName: blockchainBatch.manufacturerName,
+              manufacturerCountry: blockchainBatch.manufacturerCountry,
+              manufacturerAddress: blockchainBatch.manufacturerAddress,
+              registrationTimestamp: new Date(Number(blockchainBatch.registrationTimestamp) * 1000),
+              isActive: blockchainBatch.isActive
+            };
+
+            // Get shipment history from blockchain
+            try {
+              const shipmentHistory = await batchContract.getBatchShipmentHistory(blockchainProduct.batchNumber);
+              batch.shipmentHistory = shipmentHistory.map(entry => ({
+                timestamp: new Date(Number(entry.timestamp) * 1000),
+                from: entry.from,
+                to: entry.to,
+                fromAddress: entry.fromAddress,
+                toAddress: entry.toAddress,
+                status: entry.status,
+                quantity: Number(entry.quantity),
+                remarks: entry.remarks,
+                actor: {
+                  name: entry.actorName,
+                  type: entry.actorType,
+                  license: entry.actorLicense,
+                  location: entry.actorLocation
+                }
+              }));
+            } catch (shipmentError) {
+              console.log("Could not fetch shipment history:", shipmentError.message);
+              batch.shipmentHistory = [];
+            }
+          }
+        } catch (batchError) {
+          console.log("Could not fetch batch from blockchain:", batchError.message);
+        }
+
+        source = 'blockchain';
+      }
+    } catch (blockchainError) {
+      console.log("Blockchain verification failed, trying database:", blockchainError.message);
+    }
+
+    // Fallback to database if blockchain failed
+    if (!product) {
+      console.log("Attempting database verification...");
+      
+      // Find product by fingerprint in database
+      const dbProduct = await Product.findOne({ fingerprint })
+        .populate('manufacturerId', 'name address')
+        .lean();
+
+      if (!dbProduct) {
+        // Track invalid fingerprint attempts
+        try {
+          await trackProductVerification(req, {
+            productId: null,
+            manufacturerId: null,
+            serialNumber: null,
+            productName: null,
+            verificationResult: {
+              isAuthentic: false,
+              status: 'not_found',
+              isExpired: false
+            }
+          });
+        } catch (trackingError) {
+          console.error('❌ Error tracking invalid fingerprint:', trackingError);
+        }
+
+        return res.status(404).json({
+          success: false,
+          message: 'Product not found with this fingerprint',
+          isAuthentic: false
+        });
+      }
+
+      product = dbProduct;
+
+      // Find the batch information from database
+      batch = await Batch.findOne({ batchNumber: product.batchNumber })
+        .populate('manufacturerId', 'name address')
+        .lean();
+
+      if (!batch) {
+        return res.status(404).json({
+          success: false,
+          message: 'Batch information not found',
+          isAuthentic: false
+        });
+      }
+
+      source = 'database';
+    }
+
+    // Check if product is expired
+    const currentDate = new Date();
+    const expiryDate = product.expiryDate;
+    const isExpired = expiryDate < currentDate;
+
+    // Determine verification status
+    let verificationStatus = 'verified';
+    let isAuthentic = true;
+
+    if (isExpired) {
+      verificationStatus = 'expired';
+      isAuthentic = false;
+    } else if (!product.isActive && source === 'blockchain') {
+      verificationStatus = 'inactive';
+      isAuthentic = false;
+    }
+
+    // Track the verification
+    try {
+      await trackProductVerification(req, {
+        productId: product._id || null,
+        manufacturerId: batch.manufacturerId || null,
+        serialNumber: product.serialNumber,
+        productName: product.productName,
+        verificationResult: {
+          isAuthentic,
+          status: verificationStatus,
+          isExpired
+        }
+      });
+      console.log('✅ Fingerprint verification tracked successfully');
+    } catch (trackingError) {
+      console.error('❌ Error tracking fingerprint verification:', trackingError);
+    }
+
+    // Prepare response
+    const response = {
+      success: true,
+      isAuthentic,
+      verificationStatus,
+      isExpired,
+      source,
+      product: {
+        fingerprint: product.fingerprint || fingerprint,
+        name: product.productName,
+        serialNumber: product.serialNumber,
+        batchNumber: product.batchNumber,
+        manufactureDate: product.manufactureDate,
+        expiryDate: product.expiryDate,
+        manufacturerName: product.manufacturerName,
+        manufacturerLicense: product.manufacturerLicense,
+        productionLocation: product.productionLocation,
+        drugCode: product.drugCode,
+        dosageForm: product.dosageForm,
+        strength: product.strength,
+        storageCondition: product.storageCondition,
+        approvalCertId: product.approvalCertId,
+        manufacturerCountry: product.manufacturerCountry,
+        price: product.price
+      },
+      batch: batch ? {
+        digitalFingerprint: batch.digitalFingerprint,
+        batchNumber: batch.batchNumber,
+        manufactureDate: batch.manufactureDate,
+        expiryDate: batch.expiryDate,
+        quantityProduced: batch.quantityProduced,
+        quantityAvailable: batch.quantityAvailable,
+        dosageForm: batch.dosageForm,
+        strength: batch.strength,
+        storageConditions: batch.storageConditions,
+        productionLocation: batch.productionLocation,
+        approvalCertId: batch.approvalCertId,
+        manufacturerName: batch.manufacturerName,
+        shipmentHistory: batch.shipmentHistory || []
+      } : null,
+      verificationTimestamp: new Date()
+    };
+
+    return res.json(response);
+
+  } catch (error) {
+    console.error('❌ Fingerprint verification error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to verify product',
+      error: error.message
+    });
+  }
+};
+
+// Verify product by digital fingerprint (blockchain)
+exports.verifyProductBlockchain = async (req, res) => {
+  try {
+    const { fingerprint } = req.params;
+    if (!fingerprint) {
+      return res.status(400).json({ success: false, message: 'Digital fingerprint is required' });
+    }
+    // Get contracts
+    const { contract, batchContract } = require('../utils/blockchain');
+    // Get product from blockchain
+    const product = await contract.getProductByFingerprint(fingerprint);
+    if (!product || !product.serialNumber) {
+      return res.status(404).json({ success: false, message: 'Product not found on blockchain', isAuthentic: false });
+    }
+    // Get batch from blockchain
+    let batch = null;
+    try {
+      batch = await batchContract.getBatch(product.batchNumber);
+    } catch (err) {
+      batch = null;
+    }
+    // Format current location and actor
+    let currentLocation = 'Manufacturing Facility';
+    let currentActor = product.manufacturerName || 'Unknown Manufacturer';
+    // Shipment history from blockchain (if available)
+    let shipmentHistory = [];
+    try {
+      shipmentHistory = await batchContract.getBatchShipmentHistory(product.batchNumber);
+      shipmentHistory = shipmentHistory.map(entry => ({
+        timestamp: new Date(Number(entry.timestamp) * 1000),
+        from: entry.from,
+        to: entry.to,
+        fromAddress: entry.fromAddress,
+        toAddress: entry.toAddress,
+        status: entry.status,
+        quantity: Number(entry.quantity),
+        remarks: entry.remarks
+      }));
+      if (shipmentHistory.length > 0) {
+        const latestShipment = shipmentHistory.sort((a, b) => b.timestamp - a.timestamp)[0];
+        currentLocation = latestShipment.to || latestShipment.from;
+        currentActor = latestShipment.to || latestShipment.from;
+      }
+    } catch (err) {
+      shipmentHistory = [];
+    }
+    // Check expiry
+    const expiryDate = new Date(Number(product.expiryDate) * 1000);
+    const today = new Date();
+    const isExpired = today > expiryDate;
+    const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+    // Authenticity
+    const isAuthentic = !!product.serialNumber && !!product.batchNumber && !!product.manufacturerName;
+    // Format response
+    const verificationResult = {
+      success: true,
+      isAuthentic,
+      isExpired,
+      daysUntilExpiry,
+      product: {
+        productName: product.name,
+        serialNumber: product.serialNumber,
+        batchNumber: product.batchNumber,
+        manufactureDate: new Date(Number(product.manufactureDate) * 1000),
+        expiryDate,
+        dosageForm: product.dosageForm,
+        strength: product.strength
+      },
+      manufacturer: {
+        name: product.manufacturerName
+      },
+      currentLocation: {
+        location: currentLocation,
+        actor: currentActor,
+        lastUpdated: shipmentHistory.length > 0 ? shipmentHistory[shipmentHistory.length - 1].timestamp : new Date(Number(product.manufactureDate) * 1000)
+      },
+      blockchain: {
+        verified: true,
+        fingerprint,
+        contractAddress: contract.target
+      },
+      verification: {
+        verifiedAt: new Date(),
+        verificationStatus: isAuthentic ? 'verified' : 'suspicious',
+        fingerprint
+      },
+      shipmentHistory
+    };
+    res.json(verificationResult);
+  } catch (error) {
+    console.error('Blockchain verification error:', error);
+    res.status(500).json({ success: false, message: 'Failed to verify product on blockchain', error: error.message });
+  }
+};

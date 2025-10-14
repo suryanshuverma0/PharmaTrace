@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@metamask/detect-provider": "^2.0.0",
     "@refinedev/antd": "^6.0.2",

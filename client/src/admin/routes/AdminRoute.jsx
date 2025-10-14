@@ -1,79 +1,3 @@
-// import { useState } from "react";
-// import { useNavigate } from "react-router-dom";
-// import { toast } from "react-hot-toast";
-// import { connectWallet, isAdminWallet } from "../utils/metamaskAuth";
-// import { FaLock, FaEthereum } from "react-icons/fa";
-// import { ClipLoader } from "react-spinners"; // optional spinner library
-
-// const AdminRoute = ({ children }) => {
-//   const [loading, setLoading] = useState(false);
-//   const [authorized, setAuthorized] = useState(false);
-//   const [error, setError] = useState("");
-//   const navigate = useNavigate();
-
-//   const handleConnect = async () => {
-//     setLoading(true);
-//     setError("");
-//     try {
-//       const address = await connectWallet(); // MetaMask popup
-//       if (isAdminWallet(address)) {
-//         setAuthorized(true);
-//         toast.success("Wallet connected successfully!"); // success toast
-//       } else {
-//         setAuthorized(false);
-//         setError("This wallet is not authorized as admin.");
-//         toast.error("Unauthorized wallet!"); // error toast
-//       }
-//     } catch (err) {
-//       console.error(err);
-//       setError(err.message || "Failed to connect MetaMask.");
-//       toast.error("MetaMask connection failed!");
-//       setAuthorized(false);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   if (authorized) return children;
-
-//   return (
-//     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-gray-100 to-gray-200 p-4">
-//       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md text-center">
-//         <FaEthereum className="w-16 h-16 mx-auto mb-4 text-blue-600 animate-bounce" />
-//         <h1 className="text-2xl font-bold mb-2 text-gray-800">Admin Access Required</h1>
-//         <p className="mb-6 text-gray-600">
-//           Connect your admin wallet in MetaMask to continue to the dashboard.
-//         </p>
-
-//         {error && <p className="mb-4 text-red-600 font-medium">{error}</p>}
-
-//         <button
-//           onClick={handleConnect}
-//           disabled={loading}
-//           className="flex items-center justify-center gap-2 px-6 py-3 w-full text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all duration-200"
-//         >
-//           {loading ? <ClipLoader size={20} color="#fff" /> : <FaLock />}
-//           {loading ? "Connecting..." : "Connect MetaMask"}
-//         </button>
-
-//         <button
-//           onClick={() => {
-//             toast("Returning to homepage...", { icon: "🏠" });
-//             navigate("/");
-//           }}
-//           className="mt-4 px-6 py-2 w-full bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-800 transition-all duration-200"
-//         >
-//           Go Back to Homepage
-//         </button>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default AdminRoute;
-
-
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -95,6 +19,7 @@ const AdminRoute = ({ children }) => {
 
     try {
       const address = await connectWallet();
+      console.log("Connected wallet address:", address);
 
       if (!address) {
         throw new Error("No wallet address detected. Please try again.");
@@ -146,20 +71,20 @@ const AdminRoute = ({ children }) => {
   if (authorized) return children;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-gray-100 to-gray-200 p-4">
-      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md text-center">
-        <FaEthereum className="w-16 h-16 mx-auto mb-4 text-blue-600 animate-bounce" />
-        <h1 className="text-2xl font-bold mb-2 text-gray-800">Admin Access Required</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-r from-gray-100 to-gray-200">
+      <div className="w-full max-w-md p-8 text-center bg-white shadow-lg rounded-xl">
+        <FaEthereum className="w-16 h-16 mx-auto mb-4 text-orange-600" />
+        <h1 className="mb-2 text-2xl font-bold text-gray-800">Admin Access Required</h1>
         <p className="mb-6 text-gray-600">
           Connect your admin wallet in MetaMask to continue to the dashboard.
         </p>
 
-        {error && <p className="mb-4 text-red-600 font-medium">{error}</p>}
+        {error && <p className="mb-4 font-medium text-red-600">{error}</p>}
 
         <button
           onClick={handleConnect}
           disabled={loading}
-          className="flex items-center justify-center gap-2 px-6 py-3 w-full text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all duration-200"
+          className="flex items-center justify-center w-full gap-2 px-6 py-3 text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? <ClipLoader size={20} color="#fff" /> : <FaLock />}
           {loading ? "Connecting..." : "Connect MetaMask"}
@@ -170,7 +95,7 @@ const AdminRoute = ({ children }) => {
             toast("Returning to homepage...", { icon: "🏠" });
             navigate("/");
           }}
-          className="mt-4 px-6 py-2 w-full bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-800 transition-all duration-200"
+          className="w-full px-6 py-2 mt-4 text-gray-800 transition-all duration-200 bg-gray-200 rounded-lg hover:bg-gray-300"
         >
           Go Back to Homepage
         </button>

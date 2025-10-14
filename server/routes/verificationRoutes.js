@@ -6,4 +6,8 @@ const verificationController = require('../controllers/verificationController');
 router.get('/verify/:serialNumber', verificationController.verifyProduct);
 router.get('/journey/:serialNumber', verificationController.getProductJourney);
 
+// Blockchain-based verification routes
+router.get('/verify-fingerprint/:fingerprint', verificationController.verifyProductByFingerprint);
+router.get('/verify-blockchain/:fingerprint', verificationController.verifyProductBlockchain);
+
 module.exports = router;

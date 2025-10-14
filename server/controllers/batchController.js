@@ -1,6 +1,6 @@
 const Batch = require("../models/Batch");
-// const { ethers } = require("ethers"); // Commented for MVP
-// const { signer, batchContract, provider } = require("../utils/blockchain"); // Commented for MVP
+const { ethers } = require("ethers"); // Re-enabled for blockchain integration
+const { signer, batchContract, provider } = require("../utils/blockchain"); // Re-enabled for blockchain integration
 const Manufacturer = require("../models/Manufacturer");
 const Product = require("../models/Product");
 const Distributor = require("../models/Distributor");
@@ -96,14 +96,36 @@ const registerBatch = async (req, res) => {
       };
     };
 
-    // Generate digital fingerprint for the batch (without blockchain)
+    // Generate digital fingerprint for the batch using more comprehensive data
     const digitalFingerprint = require('crypto')
       .createHash('sha256')
-      .update(batchNumber + manuDate.toISOString() + expDate.toISOString())
+      .update(batchNumber + manuDate.toISOString() + expDate.toISOString() + manufacturer.companyName + quantityProduced)
       .digest('hex');
 
     // Parse environmental conditions from storage conditions
     const environmentalConditions = parseStorageConditions(storageConditions);
+
+    console.log("Starting blockchain registration for batch:", batchNumber);
+
+    // Store batch on blockchain first (using simplified interface)
+    const tx = await batchContract.registerBatch(
+      batchNumber,
+      Math.floor(manuDate.getTime() / 1000), // Convert to Unix timestamp
+      Math.floor(expDate.getTime() / 1000),  // Convert to Unix timestamp
+      quantityProduced,
+      dosageForm,
+      strength,
+      manufacturer.companyName
+    );
+
+    console.log("Blockchain transaction sent, waiting for confirmation...");
+    const receipt = await tx.wait();
+    
+    if (receipt.status !== 1) {
+      throw new Error('Blockchain transaction failed');
+    }
+
+    console.log("Blockchain transaction confirmed:", receipt.hash);
 
     // Create new batch in database with blockchain data
     const batch = new Batch({
@@ -120,7 +142,14 @@ const registerBatch = async (req, res) => {
       productionLocation: productionLocation || '',
       approvalCertId: approvalCertId || '',
       digitalFingerprint,
-      
+      // Blockchain transaction details
+      txHash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      blockHash: receipt.blockHash,
+      gasUsed: receipt.gasUsed.toString(),
+      contractAddress: batchContract.address,
+      manufacturerAddress: await signer.getAddress(),
+      blockchainVerified: true,
       // Initial shipment status
       shipmentStatus: 'Produced',
     });

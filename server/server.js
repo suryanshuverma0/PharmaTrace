@@ -39,6 +39,9 @@ app.use(
 app.use("/api/admin/distributors", require("./admin/routes/distributorRoute"));
 app.use("/api/admin/pharmacists", require("./admin/routes/pharmacistRoute"));
 
+// Admin analytics routes
+app.use("/api/admin", require("./routes/adminAnalyticsRoutes"));
+
 // Test route
 app.get("/api/test", (req, res) => {
   res.json({ message: "Server is working!", timestamp: new Date() });

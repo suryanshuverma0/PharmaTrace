@@ -1,297 +1,46 @@
-// import { useEffect, useState } from "react";
-// import { motion } from "framer-motion";
-// import { Users, Factory, Truck, ClipboardList } from "lucide-react";
-// import {
-//   getAllManufacturers,
-//   getAllDistributors,
-//   getAllPharmacists,
-// } from "../api/api";
-
-// const Dashboard = () => {
-//   const [stats, setStats] = useState({
-//     totalUsers: 0,
-//     totalManufacturers: 0,
-//     totalDistributors: 0,
-//     totalPharmacists: 0,
-//   });
-
-//   useEffect(() => {
-//     const fetchStats = async () => {
-//       const manufacturers = await getAllManufacturers();
-//       const distributors = await getAllDistributors();
-//       const pharmacists = await getAllPharmacists();
-
-//       const totalUsers =
-//         manufacturers.length + distributors.length + pharmacists.length;
-
-//       setStats({
-//         totalUsers,
-//         totalManufacturers: manufacturers.length,
-//         totalDistributors: distributors.length,
-//         totalPharmacists: pharmacists.length,
-//       });
-//     };
-
-//     fetchStats();
-//   }, []);
-
-//   const cards = [
-//     {
-//       title: "Total Users",
-//       value: stats.totalUsers,
-//       icon: Users,
-//       color: "from-blue-100 to-blue-50",
-//       iconColor: "text-blue-600",
-//       glow: "shadow-blue-200",
-//     },
-//     {
-//       title: "Manufacturers",
-//       value: stats.totalManufacturers,
-//       icon: Factory,
-//       color: "from-purple-100 to-purple-50",
-//       iconColor: "text-purple-600",
-//       glow: "shadow-purple-200",
-//     },
-//     {
-//       title: "Distributors",
-//       value: stats.totalDistributors,
-//       icon: Truck,
-//       color: "from-green-100 to-green-50",
-//       iconColor: "text-green-600",
-//       glow: "shadow-green-200",
-//     },
-//     {
-//       title: "Pharmacists",
-//       value: stats.totalPharmacists,
-//       icon: ClipboardList,
-//       color: "from-pink-100 to-pink-50",
-//       iconColor: "text-pink-600",
-//       glow: "shadow-pink-200",
-//     },
-//   ];
-
-//   return (
-//     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white px-6 py-10">
-//       <h1 className="text-3xl font-semibold text-gray-800 mb-8">
-//         Dashboard Overview
-//       </h1>
-
-//       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-//         {cards.map((card, index) => (
-//           <motion.div
-//             key={index}
-//             initial={{ opacity: 0, y: 30 }}
-//             animate={{ opacity: 1, y: 0 }}
-//             transition={{ delay: index * 0.1 }}
-//             whileHover={{ scale: 1.05 }}
-//             className={`bg-gradient-to-br ${card.color} shadow-md ${card.glow} rounded-2xl p-6 flex flex-col items-center justify-center text-center border border-gray-100 hover:shadow-xl transition-all duration-300`}
-//           >
-//             <div
-//               className={`p-4 rounded-full bg-white shadow-sm mb-4 ${card.iconColor}`}
-//             >
-//               <card.icon size={32} />
-//             </div>
-//             <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">
-//               {card.title}
-//             </h3>
-//             <p className="text-4xl font-bold text-gray-800 mt-2">
-//               {card.value}
-//             </p>
-//           </motion.div>
-//         ))}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Dashboard;
-
-
-// import { useEffect, useState, Fragment } from "react";
-// import { motion } from "framer-motion";
-// import { Users, Factory, Truck, ClipboardList, LogOut,XCircle } from "lucide-react";
-// import { Dialog, Transition } from "@headlessui/react";
-// import { useNavigate } from "react-router-dom";
-// import {
-//   getAllManufacturers,
-//   getAllDistributors,
-//   getAllPharmacists,
-// } from "../api/api";
-
-// const Dashboard = () => {
-//   const navigate = useNavigate();
-//   const [stats, setStats] = useState({
-//     totalUsers: 0,
-//     totalManufacturers: 0,
-//     totalDistributors: 0,
-//     totalPharmacists: 0,
-//   });
-
-//   const [logoutModal, setLogoutModal] = useState(false);
-
-//   useEffect(() => {
-//     const fetchStats = async () => {
-//       const manufacturers = await getAllManufacturers();
-//       const distributors = await getAllDistributors();
-//       const pharmacists = await getAllPharmacists();
-
-//       const totalUsers =
-//         manufacturers.length + distributors.length + pharmacists.length;
-
-//       setStats({
-//         totalUsers,
-//         totalManufacturers: manufacturers.length,
-//         totalDistributors: distributors.length,
-//         totalPharmacists: pharmacists.length,
-//       });
-//     };
-
-//     fetchStats();
-//   }, []);
-
-//   const cards = [
-//     {
-//       title: "Total Users",
-//       value: stats.totalUsers,
-//       icon: Users,
-//       color: "from-blue-100 to-blue-50",
-//       iconColor: "text-blue-600",
-//       glow: "shadow-blue-200",
-//     },
-//     {
-//       title: "Manufacturers",
-//       value: stats.totalManufacturers,
-//       icon: Factory,
-//       color: "from-purple-100 to-purple-50",
-//       iconColor: "text-purple-600",
-//       glow: "shadow-purple-200",
-//     },
-//     {
-//       title: "Distributors",
-//       value: stats.totalDistributors,
-//       icon: Truck,
-//       color: "from-green-100 to-green-50",
-//       iconColor: "text-green-600",
-//       glow: "shadow-green-200",
-//     },
-//     {
-//       title: "Pharmacists",
-//       value: stats.totalPharmacists,
-//       icon: ClipboardList,
-//       color: "from-pink-100 to-pink-50",
-//       iconColor: "text-pink-600",
-//       glow: "shadow-pink-200",
-//     },
-//   ];
-
-//   const handleLogout = () => {
-//     // clear user session if any
-//     navigate("/"); // redirect to login or home
-//   };
-
-//   return (
-//     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white px-6 py-10">
-//       {/* Header */}
-//       <div className="flex justify-between items-center mb-10">
-//         <h1 className="text-3xl font-semibold text-gray-800">Dashboard Overview</h1>
-//         <motion.button
-//           whileHover={{ scale: 1.05 }}
-//           whileTap={{ scale: 0.95 }}
-//           onClick={() => setLogoutModal(true)}
-//           className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition"
-//         >
-//           <LogOut size={20} /> Logout
-//         </motion.button>
-//       </div>
-
-//       {/* Stats Cards */}
-//       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-//         {cards.map((card, index) => (
-//           <motion.div
-//             key={index}
-//             initial={{ opacity: 0, y: 30 }}
-//             animate={{ opacity: 1, y: 0 }}
-//             transition={{ delay: index * 0.1 }}
-//             whileHover={{ scale: 1.05 }}
-//             className={`bg-gradient-to-br ${card.color} shadow-md ${card.glow} rounded-2xl p-6 flex flex-col items-center justify-center text-center border border-gray-100 hover:shadow-xl transition-all duration-300`}
-//           >
-//             <div className={`p-4 rounded-full bg-white shadow-sm mb-4 ${card.iconColor}`}>
-//               <card.icon size={32} />
-//             </div>
-//             <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">{card.title}</h3>
-//             <p className="text-4xl font-bold text-gray-800 mt-2">{card.value}</p>
-//           </motion.div>
-//         ))}
-//       </div>
-
-//       {/* Logout Confirmation Modal */}
-//       <Transition appear show={logoutModal} as={Fragment}>
-//         <Dialog as="div" className="relative z-50" onClose={() => setLogoutModal(false)}>
-//           <Transition.Child
-//             as={Fragment}
-//             enter="ease-out duration-300"
-//             enterFrom="opacity-0"
-//             enterTo="opacity-100"
-//             leave="ease-in duration-200"
-//             leaveFrom="opacity-100"
-//             leaveTo="opacity-0"
-//           >
-//             <div className="fixed inset-0 bg-black bg-opacity-40" />
-//           </Transition.Child>
-
-//           <div className="fixed inset-0 flex items-center justify-center p-4">
-//             <Transition.Child
-//               as={Fragment}
-//               enter="ease-out duration-300"
-//               enterFrom="opacity-0 scale-95"
-//               enterTo="opacity-100 scale-100"
-//               leave="ease-in duration-200"
-//               leaveFrom="opacity-100 scale-100"
-//               leaveTo="opacity-0 scale-95"
-//             >
-//               <Dialog.Panel className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 relative">
-//                 <button
-//                   onClick={() => setLogoutModal(false)}
-//                   className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 transition"
-//                 >
-//                   <XCircle className="w-6 h-6" />
-//                 </button>
-//                 <div className="flex flex-col items-center text-center">
-//                   <LogOut className="w-12 h-12 text-red-500 mb-4" />
-//                   <Dialog.Title className="text-xl font-bold mb-2">Confirm Logout</Dialog.Title>
-//                   <p className="text-gray-700 mb-6">Do you really want to logout?</p>
-//                   <div className="flex gap-4">
-//                     <button
-//                       onClick={handleLogout}
-//                       className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
-//                     >
-//                       Yes, Logout
-//                     </button>
-//                     <button
-//                       onClick={() => setLogoutModal(false)}
-//                       className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
-//                     >
-//                       Cancel
-//                     </button>
-//                   </div>
-//                 </div>
-//               </Dialog.Panel>
-//             </Transition.Child>
-//           </div>
-//         </Dialog>
-//       </Transition>
-//     </div>
-//   );
-// };
-
-// export default Dashboard;
-
-
-
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Factory, Truck, ClipboardList } from "lucide-react";
-import { getAllManufacturers, getAllDistributors, getAllPharmacists } from "../api/api";
+import { 
+  Users, Factory, Truck, ClipboardList, Package, Shield, 
+  TrendingUp, Activity, AlertTriangle, CheckCircle, 
+  BarChart3, PieChart, Clock, MapPin, Zap, Globe, Eye
+} from "lucide-react";
+import { Line, Doughnut } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+} from 'chart.js';
+import { 
+  getAllManufacturers, 
+  getAllDistributors, 
+  getAllPharmacists,
+  getAdminAnalytics,
+  getAdminRealtimeVerifications,
+  getAdminLocationAnalytics,
+  getAdminDashboardStats,
+  getAdminRecentActivities,
+  getAdminSystemAlerts
+} from "../api/api";
+import InteractiveMap from '../../components/maps/InteractiveMap';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -299,51 +48,271 @@ const Dashboard = () => {
     totalManufacturers: 0,
     totalDistributors: 0,
     totalPharmacists: 0,
+    totalProducts: 0,
+    totalBatches: 0,
+    verifiedProducts: 0,
+    totalVerifications: 0,
+    authenticationRate: 0,
+    systemHealth: 100,
   });
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      const manufacturers = await getAllManufacturers();
-      const distributors = await getAllDistributors();
-      const pharmacists = await getAllPharmacists();
+  const [loading, setLoading] = useState(true);
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [realtimeData, setRealtimeData] = useState([]);
+  const [locationData, setLocationData] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [systemAlerts, setSystemAlerts] = useState([]);
+  const [timeRange, setTimeRange] = useState('7d');
 
-      setStats({
-        totalUsers: manufacturers.length + distributors.length + pharmacists.length,
-        totalManufacturers: manufacturers.length,
-        totalDistributors: distributors.length,
-        totalPharmacists: pharmacists.length,
-      });
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        const [
+          manufacturers, 
+          distributors, 
+          pharmacists,
+          dashboardStats,
+          analytics,
+          realtimeVerifications,
+          locationAnalytics,
+          activities,
+          alerts
+        ] = await Promise.all([
+          getAllManufacturers(),
+          getAllDistributors(),
+          getAllPharmacists(),
+          getAdminDashboardStats(),
+          getAdminAnalytics(timeRange),
+          getAdminRealtimeVerifications(10),
+          getAdminLocationAnalytics(),
+          getAdminRecentActivities(8),
+          getAdminSystemAlerts()
+        ]);
+
+        setStats({
+          totalUsers: manufacturers.length + distributors.length + pharmacists.length,
+          totalManufacturers: manufacturers.length,
+          totalDistributors: distributors.length,
+          totalPharmacists: pharmacists.length,
+          ...dashboardStats.data
+        });
+
+        setAnalyticsData(analytics.data);
+        setRealtimeData(realtimeVerifications.data || []);
+        setLocationData(locationAnalytics.data || []);
+        setRecentActivities(activities);
+        setSystemAlerts(alerts);
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchStats();
+
+    fetchDashboardData();
   }, []);
 
-  const cards = [
-    { title: "Total Users", value: stats.totalUsers, icon: Users, color: "from-blue-100 to-blue-50", iconColor: "text-blue-600", glow: "shadow-blue-200" },
-    { title: "Manufacturers", value: stats.totalManufacturers, icon: Factory, color: "from-purple-100 to-purple-50", iconColor: "text-purple-600", glow: "shadow-purple-200" },
-    { title: "Distributors", value: stats.totalDistributors, icon: Truck, color: "from-green-100 to-green-50", iconColor: "text-green-600", glow: "shadow-green-200" },
-    { title: "Pharmacists", value: stats.totalPharmacists, icon: ClipboardList, color: "from-pink-100 to-pink-50", iconColor: "text-pink-600", glow: "shadow-pink-200" },
+  const primaryCards = [
+    { 
+      title: "Total Users", 
+      value: stats.totalUsers, 
+      icon: Users, 
+      color: "from-blue-100 to-blue-50", 
+      iconColor: "text-blue-600", 
+      glow: "shadow-blue-200",
+      trend: "+12%"
+    },
+    { 
+      title: "Total Products", 
+      value: stats.totalProducts, 
+      icon: Package, 
+      color: "from-purple-100 to-purple-50", 
+      iconColor: "text-purple-600", 
+      glow: "shadow-purple-200",
+      trend: "+8%"
+    },
+    { 
+      title: "Verifications", 
+      value: stats.totalVerifications, 
+      icon: Eye, 
+      color: "from-green-100 to-green-50", 
+      iconColor: "text-green-600", 
+      glow: "shadow-green-200",
+      trend: "+15%"
+    },
+    { 
+      title: "Auth Rate", 
+      value: `${stats.authenticationRate}%`, 
+      icon: Shield, 
+      color: "from-orange-100 to-orange-50", 
+      iconColor: "text-orange-600", 
+      glow: "shadow-orange-200",
+      trend: "+2%"
+    },
   ];
 
+  const secondaryCards = [
+    { title: "Manufacturers", value: stats.totalManufacturers, icon: Factory, color: "from-cyan-100 to-cyan-50", iconColor: "text-cyan-600" },
+    { title: "Distributors", value: stats.totalDistributors, icon: Truck, color: "from-indigo-100 to-indigo-50", iconColor: "text-indigo-600" },
+    { title: "Pharmacists", value: stats.totalPharmacists, icon: ClipboardList, color: "from-rose-100 to-rose-50", iconColor: "text-rose-600" },
+    { title: "Total Batches", value: stats.totalBatches, icon: Package, color: "from-amber-100 to-amber-50", iconColor: "text-amber-600" },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-20 h-20 border-b-2 border-blue-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen">
-      <h1 className="text-3xl font-semibold text-gray-800 mb-8">Dashboard Overview</h1>
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card, index) => (
+    <div className="min-h-screen space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+          <p className="mt-2 text-gray-600">Comprehensive system overview and analytics</p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-gray-500">
+            Last updated: {new Date().toLocaleTimeString()}
+          </div>
+        </div>
+      </div>
+
+      {/* Primary Statistics Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {primaryCards.map((card, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             whileHover={{ scale: 1.05 }}
-            className={`bg-gradient-to-br ${card.color} shadow-md ${card.glow} rounded-2xl p-6 flex flex-col items-center justify-center text-center border border-gray-100 hover:shadow-xl transition-all duration-300`}
+            className={`bg-gradient-to-br ${card.color} shadow-lg ${card.glow} rounded-2xl p-6 border border-gray-100 hover:shadow-2xl transition-all duration-300`}
           >
-            <div className={`p-4 rounded-full bg-white shadow-sm mb-4 ${card.iconColor}`}>
-              <card.icon size={32} />
+            <div className="flex items-start justify-between">
+              <div className={`p-3 rounded-xl bg-white shadow-sm ${card.iconColor}`}>
+                <card.icon size={28} />
+              </div>
+              {card.trend && (
+                <span className="px-2 py-1 text-xs font-semibold text-green-600 bg-green-100 rounded-full">
+                  {card.trend}
+                </span>
+              )}
             </div>
-            <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">{card.title}</h3>
-            <p className="text-4xl font-bold text-gray-800 mt-2">{card.value}</p>
+            <div className="mt-4">
+              <h3 className="text-sm font-medium tracking-wide text-gray-600 uppercase">{card.title}</h3>
+              <p className="mt-2 text-3xl font-bold text-gray-800">{typeof card.value === 'number' ? card.value.toLocaleString() : card.value}</p>
+            </div>
           </motion.div>
         ))}
+      </div>
+
+      {/* Secondary Statistics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {secondaryCards.map((card, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className={`bg-gradient-to-r ${card.color} rounded-xl p-4 border border-gray-100`}
+          >
+            <div className="flex items-center space-x-3">
+              <div className={`p-2 rounded-lg bg-white ${card.iconColor}`}>
+                <card.icon size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">{card.title}</p>
+                <p className="text-xl font-bold text-gray-800">{card.value.toLocaleString()}</p>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Analytics and Map Section */}
+      <div className="grid gap-8 lg:grid-cols-3">
+        {/* Global Verification Map */}
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="p-6 bg-white border border-gray-100 shadow-lg lg:col-span-2 rounded-2xl"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">Global Verification Map</h2>
+            <div className="flex items-center space-x-4">
+              <select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value)}
+                className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg"
+              >
+                <option value="24h">Last 24 Hours</option>
+                <option value="7d">Last 7 Days</option>
+                <option value="30d">Last 30 Days</option>
+                <option value="90d">Last 90 Days</option>
+              </select>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-gray-500">Live</span>
+              </div>
+            </div>
+          </div>
+          <div className="h-96">
+            <InteractiveMap 
+              locations={locationData}
+              realtimeData={realtimeData}
+              showHeatmap={true}
+              autoRefresh={true}
+            />
+          </div>
+        </motion.div>
+
+        {/* Recent Activities */}
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+          className="p-6 bg-white border border-gray-100 shadow-lg rounded-2xl"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">Recent Activities</h2>
+            <Clock className="w-5 h-5 text-gray-500" />
+          </div>
+          <div className="space-y-4 overflow-y-auto max-h-80">
+            {recentActivities.map((activity, index) => (
+              <motion.div
+                key={activity.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 * index }}
+                className="flex items-center p-3 space-x-3 transition-colors rounded-lg hover:bg-gray-50"
+              >
+                <div className={`p-2 rounded-lg ${
+                  activity.type === 'product_registered' ? 'bg-blue-100 text-blue-600' :
+                  activity.type === 'batch_shipped' ? 'bg-green-100 text-green-600' :
+                  activity.type === 'verification' ? 'bg-purple-100 text-purple-600' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {activity.type === 'product_registered' ? <Package size={16} /> :
+                   activity.type === 'batch_shipped' ? <Truck size={16} /> :
+                   activity.type === 'verification' ? <Shield size={16} /> :
+                   <Users size={16} />}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-800">{activity.message}</p>
+                  <p className="text-xs text-gray-500">{activity.time}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </div>
     </div>
   );

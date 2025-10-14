@@ -7,7 +7,7 @@ import ManufacturerModal from "./ManufacturerModal";
 import ConfirmationModal from "./ConfirmationDialog";
 import { approveManufacturer as approveApi } from "../api/api";
 
-const ManufacturerTable = ({ manufacturers, refresh }) => {
+const ManufacturerTable = ({ manufacturers, refresh, setFilter }) => {
   const [loadingIds, setLoadingIds] = useState([]);
   const [selected, setSelected] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null); // {id, approve, message}
@@ -19,6 +19,7 @@ const ManufacturerTable = ({ manufacturers, refresh }) => {
       if (res?.success) {
         toast.success(res.message); // ✅ Show success toast
         refresh();
+        setFilter("all");
       } else {
         toast.error("Failed to update status"); // ✅ Show error toast
       }
@@ -36,17 +37,17 @@ const ManufacturerTable = ({ manufacturers, refresh }) => {
   };
 
   return (
-    <div className="overflow-hidden bg-white rounded-2xl shadow-md border border-gray-100">
+    <div className="overflow-hidden bg-white border border-gray-100 shadow-md rounded-2xl">
       <table className="w-full border-collapse min-w-[900px]">
         <thead>
-          <tr className="bg-gray-50 text-left text-gray-700 uppercase text-sm">
-            <th className="py-3 px-4">#</th>
-            <th className="py-3 px-4">Company</th>
-            <th className="py-3 px-4">Email</th>
-            <th className="py-3 px-4">Country</th>
-            <th className="py-3 px-4">Reg. No.</th>
-            <th className="py-3 px-4">Status</th>
-            <th className="py-3 px-4 text-right">Action</th>
+          <tr className="text-sm text-left text-gray-700 uppercase bg-gray-50">
+            <th className="px-4 py-3">#</th>
+            <th className="px-4 py-3">Company</th>
+            <th className="px-4 py-3">Email</th>
+            <th className="px-4 py-3">Country</th>
+            <th className="px-4 py-3">Reg. No.</th>
+            <th className="px-4 py-3">Status</th>
+            <th className="px-4 py-3 text-right">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -58,34 +59,34 @@ const ManufacturerTable = ({ manufacturers, refresh }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() => setSelected(m)}
-                className="border-b hover:bg-gray-50 cursor-pointer transition-all group"
+                className="transition-all border-b cursor-pointer hover:bg-gray-50 group"
               >
-                <td className="py-3 px-4">{i + 1}</td>
-                <td className="py-3 px-4 font-medium text-gray-800">
+                <td className="px-4 py-3">{i + 1}</td>
+                <td className="px-4 py-3 font-medium text-gray-800">
                   <div>{m.manufacturer?.companyName || "—"}</div>
                   <div className="text-xs text-gray-500">{m.name || "—"}</div>
                 </td>
-                <td className="py-3 px-4">{m.email}</td>
-                <td className="py-3 px-4">{m.country || "—"}</td>
-                <td className="py-3 px-4">{m.manufacturer?.registrationNumber || "—"}</td>
-                <td className="py-3 px-4">
+                <td className="px-4 py-3">{m.email}</td>
+                <td className="px-4 py-3">{m.country || "—"}</td>
+                <td className="px-4 py-3">{m.manufacturer?.registrationNumber || "—"}</td>
+                <td className="px-4 py-3">
                   {m.isApproved ? (
-                    <span className="inline-flex items-center gap-1 text-green-600 font-medium bg-green-50 px-2 py-1 rounded-md">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 font-medium text-green-600 rounded-md bg-green-50">
                       <CheckCircle className="w-4 h-4" /> Approved
                     </span>
                   ) : m.isRejected ? (
-                    <span className="inline-flex items-center gap-1 text-red-600 font-medium bg-red-50 px-2 py-1 rounded-md">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 font-medium text-red-600 rounded-md bg-red-50">
                       <XCircle className="w-4 h-4" /> Rejected
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-yellow-600 font-medium bg-yellow-50 px-2 py-1 rounded-md">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 font-medium text-yellow-600 rounded-md bg-yellow-50">
                       <Clock className="w-4 h-4" /> Pending
                     </span>
                   )}
                 </td>
-                <td className="py-3 px-4 text-right">
+                <td className="px-4 py-3 text-right">
                   <div
-                    className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="flex items-center justify-end gap-2 transition-opacity opacity-100 group-hover:opacity-100"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {m.isApproved ? (
@@ -97,7 +98,7 @@ const ManufacturerTable = ({ manufacturers, refresh }) => {
                             "Are you sure you want to disapprove this manufacturer?"
                           )
                         }
-                        className="px-3 py-1 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                        className="px-3 py-1 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700"
                       >
                         Disapprove
                       </button>
@@ -110,7 +111,7 @@ const ManufacturerTable = ({ manufacturers, refresh }) => {
                             "Are you sure you want to approve this manufacturer?"
                           )
                         }
-                        className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
+                        className="px-3 py-1 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700"
                       >
                         Approve
                       </button>
@@ -121,7 +122,7 @@ const ManufacturerTable = ({ manufacturers, refresh }) => {
             ))
           ) : (
             <tr>
-              <td colSpan="7" className="text-center py-6 text-gray-500 font-medium">
+              <td colSpan="7" className="py-6 font-medium text-center text-gray-500">
                 No manufacturers found.
               </td>
             </tr>
@@ -142,12 +143,12 @@ const ManufacturerTable = ({ manufacturers, refresh }) => {
       {/* Confirmation Modal */}
       {confirmAction && (
       <ConfirmationModal
-  isOpen={!!confirmAction}
-  closeModal={() => setConfirmAction(null)}
-  onConfirm={() => handleApprove(confirmAction.id, confirmAction.approve)}
-  message={confirmAction.message}
-  color={confirmAction.approve ? "green" : "red"} // ✅ dynamic color
-/>
+        isOpen={!!confirmAction}
+        closeModal={() => setConfirmAction(null)}
+        onConfirm={() => handleApprove(confirmAction.id, confirmAction.approve)}
+        message={confirmAction.message}
+        color={confirmAction.approve ? "green" : "red"} // ✅ dynamic color
+      />
 
       )}
     </div>

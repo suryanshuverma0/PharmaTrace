@@ -73,3 +73,97 @@ export const approvePharmacist = async (id, isApproved) => {
     return null;
   }
 };
+
+// ===== ADMIN ANALYTICS & TRACKING APIs =====
+
+// Get admin dashboard analytics
+export const getAdminAnalytics = async (timeRange = '7d') => {
+  try {
+    const res = await API.get(`/admin/analytics?timeRange=${timeRange}`);
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching admin analytics:", err);
+    return {
+      data: {
+        overview: {
+          totalScans: 0,
+          uniqueProductCount: 0,
+          authenticationRate: 0,
+          totalProducts: 0,
+          totalBatches: 0,
+          verifiedProducts: 0,
+          activeShipments: 0,
+          systemHealth: 100,
+          blockchainTxns: 0
+        },
+        timeSeriesData: [],
+        deviceAnalytics: [],
+        productAnalytics: []
+      }
+    };
+  }
+};
+
+// Get admin real-time verifications
+export const getAdminRealtimeVerifications = async (limit = 20) => {
+  try {
+    const res = await API.get(`/admin/realtime-verifications?limit=${limit}`);
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching admin realtime verifications:", err);
+    return { data: [] };
+  }
+};
+
+// Get admin location analytics
+export const getAdminLocationAnalytics = async () => {
+  try {
+    const res = await API.get("/admin/location-analytics");
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching admin location analytics:", err);
+    return { data: [] };
+  }
+};
+
+// Get admin dashboard stats
+export const getAdminDashboardStats = async () => {
+  try {
+    const res = await API.get("/admin/dashboard-stats");
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching admin dashboard stats:", err);
+    return {
+      totalProducts: 0,
+      totalBatches: 0,
+      verifiedProducts: 0,
+      activeShipments: 0,
+      systemHealth: 100,
+      blockchainTxns: 0,
+      totalVerifications: 0,
+      authenticationRate: 0
+    };
+  }
+};
+
+// Get recent activities for admin
+export const getAdminRecentActivities = async (limit = 10) => {
+  try {
+    const res = await API.get(`/admin/recent-activities?limit=${limit}`);
+    return res.data.data || [];
+  } catch (err) {
+    console.error("Error fetching admin recent activities:", err);
+    return [];
+  }
+};
+
+// Get system alerts for admin
+export const getAdminSystemAlerts = async () => {
+  try {
+    const res = await API.get("/admin/system-alerts");
+    return res.data.data || [];
+  } catch (err) {
+    console.error("Error fetching admin system alerts:", err);
+    return [];
+  }
+};

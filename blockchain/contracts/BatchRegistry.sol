@@ -11,24 +11,44 @@ contract BatchRegistry {
         uint256 quantityAvailable;
         string dosageForm;
         string strength;
-        string storageConditions;
-        string productionLocation;
-        string approvalCertId;
         string manufacturerName;
-        string manufacturerCountry;
         address manufacturerAddress;
         uint256 registrationTimestamp;
         bool isActive;
+        string digitalFingerprint;
+    }
+
+    struct ShipmentEntry {
+        uint256 timestamp;
+        string from;
+        string to;
+        address fromAddress;
+        address toAddress;
+        string status;
+        uint256 quantity;
+        string remarks;
     }
 
     // Mapping from batch number to batch details
     mapping(string => Batch) public batches;
     
+    // Mapping from digital fingerprint to batch details
+    mapping(string => Batch) public batchesByFingerprint;
+    
+    // Mapping from batch number to digital fingerprint
+    mapping(string => string) public batchToFingerprint;
+    
     // Mapping to track all batch numbers by manufacturer
     mapping(address => string[]) public manufacturerBatches;
     
+    // Mapping to track shipment history for each batch
+    mapping(string => ShipmentEntry[]) public batchShipmentHistory;
+    
     // Array to store all batch numbers
     string[] public allBatchNumbers;
+    
+    // Array to store all batch fingerprints
+    string[] public allBatchFingerprints;
 
     // Events
     event BatchRegistered(
@@ -51,7 +71,7 @@ contract BatchRegistry {
         uint256 timestamp
     );
 
-    // Register a new batch
+    // Register a new batch - simplified version
     function registerBatch(
         string memory batchNumber,
         uint256 manufactureDate,
@@ -59,11 +79,7 @@ contract BatchRegistry {
         uint256 quantityProduced,
         string memory dosageForm,
         string memory strength,
-        string memory storageConditions,
-        string memory productionLocation,
-        string memory approvalCertId,
-        string memory manufacturerName,
-        string memory manufacturerCountry
+        string memory manufacturerName
     ) public {
         // Validate that batch doesn't already exist
         require(batches[batchNumber].manufacturerAddress == address(0), "Batch already exists");
@@ -75,6 +91,14 @@ contract BatchRegistry {
         // Validate quantity
         require(quantityProduced > 0, "Quantity produced must be greater than 0");
 
+        // Generate digital fingerprint
+        string memory digitalFingerprint = generateBatchFingerprint(
+            batchNumber,
+            manufacturerName,
+            quantityProduced,
+            block.timestamp
+        );
+
         // Create batch struct
         batches[batchNumber] = Batch({
             batchNumber: batchNumber,
@@ -84,21 +108,23 @@ contract BatchRegistry {
             quantityAvailable: quantityProduced,
             dosageForm: dosageForm,
             strength: strength,
-            storageConditions: storageConditions,
-            productionLocation: productionLocation,
-            approvalCertId: approvalCertId,
             manufacturerName: manufacturerName,
-            manufacturerCountry: manufacturerCountry,
             manufacturerAddress: msg.sender,
             registrationTimestamp: block.timestamp,
-            isActive: true
+            isActive: true,
+            digitalFingerprint: digitalFingerprint
         });
+
+        // Store in fingerprint mapping
+        batchesByFingerprint[digitalFingerprint] = batches[batchNumber];
+        batchToFingerprint[batchNumber] = digitalFingerprint;
 
         // Add to manufacturer's batch list
         manufacturerBatches[msg.sender].push(batchNumber);
         
         // Add to all batches list
         allBatchNumbers.push(batchNumber);
+        allBatchFingerprints.push(digitalFingerprint);
 
         // Emit event
         emit BatchRegistered(batchNumber, msg.sender, quantityProduced, block.timestamp);
@@ -151,5 +177,71 @@ contract BatchRegistry {
     function getBatchAvailableQuantity(string memory batchNumber) public view returns (uint256) {
         require(batches[batchNumber].manufacturerAddress != address(0), "Batch does not exist");
         return batches[batchNumber].quantityAvailable;
+    }
+
+    // Generate digital fingerprint for batch
+    function generateBatchFingerprint(
+        string memory batchNumber,
+        string memory manufacturerName,
+        uint256 quantityProduced,
+        uint256 timestamp
+    ) internal pure returns (string memory) {
+        return string(abi.encodePacked(
+            batchNumber, 
+            manufacturerName, 
+            quantityProduced, 
+            timestamp
+        ));
+    }
+
+    // Get batch by digital fingerprint
+    function getBatchByFingerprint(string memory fingerprint) public view returns (Batch memory) {
+        require(bytes(batchesByFingerprint[fingerprint].batchNumber).length > 0, "Batch not found");
+        return batchesByFingerprint[fingerprint];
+    }
+
+    // Get digital fingerprint by batch number
+    function getFingerprintByBatch(string memory batchNumber) public view returns (string memory) {
+        require(bytes(batchToFingerprint[batchNumber]).length > 0, "Batch number not found");
+        return batchToFingerprint[batchNumber];
+    }
+
+    // Add shipment entry to batch history - simplified
+    function addShipmentEntry(
+        string memory batchNumber,
+        string memory from,
+        string memory to,
+        address fromAddress,
+        address toAddress,
+        string memory status,
+        uint256 quantity,
+        string memory remarks
+    ) public {
+        require(batches[batchNumber].manufacturerAddress != address(0), "Batch does not exist");
+        
+        ShipmentEntry memory entry = ShipmentEntry({
+            timestamp: block.timestamp,
+            from: from,
+            to: to,
+            fromAddress: fromAddress,
+            toAddress: toAddress,
+            status: status,
+            quantity: quantity,
+            remarks: remarks
+        });
+
+        batchShipmentHistory[batchNumber].push(entry);
+    }
+
+    // Get shipment history for a batch
+    function getBatchShipmentHistory(string memory batchNumber) public view returns (ShipmentEntry[] memory) {
+        require(batches[batchNumber].manufacturerAddress != address(0), "Batch does not exist");
+        return batchShipmentHistory[batchNumber];
+    }
+
+    // Get shipment history length for a batch
+    function getBatchShipmentHistoryLength(string memory batchNumber) public view returns (uint256) {
+        require(batches[batchNumber].manufacturerAddress != address(0), "Batch does not exist");
+        return batchShipmentHistory[batchNumber].length;
     }
 }

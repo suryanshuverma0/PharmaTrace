@@ -6,7 +6,7 @@ import PharmacistModal from "./PharmacistModal";
 import ConfirmationModal from "./ConfirmationDialog";
 import { approvePharmacist as approveApi } from "../api/api";
 
-const PharmacistTable = ({ pharmacists, refresh }) => {
+const PharmacistTable = ({ pharmacists, refresh, setFilter }) => {
   const [loadingIds, setLoadingIds] = useState([]);
   const [selected, setSelected] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null); // {id, approve, message}
@@ -18,6 +18,7 @@ const PharmacistTable = ({ pharmacists, refresh }) => {
       if (res?.success) {
         toast.success(res.message);
         refresh();
+        setFilter("all");
       } else {
         toast.error("Failed to update status");
       }
@@ -35,17 +36,17 @@ const PharmacistTable = ({ pharmacists, refresh }) => {
   };
 
   return (
-    <div className="overflow-hidden bg-white rounded-2xl shadow-md border border-gray-100">
+    <div className="overflow-hidden bg-white border border-gray-100 shadow-md rounded-2xl">
       <table className="w-full border-collapse min-w-[900px]">
         <thead>
-          <tr className="bg-gray-50 text-left text-gray-700 uppercase text-sm">
-            <th className="py-3 px-4">#</th>
-            <th className="py-3 px-4">Pharmacy</th>
-            <th className="py-3 px-4">Email</th>
-            <th className="py-3 px-4">Phone</th>
-            <th className="py-3 px-4">License No.</th>
-            <th className="py-3 px-4">Status</th>
-            <th className="py-3 px-4 text-right">Action</th>
+          <tr className="text-sm text-left text-gray-700 uppercase bg-gray-50">
+            <th className="px-4 py-3">#</th>
+            <th className="px-4 py-3">Pharmacy</th>
+            <th className="px-4 py-3">Email</th>
+            <th className="px-4 py-3">Phone</th>
+            <th className="px-4 py-3">License No.</th>
+            <th className="px-4 py-3">Status</th>
+            <th className="px-4 py-3 text-right">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -57,34 +58,34 @@ const PharmacistTable = ({ pharmacists, refresh }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() => setSelected(p)}
-                className="border-b hover:bg-gray-50 cursor-pointer transition-all group"
+                className="transition-all border-b cursor-pointer hover:bg-gray-50 group"
               >
-                <td className="py-3 px-4">{i + 1}</td>
-                <td className="py-3 px-4 font-medium text-gray-800">
+                <td className="px-4 py-3">{i + 1}</td>
+                <td className="px-4 py-3 font-medium text-gray-800">
                   <div>{p.pharmacist?.pharmacyName || "—"}</div>
                   <div className="text-xs text-gray-500">{p.name || "—"}</div>
                 </td>
-                <td className="py-3 px-4">{p.email}</td>
-                <td className="py-3 px-4">{p.phone || "—"}</td>
-                <td className="py-3 px-4">{p.pharmacist?.licenseNumber || "—"}</td>
-                <td className="py-3 px-4">
+                <td className="px-4 py-3">{p.email}</td>
+                <td className="px-4 py-3">{p.phone || "—"}</td>
+                <td className="px-4 py-3">{p.pharmacist?.licenseNumber || "—"}</td>
+                <td className="px-4 py-3">
                   {p.isApproved ? (
-                    <span className="inline-flex items-center gap-1 text-green-600 font-medium bg-green-50 px-2 py-1 rounded-md">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 font-medium text-green-600 rounded-md bg-green-50">
                       <CheckCircle className="w-4 h-4" /> Approved
                     </span>
                   ) : p.isRejected ? (
-                    <span className="inline-flex items-center gap-1 text-red-600 font-medium bg-red-50 px-2 py-1 rounded-md">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 font-medium text-red-600 rounded-md bg-red-50">
                       <XCircle className="w-4 h-4" /> Rejected
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-yellow-600 font-medium bg-yellow-50 px-2 py-1 rounded-md">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 font-medium text-yellow-600 rounded-md bg-yellow-50">
                       <Clock className="w-4 h-4" /> Pending
                     </span>
                   )}
                 </td>
-                <td className="py-3 px-4 text-right">
+                <td className="px-4 py-3 text-right">
                   <div
-                    className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="flex items-center justify-end gap-2 transition-opacity opacity-100 group-hover:opacity-100"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {p.isApproved ? (
@@ -97,7 +98,7 @@ const PharmacistTable = ({ pharmacists, refresh }) => {
                           )
                         }
                         disabled={loadingIds.includes(p._id)}
-                        className="px-3 py-1 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-70"
+                        className="px-3 py-1 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-70"
                       >
                         {loadingIds.includes(p._id) ? "..." : "Disapprove"}
                       </button>
@@ -111,7 +112,7 @@ const PharmacistTable = ({ pharmacists, refresh }) => {
                           )
                         }
                         disabled={loadingIds.includes(p._id)}
-                        className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-70"
+                        className="px-3 py-1 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-70"
                       >
                         {loadingIds.includes(p._id) ? "..." : "Approve"}
                       </button>
@@ -122,7 +123,7 @@ const PharmacistTable = ({ pharmacists, refresh }) => {
             ))
           ) : (
             <tr>
-              <td colSpan="7" className="text-center py-6 text-gray-500 font-medium">
+              <td colSpan="7" className="py-6 font-medium text-center text-gray-500">
                 No pharmacists found.
               </td>
             </tr>

@@ -1,9 +1,9 @@
-// const { ethers } = require("ethers"); // Commented for MVP
+const { ethers } = require("ethers"); // Re-enabled for blockchain integration
 const mongoose = require('mongoose');
 const QRCode = require('qrcode');
 
 const Product = require("../models/Product");
-// const { contract, signer, provider } = require("../utils/blockchain"); // Commented for MVP
+const { contract, signer, provider } = require("../utils/blockchain"); // Re-enabled for blockchain integration
 const Batch = require("../models/Batch");
 const Manufacturer = require("../models/Manufacturer");
 
@@ -48,8 +48,15 @@ const registerProduct = async (req, res) => {
       return res.status(400).json({ message: "Manufacturer not found" });
     }
 
-    // Generate QR Code
+    // Create digital fingerprint using comprehensive product data
+    const fingerprint = require('crypto')
+      .createHash('sha256')
+      .update(serialNumber + batchNumber + productName + manufacturer.companyName + new Date().toISOString())
+      .digest('hex');
+
+    // Generate QR Code with fingerprint
     const qrData = {
+      fingerprint, // Use fingerprint as primary identifier
       serialNumber,
       batchNumber,
       productName,
@@ -59,16 +66,33 @@ const registerProduct = async (req, res) => {
     };
     const qrCodeUrl = await QRCode.toDataURL(JSON.stringify(qrData));
 
-    // Create fingerprint without blockchain
-    const fingerprint = require('crypto')
-      .createHash('sha256')
-      .update(serialNumber + batchNumber + new Date().toISOString())
-      .digest('hex');
+    console.log("Starting blockchain registration for product:", serialNumber);
+
+    // Store product on blockchain first (using simplified interface)
+    const tx = await contract.registerProduct(
+      productName,
+      serialNumber,
+      batchNumber,
+      Math.floor(batch.manufactureDate.getTime() / 1000), // Convert to Unix timestamp
+      Math.floor(batch.expiryDate.getTime() / 1000),      // Convert to Unix timestamp
+      manufacturer.companyName,
+      batch.dosageForm || '',
+      batch.strength
+    );
+
+    console.log("Product blockchain transaction sent, waiting for confirmation...");
+    const receipt = await tx.wait();
+    
+    if (receipt.status !== 1) {
+      throw new Error('Blockchain product registration failed');
+    }
+
+    console.log("Product blockchain transaction confirmed:", receipt.hash);
 
     // Update batch quantity using the new method
     await batch.registerProduct(1);
 
-    // Save product to MongoDB with additional blockchain data
+    // Save product to MongoDB with blockchain data
     const newProduct = await Product.create({
       manufacturerId: req.user.userId,
       batchId: batch._id,
@@ -88,8 +112,16 @@ const registerProduct = async (req, res) => {
       manufacturerCountry: 'Nepal',
       fingerprint,
       qrCodeUrl,
-      
-      price: price
+      price: price,
+      // Blockchain transaction details
+      txHash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      blockHash: receipt.blockHash,
+      gasUsed: receipt.gasUsed.toString(),
+      contractAddress: contract.address,
+      manufacturerAddress: await signer.getAddress(),
+      isAuthentic: true,
+      verifiedAt: new Date()
     });
 
     res.status(201).json({
@@ -98,7 +130,13 @@ const registerProduct = async (req, res) => {
       qrCodeUrl,
       fingerprint: newProduct.fingerprint,
       registrationTimestamp: new Date().toISOString(),
-      serialNumber
+      serialNumber,
+      blockchain: {
+        txHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        digitalFingerprint: fingerprint,
+        contractAddress: contract.address
+      }
     });
 
   } catch (error) {
@@ -125,6 +163,127 @@ const registerProduct = async (req, res) => {
 };
 
 
+
+// New function to get product by digital fingerprint from blockchain
+const getProductByFingerprint = async (req, res) => {
+  const { fingerprint: rawFingerprint } = req.params;
+  const fingerprint = rawFingerprint.trim();
+
+  try {
+    console.log("=== FETCHING PRODUCT BY FINGERPRINT ===");
+    console.log("Fingerprint:", fingerprint);
+
+    // Get product from blockchain using fingerprint
+    const productData = await contract.getProductByFingerprint(fingerprint);
+    console.log("Product data from blockchain:", productData);
+
+    // Check if product exists
+    if (!productData.serialNumber || productData.serialNumber.trim() === "") {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found with this fingerprint"
+      });
+    }
+
+    // Get associated batch data from blockchain
+    let batchData = null;
+    try {
+      const { batchContract } = require("../utils/blockchain");
+      batchData = await batchContract.getBatch(productData.batchNumber);
+      console.log("Batch data from blockchain:", batchData);
+    } catch (batchError) {
+      console.log("Could not fetch batch data:", batchError.message);
+    }
+
+    // Format product data
+    const productFormatted = {
+      fingerprint: productData.digitalFingerprint,
+      name: productData.name,
+      serialNumber: productData.serialNumber,
+      batchNumber: productData.batchNumber,
+      manufactureDate: new Date(Number(productData.manufactureDate) * 1000),
+      expiryDate: new Date(Number(productData.expiryDate) * 1000),
+      manufacturerName: productData.manufacturerName,
+      manufacturerLicense: productData.manufacturerLicense,
+      productionLocation: productData.productionLocation,
+      drugCode: productData.drugCode,
+      dosageForm: productData.dosageForm,
+      strength: productData.strength,
+      storageCondition: productData.storageCondition,
+      approvalCertificateId: productData.approvalCertificateId,
+      manufacturerCountry: productData.manufacturerCountry,
+      manufacturerAddress: productData.manufacturerAddress,
+      registrationTimestamp: new Date(Number(productData.registrationTimestamp) * 1000),
+      isActive: productData.isActive
+    };
+
+    // Format batch data if available
+    let batchFormatted = null;
+    if (batchData && batchData.batchNumber) {
+      batchFormatted = {
+        digitalFingerprint: batchData.digitalFingerprint,
+        batchNumber: batchData.batchNumber,
+        manufactureDate: new Date(Number(batchData.manufactureDate) * 1000),
+        expiryDate: new Date(Number(batchData.expiryDate) * 1000),
+        quantityProduced: Number(batchData.quantityProduced),
+        quantityAvailable: Number(batchData.quantityAvailable),
+        dosageForm: batchData.dosageForm,
+        strength: batchData.strength,
+        storageConditions: batchData.storageConditions,
+        productionLocation: batchData.productionLocation,
+        approvalCertId: batchData.approvalCertId,
+        manufacturerName: batchData.manufacturerName,
+        manufacturerCountry: batchData.manufacturerCountry,
+        manufacturerAddress: batchData.manufacturerAddress,
+        registrationTimestamp: new Date(Number(batchData.registrationTimestamp) * 1000),
+        isActive: batchData.isActive
+      };
+
+      // Get shipment history from blockchain
+      try {
+        const shipmentHistory = await batchContract.getBatchShipmentHistory(productData.batchNumber);
+        batchFormatted.shipmentHistory = shipmentHistory.map(entry => ({
+          timestamp: new Date(Number(entry.timestamp) * 1000),
+          from: entry.from,
+          to: entry.to,
+          fromAddress: entry.fromAddress,
+          toAddress: entry.toAddress,
+          status: entry.status,
+          quantity: Number(entry.quantity),
+          remarks: entry.remarks,
+          actor: {
+            name: entry.actorName,
+            type: entry.actorType,
+            license: entry.actorLicense,
+            location: entry.actorLocation
+          }
+        }));
+      } catch (shipmentError) {
+        console.log("Could not fetch shipment history:", shipmentError.message);
+        batchFormatted.shipmentHistory = [];
+      }
+    }
+
+    console.log("Formatted product:", productFormatted);
+    console.log("Formatted batch:", batchFormatted);
+
+    return res.json({
+      success: true,
+      product: productFormatted,
+      batch: batchFormatted,
+      source: 'blockchain'
+    });
+
+  } catch (error) {
+    console.error("Error fetching product by fingerprint:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch product from blockchain",
+      details: error.message,
+      stack: error.stack
+    });
+  }
+};
 
 // FIXED: Updated getProductOnChain with proper debugging and data handling
 const getProductOnChain = async (req, res) => {
@@ -438,6 +597,7 @@ const getManufacturerBatches = async (req, res) => {
 
 module.exports = { 
   registerProduct, 
+  getProductByFingerprint,
   getProductOnChain, 
   debugBlockchainConnection, 
   getManufacturerProducts,
