@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }) => {
       if (account) {
         const user = await getUserRole(account);
 
-        if (user?.address === account) {
+        if (user?.address.toUpperCase() === account) {
           setConnectedAddress(user?.address || address)
           setisAccountRegistered(true);
           setIsConnected(true);
@@ -122,51 +122,94 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("token");
   };
 
-  const registerUserWithRole = async (userData) => {
-    try {
-      setIsLoading(true);
-      if (!connectedAddress) {
-        const connectResult = await connectWallet();
-        if (!connectResult.success) {
-          return { success: false, error: connectResult.error };
-        }
+  // const registerUserWithRole = async (userData) => {
+  //   try {
+  //     setIsLoading(true);
+  //     if (!connectedAddress) {
+  //       const connectResult = await connectWallet();
+  //       if (!connectResult.success) {
+  //         return { success: false, error: connectResult.error };
+  //       }
+  //     }
+
+  //     // Generate a message to sign for verification
+  //     const message = `Register as ${userData.role} - ${
+  //       userData.name
+  //     } - ${Date.now()}`;
+  //     const signature = await MetaMaskService.signMessage(message);
+
+  //     const registrationData = {
+  //       address: connectedAddress,
+  //       signature,
+  //       message,
+  //       ...userData,
+  //     };
+
+  //     const result = await registerUser(registrationData);
+
+  //     if (result.success) {
+  //       setUser({
+  //         ...user,
+  //         role: userData.role,
+  //         name: userData.name,
+  //         email: userData.email,
+  //         phone: userData.phone,
+  //         country: userData.country,
+  //         isRegistered: true,
+  //       });
+  //       return { success: true };
+  //     } else {
+  //       return { success: false, error: result.error };
+  //     }
+  //   } catch (error) {
+  //     return { success: false, error: error.message };
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+
+  const registerUserWithRole = async (userData, isFormData = false) => {
+  try {
+    setIsLoading(true);
+    if (!connectedAddress) {
+      const connectResult = await connectWallet();
+      if (!connectResult.success) {
+        return { success: false, error: connectResult.error };
       }
-
-      // Generate a message to sign for verification
-      const message = `Register as ${userData.role} - ${
-        userData.name
-      } - ${Date.now()}`;
-      const signature = await MetaMaskService.signMessage(message);
-
-      const registrationData = {
-        address: connectedAddress,
-        signature,
-        message,
-        ...userData,
-      };
-
-      const result = await registerUser(registrationData);
-
-      if (result.success) {
-        setUser({
-          ...user,
-          role: userData.role,
-          name: userData.name,
-          email: userData.email,
-          phone: userData.phone,
-          country: userData.country,
-          isRegistered: true,
-        });
-        return { success: true };
-      } else {
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      return { success: false, error: error.message };
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    // If JSON data, add address, message, signature as before
+    let payload = userData;
+    if (!isFormData) {
+      const message = `Register as ${userData.role} - ${userData.name} - ${Date.now()}`;
+      const signature = await MetaMaskService.signMessage(message);
+      payload = { address: connectedAddress, signature, message, ...userData };
+    }
+
+    // Send payload to backend
+    const result = await registerUser(payload, isFormData); // registerUser should accept FormData
+    if (result.success) {
+      setUser({
+        ...user,
+        role: userData.role,
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        country: userData.country,
+        isRegistered: true,
+      });
+      return { success: true };
+    } else {
+      return { success: false, error: result.error };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const login = async () => {
     try {
