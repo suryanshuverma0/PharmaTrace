@@ -28,79 +28,94 @@ const validateRoleData = (role, data) => {
   return errors;
 };
 
-const registerUser = async (req, res) => {
-  const {
-    name,
-    role,
-    phone,
-    email,
-    address,
-    country,
-    state,
-    city,
-    message,
-    signature,
-    companyName,
-    registrationNumber,
-    licenseDocument,
-    website,
-    certifications,
-    warehouseAddress,
-    operationalRegions,
-    pharmacyName,
-    licenseNumber,
-    pharmacyLocation,
-  } = req.body;
-
-  // Validate signature (use original address case for signature verification)
-  if (!verifySignature(address, message, signature)) {
-    return res.status(401).json({ message: "Invalid signature" });
-  }
-
-  // Validate required User fields
-  if (!address || !country) {
-    return res
-      .status(400)
-      .json({ message: "Address and Country are required" });
-  }
-  if (
-    !["consumer", "manufacturer", "distributor", "pharmacist"].includes(role)
-  ) {
-    return res.status(400).json({ message: "Invalid role" });
-  }
-
-  // Validate role-specific fields
-  const roleValidationErrors = validateRoleData(role, {
-    companyName,
-    registrationNumber,
-    warehouseAddress,
-    pharmacyName,
-    licenseNumber,
-  });
-  if (roleValidationErrors.length > 0) {
-    return res.status(400).json({ message: roleValidationErrors.join(" ") });
-  }
-
+const registerUser = async (req, res, next) => {
   try {
-    // Normalize address to lowercase for consistency
-    const normalizedAddress = address.toLowerCase();
-    
-    // Check for existing user (case-insensitive)
-    const existing = await User.findOne({ 
-      address: { $regex: new RegExp(`^${address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") }
+    console.log("=== Registration Request Start ===");
+    console.log("Headers:", JSON.stringify(req.headers, null, 2));
+    console.log("Body:", JSON.stringify(req.body, null, 2));
+    console.log(
+      "File:",
+      req.file ? JSON.stringify(req.file, null, 2) : "No file uploaded"
+    );
+    console.log("=== Registration Request End ===");
+
+    // License document comes from multer + Cloudinary
+    const licenseDocument =
+      req.file?.path || req.file?.filename || req.file?.secure_url || null;
+    console.log("License Document URL:", licenseDocument);
+
+    // Parse user data from body
+    const {
+      name,
+      role,
+      phone,
+      email,
+      address,
+      country,
+      state,
+      city,
+      message,
+      signature,
+      companyName,
+      registrationNumber,
+      website,
+      certifications,
+      warehouseAddress,
+      operationalRegions,
+      pharmacyName,
+      licenseNumber,
+      pharmacyLocation,
+    } = req.body;
+
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+    console.log("Uploaded file:", JSON.stringify(req.file, null, 2));
+
+    // Validate signature
+    if (!verifySignature(address, message, signature)) {
+      return res.status(401).json({ message: "Invalid signature" });
+    }
+
+    // Validate required fields
+    if (!address || !country) {
+      return res
+        .status(400)
+        .json({ message: "Address and Country are required" });
+    }
+    if (
+      !["consumer", "manufacturer", "distributor", "pharmacist"].includes(role)
+    ) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    // Role-specific validation
+    const roleErrors = validateRoleData(role, {
+      companyName,
+      registrationNumber,
+      warehouseAddress,
+      pharmacyName,
+      licenseNumber,
+      licenseDocument,
     });
-    
+    if (roleErrors.length > 0) {
+      return res.status(400).json({ message: roleErrors.join(" ") });
+    }
+
+    // Normalize address and check existing user
+    const normalizedAddress = address.toLowerCase();
+    const existing = await User.findOne({
+      address: { $regex: new RegExp(`^${address}$`, "i") },
+    });
     if (existing) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: `User already registered with this wallet address as ${existing.role}`,
         existingRole: existing.role,
         existingName: existing.name,
-        attemptedRole: role
+        attemptedRole: role,
       });
     }
 
-    // Create User (with normalized address)
-    const newUser = new User({
+    // Create User
+    const newUser = await User.create({
       name,
       role,
       address: normalizedAddress,
@@ -110,10 +125,9 @@ const registerUser = async (req, res) => {
       state,
       city,
     });
-    await newUser.save();
 
+    // Create role-specific document
     try {
-      // Create role-specific entry
       if (role === "manufacturer") {
         await Manufacturer.create({
           user: newUser._id,
@@ -141,36 +155,47 @@ const registerUser = async (req, res) => {
         });
       }
     } catch (roleError) {
-      // If role-specific creation fails, delete the user and throw error
+      // Rollback User if role creation fails
       await User.findByIdAndDelete(newUser._id);
-      throw new Error(`Failed to create ${role} profile: ${roleError.message}`);
+      return res.status(500).json({
+        message: `Failed to create ${role} profile`,
+        error: roleError.message,
+      });
     }
 
-    // After successful creation, send email
-    const userDetails = {
+    // Send activation email (optional warning if fails)
+    const emailResult = await sendActivationEmail({
       userId: newUser._id,
       address: newUser.address,
       role: newUser.role,
       name: newUser.name,
       email: newUser.email,
-    };
+    });
+    if (!emailResult.success)
+      console.warn("Activation email failed:", emailResult.error);
 
-    const mailResponse = await sendActivationEmail(userDetails);
-    if (!mailResponse.success) {
-      console.warn("Failed to send activation email:", mailResponse.error);
-    }
-
+    // Return success
     return res.status(201).json({
       message: "User registered successfully",
-      data: { name, role, address, email, phone, country },
+      data: { name, role, address, email, phone, country, licenseDocument },
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "Registration failed",
-      error: error.message,
+    console.error("Registration failed:", {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
     });
+
+    // Pass structured error to global error handler
+    error.status = error.status || 500;
+    if (!error.message) {
+      error.message = "Registration failed";
+    }
+
+    next(error);
   }
 };
+
 
 const loginUser = async (req, res) => {
   const { address, message, signature } = req.body;
@@ -193,7 +218,12 @@ const loginUser = async (req, res) => {
   try {
     // Case-insensitive address lookup (escape special regex characters)
     const user = await User.findOne({
-      address: { $regex: new RegExp(`^${address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") },
+      address: {
+        $regex: new RegExp(
+          `^${address.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+          "i"
+        ),
+      },
     });
 
     if (!user) {
@@ -268,12 +298,28 @@ const activateUser = async (req, res) => {
   }
 };
 
+// const getUserByAddress = async (req, res) => {
+//   try {
+//     console.log("adress", req.params.address);
+//     const user = await User.findOne({ address: req.params.address });
+//     if (!user) return res.status(404).json({ message: "User not found" });
+//     res.json({ data: user });
+//   } catch {
+//     res.status(500).json({ message: "Error fetching user" });
+//   }
+// };
+
 const getUserByAddress = async (req, res) => {
   try {
-    const user = await User.findOne({ address: req.params.address });
+    const address = req.params.address.toLowerCase(); // normalize
+    console.log("Normalized address:", address);
+
+    const user = await User.findOne({ address });
     if (!user) return res.status(404).json({ message: "User not found" });
+
     res.json({ data: user });
-  } catch {
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Error fetching user" });
   }
 };

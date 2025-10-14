@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import React, { useState } from "react";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
 
- const Input = ({ 
-  label, 
-  error, 
-  type = 'text', 
+const Input = ({
+  label,
+  error,
+  type = "text",
   placeholder,
   value,
   onChange,
   disabled = false,
   required = false,
   icon,
-  className = '',
-  ...props 
+  className = "",
+  ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false);
-  const isPassword = type === 'password';
-  
+  const isPassword = type === "password";
+
   return (
     <div className={`w-full ${className}`}>
       {label && (
@@ -30,7 +30,7 @@ import { Eye, EyeOff, AlertCircle } from 'lucide-react';
             <span className="text-gray-400">{icon}</span>
           </div>
         )}
-        <input
+        {/* <input
           type={isPassword ? (showPassword ? 'text' : 'password') : type}
           className={`w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
             icon ? 'pl-10' : ''
@@ -42,7 +42,24 @@ import { Eye, EyeOff, AlertCircle } from 'lucide-react';
           onChange={onChange}
           disabled={disabled}
           {...props}
+        /> */}
+
+        <input
+          type={isPassword ? (showPassword ? "text" : "password") : type}
+          className={`w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+            icon ? "pl-10" : ""
+          } ${isPassword ? "pr-10" : ""} ${
+            error
+              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+              : ""
+          } ${disabled ? "bg-gray-100 cursor-not-allowed" : ""}`}
+          placeholder={placeholder}
+          {...(type === "file" ? {} : { value })} // ✅ skip value for file input
+          onChange={onChange}
+          disabled={disabled}
+          {...props}
         />
+
         {isPassword && (
           <button
             type="button"

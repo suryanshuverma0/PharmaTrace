@@ -1,50 +1,57 @@
-import PharmacyLayout from '../layout/PharmacyLayout';
-import PharmacyDashboard from '../pages/pharmacy/PharmacyDashboard';
-import ExpiryAlerts from '../pages/pharmacy/ExpiryAlerts';
-import Inventory from '../pages/pharmacy/Inventory';
+import PharmacyLayout from "../layout/PharmacyLayout";
+import PharmacyDashboard from "../pages/pharmacy/PharmacyDashboard";
+import ExpiryAlerts from "../pages/pharmacy/ExpiryAlerts";
+import Inventory from "../pages/pharmacy/Inventory";
 
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route } from "react-router-dom";
+
+//Admin
+import AdminRoute from "../admin/routes/AdminRoute";
+import AdminApp from "../admin/AdminApp";
+import Dashboard from "../admin/pages/Dashboard";
+import Manufacturers from "../admin/pages/Manufacturers";
+import Distributors from "../admin/pages/Distributors";
+import Pharmacists from "../admin/pages/Pharmacists";
 
 // Layouts
-import PublicLayout from '../layout/PublicLayout';
-import ConsumerLayout from '../layout/ConsumerLayout';
-import ManufacturerLayout from '../layout/ManufacturerLayout';
-import DistributorLayout from '../layout/DistributorLayout';
-import ProtectedRoute from './ProtectedRoute';
+import PublicLayout from "../layout/PublicLayout";
+import ConsumerLayout from "../layout/ConsumerLayout";
+import ManufacturerLayout from "../layout/ManufacturerLayout";
+import DistributorLayout from "../layout/DistributorLayout";
+import ProtectedRoute from "./ProtectedRoute";
 
 // Public Pages
-import LandingPage from '../pages/LandingPage';
-import AboutPage from '../pages/home/AboutPage';
-import FeaturePage from '../pages/home/FeaturePage';
-import LoginPage from '../pages/auth/LoginPage';
-import AccountActivation from '../pages/auth/AccountActivation';
-import RegisterPage from '../pages/auth/RegisterPage';
-import UnauthorizedPage from '../pages/UnauthorizedPage';
+import LandingPage from "../pages/LandingPage";
+import AboutPage from "../pages/home/AboutPage";
+import FeaturePage from "../pages/home/FeaturePage";
+import LoginPage from "../pages/auth/LoginPage";
+import AccountActivation from "../pages/auth/AccountActivation";
+import RegisterPage from "../pages/auth/RegisterPage";
+import UnauthorizedPage from "../pages/UnauthorizedPage";
 
 // Consumer Pages
-import ConsumerDashboard from '../pages/consumer/ConsumerDashboard';
-import VerifyDrug from '../pages/consumer/VerifyDrug';
-import JourneyDetails from '../pages/consumer/JourneyDetails';
+import ConsumerDashboard from "../pages/consumer/ConsumerDashboard";
+import VerifyDrug from "../pages/consumer/VerifyDrug";
+import JourneyDetails from "../pages/consumer/JourneyDetails";
 
 // Manufacturer Pages
-import ManufacturerDashboard from '../pages/manufacturer/ManufacturerDashboard';
-import RegisterProduct from '../pages/manufacturer/RegisterProduct';
-import RegisterBatch from '../pages/manufacturer/RegisterBatch';
-import RegisteredBatch from '../pages/manufacturer/RegisteredBatch';
-import ProductsList from '../pages/manufacturer/ProductsList';
-import TrackProducts from '../pages/manufacturer/TrackProducts';
-import QRCodeManager from '../pages/manufacturer/QRCodeManager';
+import ManufacturerDashboard from "../pages/manufacturer/ManufacturerDashboard";
+import RegisterProduct from "../pages/manufacturer/RegisterProduct";
+import RegisterBatch from "../pages/manufacturer/RegisterBatch";
+import RegisteredBatch from "../pages/manufacturer/RegisteredBatch";
+import ProductsList from "../pages/manufacturer/ProductsList";
+import TrackProducts from "../pages/manufacturer/TrackProducts";
+import QRCodeManager from "../pages/manufacturer/QRCodeManager";
 
 // Distributor Pages
-import DistributorDashboard from '../pages/distributor/DistributorDashboard';
-import AssignedBatches from '../pages/distributor/AssignedBatches';
-import AcknowledgeShipment from '../pages/distributor/AcknowledgeShipment';
-import InventoryManagement from '../pages/distributor/InventoryManagement';
-import DistributeToPharmacists from '../pages/distributor/DistributeToPharmacists';
-import TrackTransfers from '../pages/distributor/TrackTransfers';
-import AssignBatch from '../pages/manufacturer/AssignBatch';
-import ProductVerificationTracking from '../pages/manufacturer/ProductVerificationTracking';
+import DistributorDashboard from "../pages/distributor/DistributorDashboard";
+import AssignedBatches from "../pages/distributor/AssignedBatches";
+import AcknowledgeShipment from "../pages/distributor/AcknowledgeShipment";
+import InventoryManagement from "../pages/distributor/InventoryManagement";
+import DistributeToPharmacists from "../pages/distributor/DistributeToPharmacists";
+import TrackTransfers from "../pages/distributor/TrackTransfers";
+import AssignBatch from "../pages/manufacturer/AssignBatch";
+import ProductVerificationTracking from "../pages/manufacturer/ProductVerificationTracking";
 
 const AppRoutes = () => {
   return (
@@ -58,7 +65,10 @@ const AppRoutes = () => {
         <Route path="activate-account" element={<AccountActivation />} />
         <Route path="connect" element={<RegisterPage />} />
         <Route path="verify-product" element={<VerifyDrug />} />
-        <Route path="consumer/journey/:serialNumber" element={<JourneyDetails />} />
+        <Route
+          path="consumer/journey/:serialNumber"
+          element={<JourneyDetails />}
+        />
         <Route path="unauthorized" element={<UnauthorizedPage />} />
       </Route>
 
@@ -73,7 +83,7 @@ const AppRoutes = () => {
       </Route>
 
       {/* Manufacturer Routes */}
-      <Route element={<ProtectedRoute allowedRoles={['manufacturer']} />}>
+      <Route element={<ProtectedRoute allowedRoles={["manufacturer"]} />}>
         <Route path="/manufacturer" element={<ManufacturerLayout />}>
           <Route index element={<ManufacturerDashboard />} />
           <Route path="dashboard" element={<ManufacturerDashboard />} />
@@ -86,18 +96,24 @@ const AppRoutes = () => {
           <Route path="track" element={<TrackProducts />} />
           <Route path="track/:serialNumber" element={<TrackProducts />} />
           <Route path="qr-codes" element={<QRCodeManager />} />
-          <Route path="track-products-verification" element={<ProductVerificationTracking />} />
+          <Route
+            path="track-products-verification"
+            element={<ProductVerificationTracking />}
+          />
           <Route path="settings" element={<div>Settings Placeholder</div>} />
         </Route>
       </Route>
 
       {/* Distributor Routes */}
-      <Route element={<ProtectedRoute allowedRoles={['distributor']} />}>
+      <Route element={<ProtectedRoute allowedRoles={["distributor"]} />}>
         <Route path="/distributor" element={<DistributorLayout />}>
           <Route index element={<DistributorDashboard />} />
           <Route path="dashboard" element={<DistributorDashboard />} />
           <Route path="assigned-batches" element={<AssignedBatches />} />
-          <Route path="acknowledge-shipment" element={<AcknowledgeShipment />} />
+          <Route
+            path="acknowledge-shipment"
+            element={<AcknowledgeShipment />}
+          />
           <Route path="inventory" element={<InventoryManagement />} />
           <Route path="distribute" element={<DistributeToPharmacists />} />
           <Route path="track-transfers" element={<TrackTransfers />} />
@@ -107,18 +123,33 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-            {/* Pharmacy Routes */}
+      {/* Pharmacy Routes */}
       {/* <Route element={<ProtectedRoute allowedRoles={['pharmacy']} />}> */}
-        <Route path="/pharmacy" element={<PharmacyLayout />}>
-          <Route index element={<PharmacyDashboard />} />
-          <Route path="dashboard" element={<PharmacyDashboard />} />
-          <Route path="inventory" element={<Inventory />} />
-          <Route path="verify" element={<VerifyDrug />} />
-          <Route path="expiry-alerts" element={<ExpiryAlerts />} />
-        </Route>
+      <Route path="/pharmacy" element={<PharmacyLayout />}>
+        <Route index element={<PharmacyDashboard />} />
+        <Route path="dashboard" element={<PharmacyDashboard />} />
+        <Route path="inventory" element={<Inventory />} />
+        <Route path="verify" element={<VerifyDrug />} />
+        <Route path="expiry-alerts" element={<ExpiryAlerts />} />
+      </Route>
       {/* </Route> */}
 
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminApp />
+          </AdminRoute>
+        }
+      >
+        <Route index element={<Dashboard />} />
+        <Route path="manufacturers" element={<Manufacturers />} />
+        <Route path="distributors" element={<Distributors />} />
+        <Route path="pharmacists" element={<Pharmacists />} />
+      </Route>
 
+      {/* Fallback Route */}
+      <Route path="*" element={<div>404 Not Found</div>} />
     </Routes>
   );
 };
