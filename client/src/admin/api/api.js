@@ -1,14 +1,9 @@
-import axios from "axios";
-
-const API = axios.create({
-  baseURL: "http://localhost:3000/api",
-  headers: { "Content-Type": "application/json" },
-});
+import apiClient from "../../services/api/api";
 
 // Fetch all manufacturers
 export const getAllManufacturers = async () => {
   try {
-    const res = await API.get("/admin/manufacturers");
+    const res = await apiClient.get("/admin/manufacturers");
     return res.data.data;
   } catch (err) {
     console.error("Error fetching manufacturers:", err);
@@ -19,7 +14,7 @@ export const getAllManufacturers = async () => {
 // Approve / disapprove manufacturer
 export const approveManufacturer = async (id, isApproved) => {
   try {
-    const res = await API.put(`/admin/manufacturers/${id}/approve`, { isApproved });
+    const res = await apiClient.put(`/admin/manufacturers/${id}/approve`, { isApproved });
     return res.data;
   } catch (err) {
     console.error("Error approving manufacturer:", err);
@@ -30,7 +25,7 @@ export const approveManufacturer = async (id, isApproved) => {
 // Fetch all distributors
 export const getAllDistributors = async () => {
   try {
-    const res = await API.get("/admin/distributors");
+    const res = await apiClient.get("/admin/distributors");
     return res.data.data;
   } catch (err) {
     console.error("Error fetching distributors:", err);
@@ -41,7 +36,7 @@ export const getAllDistributors = async () => {
 // Approve / disapprove distributor
 export const approveDistributor = async (id, isApproved) => {
   try {
-    const res = await API.put(`/admin/distributors/${id}/approve`, { isApproved });
+    const res = await apiClient.put(`/admin/distributors/${id}/approve`, { isApproved });
     return res.data;
   } catch (err) {
     console.error("Error approving distributor:", err);
@@ -51,7 +46,7 @@ export const approveDistributor = async (id, isApproved) => {
 
 export const getAllPharmacists = async () => {
   try {
-    const res = await API.get("/admin/pharmacists");
+    const res = await apiClient.get("/admin/pharmacists");
     return res.data.data || [];
   } catch (err) {
     console.error("Error fetching pharmacists:", err);
@@ -66,7 +61,7 @@ export const getAllPharmacists = async () => {
  */
 export const approvePharmacist = async (id, isApproved) => {
   try {
-    const res = await API.put(`/admin/pharmacists/${id}/approve`, { isApproved });
+    const res = await apiClient.put(`/admin/pharmacists/${id}/approve`, { isApproved });
     return res.data;
   } catch (err) {
     console.error("Error approving pharmacist:", err);
@@ -79,7 +74,7 @@ export const approvePharmacist = async (id, isApproved) => {
 // Get admin dashboard analytics
 export const getAdminAnalytics = async (timeRange = '7d') => {
   try {
-    const res = await API.get(`/admin/analytics?timeRange=${timeRange}`);
+    const res = await apiClient.get(`/admin/analytics?timeRange=${timeRange}`);
     return res.data;
   } catch (err) {
     console.error("Error fetching admin analytics:", err);
@@ -107,7 +102,7 @@ export const getAdminAnalytics = async (timeRange = '7d') => {
 // Get admin real-time verifications
 export const getAdminRealtimeVerifications = async (limit = 20) => {
   try {
-    const res = await API.get(`/admin/realtime-verifications?limit=${limit}`);
+    const res = await apiClient.get(`/admin/realtime-verifications?limit=${limit}`);
     return res.data;
   } catch (err) {
     console.error("Error fetching admin realtime verifications:", err);
@@ -118,7 +113,7 @@ export const getAdminRealtimeVerifications = async (limit = 20) => {
 // Get admin location analytics
 export const getAdminLocationAnalytics = async () => {
   try {
-    const res = await API.get("/admin/location-analytics");
+    const res = await apiClient.get("/admin/location-analytics");
     return res.data;
   } catch (err) {
     console.error("Error fetching admin location analytics:", err);
@@ -129,7 +124,7 @@ export const getAdminLocationAnalytics = async () => {
 // Get admin dashboard stats
 export const getAdminDashboardStats = async () => {
   try {
-    const res = await API.get("/admin/dashboard-stats");
+    const res = await apiClient.get("/admin/dashboard-stats");
     return res.data;
   } catch (err) {
     console.error("Error fetching admin dashboard stats:", err);
@@ -149,7 +144,7 @@ export const getAdminDashboardStats = async () => {
 // Get recent activities for admin
 export const getAdminRecentActivities = async (limit = 10) => {
   try {
-    const res = await API.get(`/admin/recent-activities?limit=${limit}`);
+    const res = await apiClient.get(`/admin/recent-activities?limit=${limit}`);
     return res.data.data || [];
   } catch (err) {
     console.error("Error fetching admin recent activities:", err);
@@ -160,7 +155,7 @@ export const getAdminRecentActivities = async (limit = 10) => {
 // Get system alerts for admin
 export const getAdminSystemAlerts = async () => {
   try {
-    const res = await API.get("/admin/system-alerts");
+    const res = await apiClient.get("/admin/system-alerts");
     return res.data.data || [];
   } catch (err) {
     console.error("Error fetching admin system alerts:", err);

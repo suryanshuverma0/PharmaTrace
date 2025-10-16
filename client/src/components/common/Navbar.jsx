@@ -115,6 +115,12 @@ const ProfileDropdown = ({ user,  onDisconnect }) => {
 
   const navigateToDashboard = () => {
     switch (user?.role) {
+      case "superadmin":
+        navigate("/admin");
+        break;
+      case "admin":
+        navigate("/admin");
+        break;
       case "manufacturer":
         navigate("/manufacturer/dashboard");
         break;

@@ -59,3 +59,21 @@ export const verifySignature = async (address, message, signature) => {
     throw error;
   }
 };
+
+// Check if user is superadmin
+export const checkSuperAdmin = async (address) => {
+  try {
+    const res = await apiClient.post('/auth/check-superadmin', { address });
+    return { 
+      success: true, 
+      isSuperAdmin: res.data.isSuperAdmin,
+      data: res.data 
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      isSuperAdmin: false,
+      error: error.response?.data?.message || error.message 
+    };
+  }
+};

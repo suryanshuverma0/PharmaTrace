@@ -83,7 +83,7 @@ const approvePharmacist = async (req, res) => {
     await user.save();
 
     // Update blockchain
-    const RoleEnum = { None: 0, Manufacturer: 1, Distributor: 2, Pharmacist: 3 };
+    const RoleEnum = { None: 0, Superadmin: 1, Manufacturer: 2, Distributor: 3, Pharmacist: 4 };
     try {
       const tx = await userRegistry.setUser(user.address, isApproved, RoleEnum.Pharmacist);
       await tx.wait();

@@ -47,6 +47,8 @@ export const AuthProvider = ({ children }) => {
       const decodedToken = decodeToken(token);
       if (decodedToken && decodedToken.exp * 1000 > Date.now()) {
         setIsAuthenticated(true);
+        // Also set user data immediately from token
+        setUser(decodedToken);
         return;
       } else {
         // Token is expired, remove it
@@ -77,14 +79,14 @@ export const AuthProvider = ({ children }) => {
       if (account) {
         const user = await getUserRole(account);
 
-        if (user?.address.toUpperCase() === account) {
-          setConnectedAddress(user?.address || address)
+        // Use case-insensitive comparison for Ethereum addresses
+        if (user?.address.toLowerCase() === account.toLowerCase()) {
+          setConnectedAddress(user?.address || account)
           setisAccountRegistered(true);
           setIsConnected(true);
         } else {
           setisAccountRegistered(false);
           setIsConnected(false);
-
         }
       }
     } catch (error) {

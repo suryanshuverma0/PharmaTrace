@@ -6,13 +6,10 @@ import Inventory from "../pages/pharmacy/Inventory";
 import { Routes, Route } from "react-router-dom";
 
 //Admin
-import AdminRoute from "../admin/routes/AdminRoute";
-import AdminApp from "../admin/AdminApp";
 import Dashboard from "../admin/pages/Dashboard";
 import Manufacturers from "../admin/pages/Manufacturers";
 import Distributors from "../admin/pages/Distributors";
 import Pharmacists from "../admin/pages/Pharmacists";
-import AdminTransferOwnership from "../admin/pages/AdminTransferOwnership";
 
 // Layouts
 import PublicLayout from "../layout/PublicLayout";
@@ -53,6 +50,7 @@ import DistributeToPharmacists from "../pages/distributor/DistributeToPharmacist
 import TrackTransfers from "../pages/distributor/TrackTransfers";
 import AssignBatch from "../pages/manufacturer/AssignBatch";
 import ProductVerificationTracking from "../pages/manufacturer/ProductVerificationTracking";
+import DashboardLayout from "../admin/components/DashboardLayout";
 
 const AppRoutes = () => {
   return (
@@ -125,31 +123,25 @@ const AppRoutes = () => {
       </Route>
 
       {/* Pharmacy Routes */}
-      {/* <Route element={<ProtectedRoute allowedRoles={['pharmacy']} />}> */}
-      <Route path="/pharmacy" element={<PharmacyLayout />}>
-        <Route index element={<PharmacyDashboard />} />
-        <Route path="dashboard" element={<PharmacyDashboard />} />
-        <Route path="inventory" element={<Inventory />} />
-        <Route path="verify" element={<VerifyDrug />} />
-        <Route path="expiry-alerts" element={<ExpiryAlerts />} />
-      </Route>
-      {/* </Route> */}
-
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <AdminApp />
-          </AdminRoute>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="manufacturers" element={<Manufacturers />} />
-        <Route path="distributors" element={<Distributors />} />
-        <Route path="pharmacists" element={<Pharmacists />} />
-        <Route path="transfer-admin" element={<AdminTransferOwnership />} />
+      <Route element={<ProtectedRoute allowedRoles={["pharmacy"]} />}>
+        <Route path="/pharmacy" element={<PharmacyLayout />}>
+          <Route index element={<PharmacyDashboard />} />
+          <Route path="dashboard" element={<PharmacyDashboard />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="verify" element={<VerifyDrug />} />
+          <Route path="expiry-alerts" element={<ExpiryAlerts />} />
+        </Route>
       </Route>
 
+      {/* Admin Routes - Protected by SuperAdmin API Check */}
+      <Route element={<ProtectedRoute allowedRoles={["superadmin", "admin"]} />}>
+        <Route path="/admin" element={<DashboardLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="manufacturers" element={<Manufacturers />} />
+          <Route path="distributors" element={<Distributors />} />
+          <Route path="pharmacists" element={<Pharmacists />} />
+        </Route>
+      </Route>
       {/* Fallback Route */}
       <Route path="*" element={<div>404 Not Found</div>} />
     </Routes>

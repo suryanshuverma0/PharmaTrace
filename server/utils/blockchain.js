@@ -10,9 +10,9 @@ const batchContractABI =
 const userRegistryABI =
   require("../../blockchain/artifacts/contracts/UserRegistry.sol/UserRegistry.json").abi;
 // Validate environment variables
-if (!process.env.BLOCKCHAIN_RPC) {
-  throw new Error("BLOCKCHAIN_RPC is not set in .env");
-}
+// if (!process.env.BLOCKCHAIN_RPC) {
+//   throw new Error("BLOCKCHAIN_RPC is not set in .env");
+// }
 if (!process.env.PRIVATE_KEY) {
   throw new Error("PRIVATE_KEY is not set in .env");
 }
@@ -22,8 +22,12 @@ if (!process.env.CONTRACT_ADDRESS) {
 if (!process.env.BATCH_CONTRACT_ADDRESS) {
   throw new Error("BATCH_CONTRACT_ADDRESS is not set in .env");
 }
-if (!process.env.USER_REGISTRY_ADDRESS) {
-  throw new Error("USER_REGISTRY_ADDRESS is not set in .env");
+if (!process.env.PRODUCT_CONTRACT_ADDRESS) {
+  throw new Error("PRODUCT_CONTRACT_ADDRESS is not set in .env");
+}
+
+if (!process.env.USER_CONTRACT_ADDRESS) {
+  throw new Error("USER_CONTRACT_ADDRESS is not set in .env");
 }
 
 // Initialize provider and signer
@@ -44,7 +48,7 @@ try {
 
 // Initialize both contracts
 const productContract = new ethers.Contract(
-  process.env.CONTRACT_ADDRESS,
+  process.env.PRODUCT_CONTRACT_ADDRESS,
   productContractABI,
   signer
 );
@@ -55,7 +59,7 @@ const batchContract = new ethers.Contract(
 );
 
 const userRegistry = new ethers.Contract(
-  process.env.USER_REGISTRY_ADDRESS,
+  process.env.USER_CONTRACT_ADDRESS,
   userRegistryABI,
   signer
 );
@@ -110,12 +114,7 @@ async function testConnection() {
 
       // Use a sample address from Hardhat accounts
       const testUser = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
-      const RoleEnum = {
-        None: 0,
-        Manufacturer: 1,
-        Distributor: 2,
-        Pharmacist: 3,
-      };
+      const RoleEnum = { None: 0, Superadmin: 1, Manufacturer: 2, Distributor: 3, Pharmacist: 4 };
       const tx = await userRegistry.setUser(testUser, true, RoleEnum.Manufacturer); // or appropriate role
 
       await tx.wait();

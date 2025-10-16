@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
   phone: String,
   role: {
     type: String,
-    enum: ['consumer', 'pharmacist', 'distributor', 'manufacturer'],
+    enum: ['consumer', 'pharmacist', 'distributor', 'manufacturer', 'superadmin'],
     default: 'consumer'
   },
   country: { type: String, required: true },
@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema({
   publicKey: String,
   nonce: String,
   permissions: [String],
+  txHash: String,
   lastLogin: Date,
 }, {
   timestamps: true  

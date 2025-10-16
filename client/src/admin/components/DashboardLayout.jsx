@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
-import Topbar from "./Topbar";
 import ConfirmationModal from "./ConfirmationDialog";
+import Navbar from "../../components/common/Navbar";
 
 const DashboardLayout = () => {
   const [logoutModal, setLogoutModal] = useState(false);
@@ -10,16 +10,16 @@ const DashboardLayout = () => {
 
   const handleLogout = () => {
     setLogoutModal(false);
-    navigate("/"); // redirect to login page
+    navigate("/");
   };
-
+  
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col">
-        <Topbar onLogout={() => setLogoutModal(true)} />
-        <main className="p-6 flex-1 overflow-auto">
+      <div className="flex flex-col flex-1">
+        <Navbar/>
+        <main className="flex-1 p-6 overflow-auto">
           <Outlet />
         </main>
       </div>

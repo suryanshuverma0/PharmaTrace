@@ -6,9 +6,11 @@ contract UserRegistry {
 
     enum Role {
         None,
+        Superadmin,
         Manufacturer,
         Distributor,
-        Pharmacist
+        Pharmacist, 
+        Consumer
     }
 
     struct UserInfo {
@@ -47,13 +49,5 @@ contract UserRegistry {
 
     function getUserRole(address user) external view returns (Role) {
         return users[user].role;
-    }
-
-    // Transfer ownership
-    function transferAdmin(address newAdmin) external onlyAdmin {
-        require(newAdmin != address(0), "Invalid address");
-        address oldAdmin = admin;
-        admin = newAdmin;
-        emit AdminChanged(oldAdmin, newAdmin);
     }
 }

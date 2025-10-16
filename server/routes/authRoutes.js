@@ -16,5 +16,6 @@ router.post(
 router.post('/login', authController.loginUser);
 router.get('/activate-account/:token', authController.activateUser);
 router.get('/user/:address', authController.getUserByAddress);
+router.post('/check-superadmin', authController.checkSuperAdmin);
 
 module.exports = router;

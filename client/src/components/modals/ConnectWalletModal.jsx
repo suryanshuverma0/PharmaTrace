@@ -24,8 +24,10 @@ const ConnectWalletModal = () => {
   const navigate = useNavigate();
 
   const redirectUser = (role) => {
-    if (role === "manufacturer") navigate("/manufacturer");
+    if (role === "superadmin") navigate("/admin");
+    else if (role === "manufacturer") navigate("/manufacturer");
     else if (role === "distributor") navigate("/distributor");
+    else if (role === "pharmacist") navigate("/pharmacy");
     else navigate("/");
   };
 

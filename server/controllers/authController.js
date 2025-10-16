@@ -5,6 +5,9 @@ const Distributor = require("../models/Distributor");
 const Pharmacist = require("../models/Pharmacist");
 require("dotenv").config();
 
+const { userRegistry } = require("../utils/blockchain"); 
+
+
 const jwt = require("jsonwebtoken");
 const verifySignature = require("../utils/verifySignature");
 const {
@@ -174,6 +177,40 @@ const registerUser = async (req, res, next) => {
     if (!emailResult.success)
       console.warn("Activation email failed:", emailResult.error);
 
+    const RoleEnum = { 
+      None: 0, 
+      Superadmin: 1, 
+      Manufacturer: 2, 
+      Distributor: 3, 
+      Pharmacist: 4, 
+      Consumer: 5 
+    };
+    
+    // Map user role to RoleEnum
+    const getRoleEnumValue = (role) => {
+      const roleMap = {
+        'consumer': RoleEnum.Consumer,
+        'pharmacist': RoleEnum.Pharmacist,
+        'distributor': RoleEnum.Distributor,
+        'manufacturer': RoleEnum.Manufacturer,
+        'superadmin': RoleEnum.Superadmin
+      };
+      return roleMap[role] || RoleEnum.None;
+    };
+    
+    const userRoleEnum = getRoleEnumValue(newUser.role);
+    
+    const tx = await userRegistry.setUser(
+              newUser.address,
+              newUser.isApproved,
+              userRoleEnum
+            );
+            await tx.wait();
+            console.log(`User ${newUser.address} role set to ${newUser.role} (${userRoleEnum})`);
+
+    newUser.txHash = tx.hash;
+    await newUser.save();
+
     // Return success
     return res.status(201).json({
       message: "User registered successfully",
@@ -300,10 +337,19 @@ const activateUser = async (req, res) => {
 
 const getUserByAddress = async (req, res) => {
   try {
-    const address = req.params.address.toLowerCase(); // normalize
-    console.log("Normalized address:", address);
+    const address = req.params.address; // Don't convert to lowercase here
+    console.log("Looking for address:", address);
 
-    const user = await User.findOne({ address });
+    // Use case-insensitive regex search like in other functions
+    const user = await User.findOne({
+      address: {
+        $regex: new RegExp(
+          `^${address.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+          "i"
+        ),
+      },
+    });
+
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json({ data: user });
@@ -313,9 +359,67 @@ const getUserByAddress = async (req, res) => {
   }
 };
 
+const checkSuperAdmin = async (req, res) => {
+  try {
+    const { address } = req.body;
+    
+    // Validate that address is provided
+    if (!address) {
+      return res.status(400).json({ 
+        message: "Wallet address is required",
+        isSuperAdmin: false 
+      });
+    }
+
+    // Normalize address to lowercase for consistent comparison
+    const normalizedAddress = address.toLowerCase();
+    console.log("Checking superadmin status for address:", normalizedAddress);
+
+    // Find user with case-insensitive address lookup
+    const user = await User.findOne({
+      address: {
+        $regex: new RegExp(
+          `^${normalizedAddress.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+          "i"
+        ),
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ 
+        message: "User not found",
+        isSuperAdmin: false,
+        address: normalizedAddress
+      });
+    }
+
+    // Check if user is superadmin and account is active/approved
+    const isSuperAdmin = user.role === 'superadmin' && user.isActive && user.isApproved;
+
+    return res.status(200).json({
+      message: isSuperAdmin ? "User is a superadmin" : "User is not a superadmin",
+      isSuperAdmin,
+      address: user.address,
+      role: user.role,
+      isActive: user.isActive,
+      isApproved: user.isApproved,
+      name: user.name
+    });
+
+  } catch (error) {
+    console.error("Error checking superadmin status:", error);
+    return res.status(500).json({ 
+      message: "Internal server error",
+      error: error.message,
+      isSuperAdmin: false 
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getUserByAddress,
   activateUser,
+  checkSuperAdmin,
 };
