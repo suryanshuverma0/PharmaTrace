@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const User = require("../../models/User");
 const Distributor = require("../../models/Distributor");
+const { signer, userRegistry } = require("../../utils/blockchain"); 
 
 /**
  * @desc    Get all distributors with user details
@@ -71,30 +72,45 @@ const getAllDistributors = async (req, res) => {
  * @route   PUT /api/admin/distributors/:id/approve
  * @access  Admin
  */
+// Approve or disapprove a distributor (MongoDB + Blockchain)
 const approveDistributor = async (req, res) => {
   try {
     const { id } = req.params;
     const { isApproved } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!mongoose.Types.ObjectId.isValid(id))
       return res.status(400).json({ success: false, message: "Invalid user ID" });
-    }
 
     const user = await User.findById(id);
-    if (!user || user.role !== "distributor") {
+    if (!user || user.role !== "distributor")
       return res.status(404).json({ success: false, message: "Distributor not found" });
-    }
 
+    // Update MongoDB
     user.isApproved = isApproved;
     await user.save();
 
+    // Update blockchain
+    const RoleEnum = { None: 0, Manufacturer: 1, Distributor: 2, Pharmacist: 3 };
+    try {
+      const tx = await userRegistry.setUser(user.address, isApproved, RoleEnum.Distributor);
+      await tx.wait();
+      console.log(`✅ UserRegistry: ${user.address} setApproval = ${isApproved}, role = Distributor`);
+    } catch (err) {
+      console.error("⚠️ Blockchain update failed:", err.message);
+      return res.status(500).json({
+        success: false,
+        message: "MongoDB updated but blockchain transaction failed",
+        error: err.message,
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: `Distributor ${isApproved ? "approved" : "disapproved"} successfully`,
-      data: user
+      message: `Distributor ${isApproved ? "approved" : "disapproved"} successfully (MongoDB + Blockchain)`,
+      data: user,
     });
   } catch (err) {
-    console.error("Error approving distributor:", err);
+    console.error(err);
     res.status(500).json({ success: false, message: "Server error", error: err.message });
   }
 };

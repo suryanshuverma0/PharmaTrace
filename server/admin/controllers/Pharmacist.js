@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const User = require("../../models/User");
 const Pharmacist = require("../../models/Pharmacist");
+const { signer, userRegistry } = require("../../utils/blockchain"); 
+
 
 // @desc Get all pharmacists with joined user details
 // @route GET /api/admin/pharmacists
@@ -63,41 +65,47 @@ const getAllPharmacists = async (req, res) => {
 // @desc Approve / disapprove pharmacist
 // @route PUT /api/admin/pharmacists/:id/approve
 // @access Admin
+
 const approvePharmacist = async (req, res) => {
   try {
     const { id } = req.params;
     const { isApproved } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID"
-      });
-    }
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ success: false, message: "Invalid user ID" });
 
     const user = await User.findById(id);
-    if (!user || user.role !== "pharmacist") {
-      return res.status(404).json({
-        success: false,
-        message: "Pharmacist not found"
-      });
-    }
+    if (!user || user.role !== "pharmacist")
+      return res.status(404).json({ success: false, message: "Pharmacist not found" });
 
+    // Update MongoDB
     user.isApproved = isApproved;
     await user.save();
 
+    // Update blockchain
+    const RoleEnum = { None: 0, Manufacturer: 1, Distributor: 2, Pharmacist: 3 };
+    try {
+      const tx = await userRegistry.setUser(user.address, isApproved, RoleEnum.Pharmacist);
+      await tx.wait();
+      console.log(`✅ UserRegistry: ${user.address} setApproval = ${isApproved}, role = Pharmacist`);
+    } catch (err) {
+      console.error("⚠️ Blockchain update failed:", err.message);
+      return res.status(500).json({
+        success: false,
+        message: "MongoDB updated but blockchain transaction failed",
+        error: err.message,
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: `Pharmacist ${isApproved ? "approved" : "disapproved"} successfully`,
-      data: user
+      message: `Pharmacist ${isApproved ? "approved" : "disapproved"} successfully (MongoDB + Blockchain)`,
+      data: user,
     });
-  } catch (error) {
-    console.error("Error approving pharmacist:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while approving pharmacist",
-      error: error.message
-    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
   }
 };
 

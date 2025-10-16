@@ -167,3 +167,16 @@ export const getAdminSystemAlerts = async () => {
     return [];
   }
 };
+
+// ===== ADMIN BLOCKCHAIN MANAGEMENT =====
+
+// Transfer contract ownership (admin role)
+export const transferOwnership = async (newAdmin) => {
+  try {
+    const res = await API.post("/admin/transfer-admin", { newAdmin });
+    return res.data;
+  } catch (err) {
+    console.error("Error transferring ownership:", err);
+    return { success: false, error: err.message };
+  }
+};

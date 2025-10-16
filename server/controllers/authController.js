@@ -298,17 +298,6 @@ const activateUser = async (req, res) => {
   }
 };
 
-// const getUserByAddress = async (req, res) => {
-//   try {
-//     console.log("adress", req.params.address);
-//     const user = await User.findOne({ address: req.params.address });
-//     if (!user) return res.status(404).json({ message: "User not found" });
-//     res.json({ data: user });
-//   } catch {
-//     res.status(500).json({ message: "Error fetching user" });
-//   }
-// };
-
 const getUserByAddress = async (req, res) => {
   try {
     const address = req.params.address.toLowerCase(); // normalize

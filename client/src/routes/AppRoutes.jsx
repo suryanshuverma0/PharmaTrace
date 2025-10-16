@@ -12,6 +12,7 @@ import Dashboard from "../admin/pages/Dashboard";
 import Manufacturers from "../admin/pages/Manufacturers";
 import Distributors from "../admin/pages/Distributors";
 import Pharmacists from "../admin/pages/Pharmacists";
+import AdminTransferOwnership from "../admin/pages/AdminTransferOwnership";
 
 // Layouts
 import PublicLayout from "../layout/PublicLayout";
@@ -146,6 +147,7 @@ const AppRoutes = () => {
         <Route path="manufacturers" element={<Manufacturers />} />
         <Route path="distributors" element={<Distributors />} />
         <Route path="pharmacists" element={<Pharmacists />} />
+        <Route path="transfer-admin" element={<AdminTransferOwnership />} />
       </Route>
 
       {/* Fallback Route */}

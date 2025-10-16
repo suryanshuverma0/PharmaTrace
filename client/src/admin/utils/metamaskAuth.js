@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 
 // Replace this with your admin wallet address (the one that deployed contract)
-const ADMIN_WALLET = "0x2693e26025a1e661a97f006114e8b60033D4bE99";
+const ADMIN_WALLET = "0x43B0bF307E308732D638F7E965d0a8f220CB9f4d";
 
 export const connectWallet = async () => {
   if (!window.ethereum) {
