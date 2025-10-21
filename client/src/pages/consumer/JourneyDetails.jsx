@@ -40,7 +40,7 @@ const JourneyDetails = () => {
       }
 
       try {
-        const result = await verificationAPI.getProductJourney(serialNumber);
+        const result = await verificationAPI.getProductJourney(serialNumber, 'manual_verification');
         setDrugData(result);
         setActiveStep(result.journey ? result.journey.length - 1 : 0);
       } catch (error) {
@@ -437,7 +437,7 @@ const JourneyDetails = () => {
                 </div>
                 <div className="print:print-info-item">
                   <p className="text-sm font-medium text-gray-500 print:print-info-label">Manufacturer</p>
-                  <p className="mt-1 text-gray-900 print:print-info-value">{drugData?.product?.manufacturer || 'N/A'}</p>
+                  <p className="mt-1 text-gray-900 print:print-info-value">{drugData?.product?.manufacturer || drugData?.manufacturer?.name || 'N/A'}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4 print:contents">
                   <div className="print:print-info-item">

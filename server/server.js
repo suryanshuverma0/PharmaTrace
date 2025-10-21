@@ -30,6 +30,9 @@ app.use("/api/tracking", require("./routes/trackingRoutes"));
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/distribution", require("./routes/distributionRoutes"));
 app.use("/api/verification", verificationRoutes);
+app.use("/api/blockchain", require("./routes/blockchainVerificationRoutes"));
+
+
 
 // Admin routes
 app.use(

@@ -99,7 +99,7 @@ const LandingPage = () => {
     console.log("Scanned serial number:", serialNumber);
     setShowQRScanner(false);
     // Navigate to verification page with the scanned serial number
-    navigate("/verify-drug", { 
+    navigate("/verify-product", { 
       state: { 
         serialNumber, 
         verificationMethod: 'qr', 
@@ -492,7 +492,7 @@ export const QuickVerificationSection = () => {
     console.log("Scanned serial number:", serialNumber);
     setShowQRScanner(false);
     // Navigate to verification page with the scanned serial number
-    navigate("/verify-drug", { 
+    navigate("/verify-product", { 
       state: { 
         serialNumber, 
         verificationMethod: 'qr',

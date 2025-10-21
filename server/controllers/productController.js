@@ -88,6 +88,16 @@ const registerProduct = async (req, res) => {
     }
 
     console.log("Product blockchain transaction confirmed:", receipt.hash);
+    
+    // Get the blockchain-generated fingerprint
+    let blockchainFingerprint;
+    try {
+      blockchainFingerprint = await contract.getFingerprintBySerial(serialNumber);
+      console.log("Blockchain-generated fingerprint:", blockchainFingerprint);
+    } catch (fingerprintError) {
+      console.warn("Could not get blockchain fingerprint, using local:", fingerprintError.message);
+      blockchainFingerprint = fingerprint; // fallback to local fingerprint
+    }
 
     // Update batch quantity using the new method
     await batch.registerProduct(1);
@@ -110,7 +120,7 @@ const registerProduct = async (req, res) => {
       storageCondition: batch.storageConditions || '',
       approvalCertId: batch.approvalCertId,
       manufacturerCountry: 'Nepal',
-      fingerprint,
+      fingerprint: blockchainFingerprint, // Use blockchain fingerprint
       qrCodeUrl,
       price: price,
       // Blockchain transaction details

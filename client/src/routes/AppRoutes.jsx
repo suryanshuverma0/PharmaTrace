@@ -123,7 +123,7 @@ const AppRoutes = () => {
       </Route>
 
       {/* Pharmacy Routes */}
-      <Route element={<ProtectedRoute allowedRoles={["pharmacy"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["pharmacist"]} />}>
         <Route path="/pharmacy" element={<PharmacyLayout />}>
           <Route index element={<PharmacyDashboard />} />
           <Route path="dashboard" element={<PharmacyDashboard />} />

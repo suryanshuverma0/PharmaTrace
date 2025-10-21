@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, AlertTriangle, Camera, Scan, Image, Upload } from "lucide-react";
 import LocationPermissionModal from "./LocationPermissionModal";
 import { useLocationTracking } from "../../hooks/useLocationTracking";
+import QrScanner from 'qr-scanner';
 
 // Mock Button component
 const Button = ({ children, variant = "primary", className = "", onClick, disabled }) => {
@@ -31,6 +32,47 @@ const QRScannerModal = ({
   description = "Position the QR code within the frame",
   skipLocationCheck = false
 }) => {
+  // Helper function to extract serial number from QR code data
+  const extractSerialFromQR = (qrData) => {
+    try {
+      // Try to parse as JSON first
+      const parsed = JSON.parse(qrData);
+      if (parsed.serialNumber) return parsed.serialNumber;
+      if (parsed.serial) return parsed.serial;
+      if (parsed.sn) return parsed.sn;
+    } catch (e) {
+      // If not JSON, treat as plain text
+      // Handle various formats:
+      // - Direct serial: "ROM1231"
+      // - URL format: "https://verify.pharmatrace.com/ROM1231"
+      // - Key-value: "SN:ROM1231" or "SERIAL:ROM1231"
+      
+      if (qrData.includes('://')) {
+        // Extract from URL
+        const urlParts = qrData.split('/');
+        const lastPart = urlParts[urlParts.length - 1];
+        if (lastPart && lastPart.length >= 3) return lastPart;
+      }
+      
+      if (qrData.includes(':')) {
+        // Extract from key-value format
+        const parts = qrData.split(':');
+        if (parts.length >= 2) {
+          const key = parts[0].toLowerCase();
+          if (['sn', 'serial', 'serialnumber'].includes(key)) {
+            return parts[1].trim();
+          }
+        }
+      }
+      
+      // If it looks like a direct serial number (alphanumeric, 3-50 chars)
+      if (/^[A-Za-z0-9]{3,50}$/.test(qrData.trim())) {
+        return qrData.trim();
+      }
+    }
+    
+    return null;
+  };
   // Location tracking hook
   const { 
     showPermissionModal, 
@@ -61,7 +103,7 @@ const QRScannerModal = ({
     checkMobile();
   }, []);
 
-  // Mock QR Scanner functionality (replace with actual QrScanner import)
+  // Real QR Scanner functionality using qr-scanner library
   const initializeScanner = async () => {
     if (!videoRef.current) return;
     
@@ -69,27 +111,54 @@ const QRScannerModal = ({
       setScannerError(null);
       setIsScanning(false);
       
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: isMobile ? 'environment' : 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      });
+      // Initialize QR Scanner with the video element
+      const qrScanner = new QrScanner(
+        videoRef.current,
+        result => {
+          console.log('QR Code detected:', result.data);
+          // Extract serial number from QR code data
+          const serialNumber = extractSerialFromQR(result.data);
+          if (serialNumber) {
+            console.log('✅ Valid serial number extracted:', serialNumber);
+            onScanResult(serialNumber, result.data);
+            onClose();
+          } else {
+            console.warn('⚠️ No valid serial number found in QR code:', result.data);
+            setScannerError('QR code does not contain a valid serial number. Please scan a valid product QR code.');
+          }
+        },
+        {
+          onDecodeError: err => {
+            // Handle decode errors silently - keep scanning
+            // Only log if it's not a common "no QR code found" error
+            if (!err.message.includes('No QR code found')) {
+              console.debug('QR decode error:', err.message);
+            }
+          },
+          preferredCamera: isMobile ? 'environment' : 'user',
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+          returnDetailedScanResult: true,
+        }
+      );
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setIsScanning(true);
-      }
+      qrScannerRef.current = qrScanner;
+      
+      // Start the scanner
+      await qrScanner.start();
+      setIsScanning(true);
+      console.log('🔍 QR Scanner initialized and started');
+      
     } catch (error) {
-      console.error('Failed to start camera:', error);
+      console.error('Failed to start QR scanner:', error);
       let errorMessage = 'Failed to access camera. ';
       
       if (error.name === 'NotAllowedError') {
         errorMessage += 'Please allow camera permissions and try again.';
       } else if (error.name === 'NotFoundError') {
         errorMessage += 'No camera found on this device.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage += 'QR scanning is not supported on this device.';
       } else {
         errorMessage += 'Please check camera permissions and try again.';
       }
@@ -100,12 +169,13 @@ const QRScannerModal = ({
   };
 
   const stopScanner = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject;
-      const tracks = stream.getTracks();
-      tracks.forEach(track => track.stop());
-      videoRef.current.srcObject = null;
+    // Stop QR Scanner if running
+    if (qrScannerRef.current) {
+      qrScannerRef.current.stop();
+      qrScannerRef.current.destroy();
+      qrScannerRef.current = null;
     }
+    
     setIsScanning(false);
     setScannerError(null);
   };
@@ -126,17 +196,31 @@ const QRScannerModal = ({
         throw new Error('Image file is too large. Please select an image smaller than 10MB.');
       }
 
-      // Simulate QR scanning (replace with actual QrScanner.scanImage)
-      setTimeout(() => {
-        // Mock result
-        const mockSerial = 'DEMO-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-        onScanResult(mockSerial, JSON.stringify({ serialNumber: mockSerial }));
+      // Use QR Scanner to process the uploaded image
+      const result = await QrScanner.scanImage(file);
+      console.log('QR Code found in image:', result);
+      
+      // Extract serial number from QR code data
+      const serialNumber = extractSerialFromQR(result);
+      if (serialNumber) {
+        console.log('✅ Valid serial number extracted from image:', serialNumber);
+        onScanResult(serialNumber, result);
         onClose();
-      }, 2000);
+      } else {
+        throw new Error('QR code does not contain a valid serial number. Please select an image with a valid product QR code.');
+      }
       
     } catch (error) {
       console.error('Error scanning uploaded image:', error);
-      setScannerError(error.message || 'Failed to scan QR code from image.');
+      let errorMessage = error.message;
+      
+      if (error.message.includes('No QR code found')) {
+        errorMessage = 'No QR code found in the selected image. Please choose an image that contains a clear QR code.';
+      } else if (error.message.includes('decode')) {
+        errorMessage = 'Could not read the QR code in this image. Please try with a clearer image.';
+      }
+      
+      setScannerError(errorMessage);
       setIsProcessingImage(false);
     }
     
@@ -282,9 +366,14 @@ const QRScannerModal = ({
                         <div className="absolute inset-x-0 bottom-0 p-4 text-center bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
                           <p className="text-sm font-medium text-white">
                             {isScanning ? 
-                              (isMobile ? 'Hold steady and scan QR code' : 'Scanning for QR codes...') : 
+                              'Position QR code within the frame' : 
                               'Initializing camera...'}
                           </p>
+                          {isScanning && (
+                            <p className="mt-1 text-xs text-white/80">
+                              QR codes will be detected automatically
+                            </p>
+                          )}
                         </div>
 
                         {/* Loading indicator when not scanning */}
