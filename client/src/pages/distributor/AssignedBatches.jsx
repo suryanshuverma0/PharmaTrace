@@ -5,8 +5,6 @@ import {
   Calendar,
   Package,
   Building2,
-  ThermometerIcon,
-  ClipboardCheck,
   AlertCircle,
   ChevronDown,
   ChevronUp,
@@ -309,21 +307,6 @@ const AssignedBatches = () => {
                           </p>
                         </div>
 
-                        {batch.storageConditions &&
-                          batch.storageConditions.trim() !== "" && (
-                            <div className="p-4 bg-white rounded-xl">
-                              <div className="flex items-center gap-2 mb-2 text-gray-600">
-                                <ThermometerIcon className="w-5 h-5" />
-                                <span className="font-medium">
-                                  Storage Conditions
-                                </span>
-                              </div>
-                              <div className="space-y-1">
-                                <p>{batch.storageConditions}</p>
-                              </div>
-                            </div>
-                          )}
-
                         {batch.productionLocation && (
                           <div className="p-4 bg-white rounded-xl">
                             <div className="flex items-center gap-2 mb-2 text-gray-600">
@@ -334,21 +317,6 @@ const AssignedBatches = () => {
                             </div>
                             <div className="space-y-1">
                               <p>{batch.productionLocation}</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {batch.qualityCheck && (
-                          <div className="p-4 bg-white rounded-xl">
-                            <div className="flex items-center gap-2 mb-2 text-gray-600">
-                              <ClipboardCheck className="w-5 h-5" />
-                              <span className="font-medium">Quality Check</span>
-                            </div>
-                            <div className="space-y-1">
-                              <p>Result: {batch.qualityCheck.result}</p>
-                              <p className="text-sm text-gray-500">
-                                By: {batch.qualityCheck.performedBy}
-                              </p>
                             </div>
                           </div>
                         )}
@@ -377,7 +345,7 @@ const AssignedBatches = () => {
                                   <div className="flex items-center justify-center w-8 h-8">
                                     {event.status.toLowerCase() ===
                                     "delivered" ? (
-                                      <ClipboardCheck className="w-5 h-5" />
+                                      <Package className="w-5 h-5" />
                                     ) : event.status.toLowerCase() ===
                                       "in transit" ? (
                                       <Truck className="w-5 h-5" />
@@ -403,35 +371,6 @@ const AssignedBatches = () => {
                                     </p>
                                     {event.remarks && (
                                       <p className="mt-1">{event.remarks}</p>
-                                    )}
-                                    {/* {event.environmentalConditions && (
-                                <div className="p-2 mt-2 rounded-lg bg-gray-50">
-                                  <p className="font-medium">Environmental Conditions:</p>
-                                  <p>Temperature: {event.environmentalConditions.temperature}</p>
-                                  <p>Humidity: {event.environmentalConditions.humidity}</p>
-                                  <p>Status: {event.environmentalConditions.status}</p>
-                                </div>
-                              )} */}
-                                    {event.qualityCheck && (
-                                      <div className="p-2 mt-2 rounded-lg bg-gray-50">
-                                        <p className="font-medium">
-                                          Quality Check:
-                                        </p>
-                                        <p>
-                                          Result: {event.qualityCheck.result}
-                                        </p>
-                                        <p>
-                                          Date:{" "}
-                                          {new Date(
-                                            event.qualityCheck.date
-                                          ).toLocaleString()}
-                                        </p>
-                                        {event.qualityCheck.notes && (
-                                          <p>
-                                            Notes: {event.qualityCheck.notes}
-                                          </p>
-                                        )}
-                                      </div>
                                     )}
                                   </div>
                                 </div>

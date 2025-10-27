@@ -15,6 +15,7 @@ const DistributorDashboard = () => {
   const [selectedPharmacy, setSelectedPharmacy] = useState('');
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   // Mock pharmacy list - Replace with actual data from smart contract
@@ -30,6 +31,7 @@ const DistributorDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
+      setLoading(true);
       // Fetch products assigned to distributor
       const productsRes = await apiClient.get('/distributer/products');
       setProducts(productsRes.data.products || []);
@@ -47,6 +49,8 @@ const DistributorDashboard = () => {
       setTransfers(transfersRes.data.transfers || []);
     } catch (error) {
       setNotification({ show: true, message: 'Failed to fetch dashboard data', type: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,6 +107,72 @@ const DistributorDashboard = () => {
   const handleVerifyProduct = () => {
     navigate('/distributor/verify');
   };
+
+  // Skeleton components
+  const StatCardSkeleton = () => (
+    <Card className="bg-gray-50">
+      <div className="flex items-center">
+        <div className="w-8 h-8 bg-gray-300 rounded animate-pulse"></div>
+        <div className="ml-4">
+          <div className="w-24 h-4 mb-2 bg-gray-300 rounded animate-pulse"></div>
+          <div className="w-16 h-6 bg-gray-300 rounded animate-pulse"></div>
+        </div>
+      </div>
+    </Card>
+  );
+
+  const TableSkeleton = () => (
+    <Card className="border border-gray-100 shadow-lg">
+      <div className="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
+        <div className="w-48 h-6 bg-gray-300 rounded animate-pulse"></div>
+        <div className="w-64 h-8 bg-gray-300 rounded animate-pulse"></div>
+      </div>
+      <div className="overflow-x-auto rounded-lg">
+        <table className="min-w-full bg-white divide-y divide-gray-200 rounded-lg">
+          <thead className="bg-gray-50">
+            <tr>
+              {Array.from({ length: 7 }).map((_, index) => (
+                <th key={index} className="px-4 py-2">
+                  <div className="w-20 h-4 bg-gray-300 rounded animate-pulse"></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {Array.from({ length: 5 }).map((_, rowIndex) => (
+              <tr key={rowIndex}>
+                {Array.from({ length: 7 }).map((_, colIndex) => (
+                  <td key={colIndex} className="px-4 py-2">
+                    <div className={`bg-gray-300 rounded animate-pulse ${
+                      colIndex === 0 ? 'w-24 h-4' : 
+                      colIndex === 1 ? 'w-32 h-4' :
+                      colIndex === 5 ? 'w-16 h-6' : 'w-16 h-4'
+                    }`}></div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        {/* Overview Cards Skeleton */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <StatCardSkeleton key={index} />
+          ))}
+        </div>
+
+        {/* Table Skeleton */}
+        <TableSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -202,7 +272,7 @@ const DistributorDashboard = () => {
                   <td className="px-4 py-2">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${batch.status === 'In Transit' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>{batch.status}</span>
                   </td>
-                  <td className="px-4 py-2 font-mono text-xs">{batch.manufacturer.slice(0, 8)}...</td>
+                  <td className="px-4 py-2 text-sm">{batch.manufacturerName || 'Unknown Manufacturer'}</td>
                 </tr>
               ))}
             </tbody>

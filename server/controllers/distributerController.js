@@ -3,6 +3,8 @@ const Distributor = require('../models/Distributor');
 const Product = require('../models/Product');
 const Batch = require('../models/Batch');
 const User = require('../models/User');
+const Manufacturer = require('../models/Manufacturer');
+const mongoose = require('mongoose');
 const { signer, batchContract, provider } = require("../utils/blockchain");
 
 // Fetch products assigned to distributor (filter by distributor address if provided)
@@ -64,14 +66,25 @@ const getDistributorBatches = async (req, res) => {
           { shipmentHistory: { $elemMatch: { toAddress: distributorAddress } } },
           { shipmentHistory: { $elemMatch: { to: distributorCompanyName } } }
         ]
-      });
+      }).populate('manufacturerId', 'name address');
     } else {
-      batches = await Batch.find();
+      batches = await Batch.find().populate('manufacturerId', 'name address');
     }
     
     // Map to frontend format
     const formatted = await Promise.all(batches.map(async b => {
       const product = await Product.findOne({ batchId: b._id });
+
+      // Get manufacturer company name from Manufacturer model
+      let manufacturerName = 'Unknown Manufacturer';
+      if (b.manufacturerId) {
+        const manufacturerDoc = await Manufacturer.findOne({ user: b.manufacturerId._id });
+        if (manufacturerDoc && manufacturerDoc.companyName) {
+          manufacturerName = manufacturerDoc.companyName;
+        } else if (b.manufacturerId.name) {
+          manufacturerName = b.manufacturerId.name;
+        }
+      }
 
       // Sum quantities assigned TO this distributor (manufacturer -> distributor)
       const assignedToDistributor = (b.shipmentHistory || []).reduce((sum, entry) => {
@@ -126,7 +139,9 @@ const getDistributorBatches = async (req, res) => {
         totalAssignedToDistributor: assignedToDistributor,
         shippedOutByDistributor,
         status: b.shipmentStatus,
-        manufacturer: b.manufacturerId ? b.manufacturerId.toString() : '',
+        manufacturer: b.manufacturerId ? b.manufacturerId._id.toString() : '',
+        manufacturerName: manufacturerName,
+        manufacturerAddress: b.manufacturerId ? b.manufacturerId.address : '',
         serialNumber: product ? product.serialNumber : '',
         shipmentHistory: b.shipmentHistory || []
       };

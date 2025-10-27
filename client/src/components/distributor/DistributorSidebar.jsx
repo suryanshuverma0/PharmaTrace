@@ -40,11 +40,6 @@ const DistributorSidebar = () => {
       name: 'Track Transfers',
       icon: <FaHistory className="w-5 h-5" />,
     },
-    {
-      path: '/distributor/verify',
-      name: 'Verify Products',
-      icon: <FaQrcode className="w-5 h-5" />,
-    },
   ];
 
   return (
