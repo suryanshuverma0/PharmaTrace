@@ -341,6 +341,69 @@ const getDistributorTransfers = async (req, res) => {
       const productDoc = await Product.findOne({ batchId: batch._id });
       const productName = productDoc ? productDoc.productName : (batch.dosageForm + ' ' + batch.strength);
       
+      // Get manufacturer details - try multiple approaches
+      let manufacturerName = 'Unknown Manufacturer';
+      let manufacturerAddress = null;
+      
+      // Debug logging
+      console.log('Batch debug info:', {
+        batchId: batch.batchNumber,
+        manufacturerId: batch.manufacturerId,
+        manufacturer: batch.manufacturer,
+        shipmentHistoryLength: batch.shipmentHistory?.length,
+        firstShipment: batch.shipmentHistory?.[0]
+      });
+      
+      // First, try to get manufacturer from batch.manufacturerId (which refs User model)
+      if (batch.manufacturerId) {
+        // manufacturerId refs User model, so get user first
+        const manufacturerUser = await User.findById(batch.manufacturerId);
+        if (manufacturerUser) {
+          // Then find the manufacturer profile for this user
+          const manufacturer = await Manufacturer.findOne({ user: batch.manufacturerId });
+          if (manufacturer) {
+            manufacturerName = manufacturer.companyName || manufacturerUser.companyName || 'Unknown Manufacturer';
+            manufacturerAddress = manufacturerUser.address;
+            console.log('Found manufacturer from ID via User+Manufacturer:', manufacturerName);
+          } else {
+            // Fallback to user's company name if manufacturer profile doesn't exist
+            manufacturerName = manufacturerUser.companyName || manufacturerUser.fullName || 'Unknown Manufacturer';
+            manufacturerAddress = manufacturerUser.address;
+            console.log('Found manufacturer from User only:', manufacturerName);
+          }
+        }
+      }
+      
+      // If still unknown, try to get from batch.manufacturer field
+      if (manufacturerName === 'Unknown Manufacturer' && batch.manufacturer) {
+        manufacturerName = batch.manufacturer;
+        console.log('Found manufacturer from field:', manufacturerName);
+      }
+      
+      // If still unknown, check shipment history for manufacturer info
+      if (manufacturerName === 'Unknown Manufacturer') {
+        const producedEntry = batch.shipmentHistory?.find(entry => entry.status === 'Produced');
+        if (producedEntry) {
+          manufacturerName = producedEntry.from || producedEntry.fromAddress || manufacturerName;
+          manufacturerAddress = producedEntry.fromAddress;
+          console.log('Found manufacturer from shipment history:', manufacturerName);
+        }
+      }
+      
+      // Last resort: try to find manufacturer name from the shipment history "from" field
+      if (manufacturerName === 'Unknown Manufacturer' && batch.shipmentHistory?.length > 0) {
+        // Look for any shipment that has a "from" field that's not a wallet address
+        for (const shipment of batch.shipmentHistory) {
+          if (shipment.from && !shipment.from.startsWith('0x') && shipment.from.length > 10) {
+            manufacturerName = shipment.from;
+            console.log('Found manufacturer from any shipment:', manufacturerName);
+            break;
+          }
+        }
+      }
+      
+      console.log('Final manufacturer name:', manufacturerName);
+      
       // Only include transfers where this distributor is the sender
       for (const shipment of batch.shipmentHistory) {
         const isFromDistributor = shipment.from === distributorAddress || 
@@ -365,8 +428,26 @@ const getDistributorTransfers = async (req, res) => {
             timestamp: shipment.timestamp,
             remarks: shipment.remarks,
             transactionHash: shipment.transactionHash,
-            environmentalConditions: shipment.environmentalConditions,
-            qualityCheck: shipment.qualityCheck
+            manufacturer: manufacturerName,
+            manufacturerAddress: manufacturerAddress,
+            // Remove environmentalConditions as requested
+            // environmentalConditions: shipment.environmentalConditions,
+            qualityCheck: shipment.qualityCheck,
+            // Add additional useful information
+            batchInfo: {
+              productionDate: batch.productionDate,
+              expiryDate: batch.expiryDate,
+              dosageForm: batch.dosageForm,
+              strength: batch.strength,
+              batchNumber: batch.batchNumber,
+              totalQuantity: batch.quantity
+            },
+            // Add shipment tracking information
+            trackingInfo: {
+              transactionHash: shipment.transactionHash,
+              timestamp: shipment.timestamp,
+              shipmentId: shipment._id
+            }
           });
         }
       }
