@@ -32,7 +32,7 @@ const Modal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 overflow-y-auto bg-black bg-opacity-60">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4 overflow-y-auto bg-black bg-opacity-60 modal-backdrop">
       <div
         className="fixed inset-0 transition-opacity "
         onClick={onClose}

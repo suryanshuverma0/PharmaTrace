@@ -235,12 +235,12 @@ const DistributorDashboard = () => {
 
       {/* Assigned Batches Table */}
       <Card className="border border-gray-100 shadow-lg">
-        <div className="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-4 mb-4">
           <h2 className="flex items-center text-lg font-semibold text-primary-700"><FaShippingFast className="mr-2 text-primary-500" />Assigned Batches</h2>
           <input
             type="text"
             placeholder="Search by product or batch..."
-            className="w-full px-3 py-1 transition border rounded border-primary-200 focus:ring-primary-400 focus:border-primary-400 md:w-64"
+            className="w-full px-3 py-2 transition border rounded-lg border-primary-200 focus:ring-primary-400 focus:border-primary-400 focus:ring-2"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />

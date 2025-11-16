@@ -138,8 +138,6 @@ const InventoryManagement = () => {
             <h4 className="font-semibold text-green-800">Stock Information</h4>
             <div className="mt-2 space-y-2">
               <p><span className="text-gray-600">Available Quantity:</span> {item.quantity}</p>
-              <p><span className="text-gray-600">Total Quantity:</span> {item.total}</p>
-              <p><span className="text-gray-600">Reserved Quantity:</span> {item.reserved || 0}</p>
               <p><span className="text-gray-600">Stock Status:</span> 
                 <span className={`ml-2 px-2 py-1 rounded ${getStatusColor(item.stockStatus)}`}>
                   {item.stockStatus.toUpperCase()}
@@ -148,16 +146,6 @@ const InventoryManagement = () => {
             </div>
           </div>
         </div>
-
-        {item.storageConditions && (
-          <div className="p-4 mb-4 rounded-lg bg-purple-50">
-            <h4 className="font-semibold text-purple-800">Storage Conditions</h4>
-            <div className="mt-2 space-y-2">
-              <p><span className="text-gray-600">Temperature:</span> {item.storageConditions.temperature}</p>
-              <p><span className="text-gray-600">Humidity:</span> {item.storageConditions.humidity}</p>
-            </div>
-          </div>
-        )}
 
         <div className="mt-4 text-sm text-gray-500">
           Last updated: {formatDistanceToNow(new Date(item.lastUpdated))} ago

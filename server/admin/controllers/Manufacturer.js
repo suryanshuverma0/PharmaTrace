@@ -65,6 +65,7 @@ const approveManufacturer = async (req, res) => {
 
     // Update MongoDB
     user.isApproved = isApproved;
+    user.isActive = isApproved;
     await user.save();
 
     // Update blockchain

@@ -146,7 +146,7 @@ const Distributors = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name, company, reg. number, email, country, phone..."
-              className="w-full md:w-[560px] pl-10 pr-10 py-3 border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition"
+              className="w-full py-3 pl-10 pr-10 transition border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
             />
             {query && (
               <button

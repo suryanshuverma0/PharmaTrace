@@ -16,7 +16,8 @@ import {
 import { 
   formatLocationDisplay, 
   getCountryFlag, 
-  formatCoordinates 
+  formatCoordinates,
+  reverseGeocode 
 } from '../../services/locationFormatService';
 
 // Fix Leaflet default markers
@@ -160,25 +161,94 @@ const InteractiveMap = ({
   showHeatmap = true 
 }) => {
   const [mapReady, setMapReady] = useState(false);
+  const [enhancedLocations, setEnhancedLocations] = useState([]);
+  const [geocodingCache, setGeocodingCache] = useState(new Map());
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const mapRef = useRef(null);
 
   // Default center (Nepal coordinates as fallback)
   const defaultCenter = [27.7172, 85.3240];
   const defaultZoom = 7;
 
-  // Get map center based on data
+  // Enhance locations with reverse geocoding
+  useEffect(() => {
+    const enhanceLocations = async () => {
+      if (locations.length === 0) {
+        setEnhancedLocations([]);
+        return;
+      }
+
+      setIsGeocoding(true);
+      const enhanced = await Promise.all(
+        locations.map(async (location) => {
+          const coords = location.location?.coordinates;
+          if (!coords || !coords.latitude || !coords.longitude) return location;
+
+          const cacheKey = `${coords.latitude.toFixed(4)},${coords.longitude.toFixed(4)}`;
+          
+          if (geocodingCache.has(cacheKey)) {
+            const cachedLocation = geocodingCache.get(cacheKey);
+            return {
+              ...location,
+              location: {
+                ...location.location,
+                ...cachedLocation
+              }
+            };
+          }
+
+          try {
+            const geocodingResult = await reverseGeocode(coords.latitude, coords.longitude);
+            const enhancedLocation = {
+              ...location,
+              location: {
+                ...location.location,
+                city: geocodingResult.city,
+                country: geocodingResult.country,
+                region: geocodingResult.region,
+                formatted: geocodingResult.formatted,
+                fullAddress: geocodingResult.fullAddress
+              }
+            };
+
+            // Cache the result
+            setGeocodingCache(prev => new Map(prev).set(cacheKey, {
+              city: geocodingResult.city,
+              country: geocodingResult.country,
+              region: geocodingResult.region,
+              formatted: geocodingResult.formatted,
+              fullAddress: geocodingResult.fullAddress
+            }));
+
+            return enhancedLocation;
+          } catch (error) {
+            console.error('Error enhancing location:', error);
+            return location;
+          }
+        })
+      );
+
+      setEnhancedLocations(enhanced);
+      setIsGeocoding(false);
+    };
+
+    enhanceLocations();
+  }, [locations, geocodingCache]);
+
+  // Get map center based on enhanced data
   const getMapCenter = () => {
-    if (locations.length > 0 && locations[0].location?.coordinates) {
+    const locationsToUse = enhancedLocations.length > 0 ? enhancedLocations : locations;
+    if (locationsToUse.length > 0 && locationsToUse[0].location?.coordinates) {
       return [
-        locations[0].location.coordinates.latitude,
-        locations[0].location.coordinates.longitude
+        locationsToUse[0].location.coordinates.latitude,
+        locationsToUse[0].location.coordinates.longitude
       ];
     }
     return defaultCenter;
   };
 
   // Process locations for map display
-  const processedLocations = locations.map((location, index) => {
+  const processedLocations = (enhancedLocations.length > 0 ? enhancedLocations : locations).map((location, index) => {
     const coords = location.location?.coordinates;
     if (!coords || !coords.latitude || !coords.longitude) return null;
 
@@ -230,6 +300,12 @@ const InteractiveMap = ({
             <div className="text-xs text-gray-500">
               {locations.reduce((sum, loc) => sum + (loc.stats?.totalVerifications || 0), 0)} Verifications
             </div>
+            {isGeocoding && (
+              <div className="flex items-center mt-1 space-x-1 text-xs text-blue-600">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span>Resolving locations...</span>
+              </div>
+            )}
           </div>
         )}
       </div>

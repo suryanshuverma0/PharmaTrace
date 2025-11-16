@@ -44,6 +44,7 @@ import QRCodeManager from "../pages/manufacturer/QRCodeManager";
 // Distributor Pages
 import DistributorDashboard from "../pages/distributor/DistributorDashboard";
 import AssignedBatches from "../pages/distributor/AssignedBatches";
+import ManufacturerAssignedBatch from "../pages/manufacturer/AssignedBatches";
 import AcknowledgeShipment from "../pages/distributor/AcknowledgeShipment";
 import InventoryManagement from "../pages/distributor/InventoryManagement";
 import DistributeToPharmacists from "../pages/distributor/DistributeToPharmacists";
@@ -91,7 +92,7 @@ const AppRoutes = () => {
           <Route path="registered-batches" element={<RegisteredBatch />} />
           <Route path="products" element={<ProductsList />} />
           <Route path="assign-batch" element={<AssignBatch />} />
-          <Route path="assigned-batches" element={<AssignedBatches />} />
+          <Route path="assigned-batches" element={<ManufacturerAssignedBatch />} />
           <Route path="track" element={<TrackProducts />} />
           <Route path="track/:serialNumber" element={<TrackProducts />} />
           <Route path="qr-codes" element={<QRCodeManager />} />

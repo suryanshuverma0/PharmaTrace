@@ -33,8 +33,28 @@ const AssignedBatches = () => {
   const fetchAssignedBatches = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/batches/assignments');
-      setAssignments(response.data);
+      // Use the same endpoint as distributor but from manufacturer's perspective
+      const response = await apiClient.get('/distributer/batches');
+      // Transform the data to manufacturer's view
+      const transformedData = response.data.batches?.map(batch => ({
+        _id: batch.batchId,
+        batchNumber: batch.batchId,
+        product: batch.product,
+        quantity: batch.shipmentHistory?.[0]?.quantity || 0,
+        status: batch.status,
+        assignedAt: batch.shipmentHistory?.[0]?.timestamp || new Date().toISOString(),
+        distributor: {
+          name: batch.shipmentHistory?.[0]?.to || 'Unknown Distributor',
+          address: batch.shipmentHistory?.[0]?.toAddress || 'N/A'
+        },
+        shipmentHistory: batch.shipmentHistory || [],
+        serialNumber: batch.serialNumber,
+        manufacturerName: batch.manufacturerName,
+        storageConditions: batch.storageConditions,
+        manufactureDate: batch.manufactureDate,
+        expiryDate: batch.expiryDate
+      })) || [];
+      setAssignments(transformedData);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch assignments');
     } finally {
@@ -89,7 +109,7 @@ const AssignedBatches = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Assigned Batches</h1>
         <p className="mt-2 text-lg text-gray-600">
-          Track and manage your batch assignments to distributors
+          Track and manage your batch assignments to distributors helloe
         </p>
       </div>
 
@@ -124,7 +144,7 @@ const AssignedBatches = () => {
             key={assignment._id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="overflow-hidden bg-white border rounded-xl shadow-sm"
+            className="overflow-hidden bg-white border shadow-sm rounded-xl"
           >
             <div
               className="p-6 cursor-pointer hover:bg-gray-50"
@@ -179,47 +199,98 @@ const AssignedBatches = () => {
                 exit={{ height: 0 }}
                 className="px-6 pb-6 border-t"
               >
-                <div className="grid gap-6 pt-6 md:grid-cols-2">
+                {/* Manufacturer-specific metrics */}
+                <div className="grid gap-4 pt-6 mb-6 md:grid-cols-3">
+                  <div className="p-4 rounded-lg bg-blue-50">
+                    <div className="flex items-center gap-2 mb-2 text-blue-600">
+                      <Package className="w-5 h-5" />
+                      <span className="font-medium">Assigned Quantity</span>
+                    </div>
+                    <p className="text-2xl font-semibold text-blue-900">
+                      {assignment.quantity}
+                    </p>
+                    <p className="text-sm text-blue-600">Units to distributor</p>
+                  </div>
+                  
+                  <div className="p-4 rounded-lg bg-green-50">
+                    <div className="flex items-center gap-2 mb-2 text-green-600">
+                      <Truck className="w-5 h-5" />
+                      <span className="font-medium">Current Status</span>
+                    </div>
+                    <p className="text-lg font-semibold text-green-900">
+                      {assignment.status}
+                    </p>
+                    <p className="text-sm text-green-600">Shipment status</p>
+                  </div>
+                  
+                  <div className="p-4 rounded-lg bg-purple-50">
+                    <div className="flex items-center gap-2 mb-2 text-purple-600">
+                      <Calendar className="w-5 h-5" />  
+                      <span className="font-medium">Assigned Date</span>
+                    </div>
+                    <p className="text-sm font-semibold text-purple-900">
+                      {new Date(assignment.assignedAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-purple-600">Initial assignment</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-4">
-                    <h4 className="font-medium text-gray-900">Assignment Details</h4>
+                    <h4 className="font-medium text-gray-900">Batch Details</h4>
                     <div className="grid gap-4">
+                      <div className="p-4 rounded-lg bg-gray-50">
+                        <p className="text-sm text-gray-600">Product Information</p>
+                        <div className="mt-1 space-y-1">
+                          <p className="font-medium text-gray-900">{assignment.product}</p>
+                          <p className="text-sm text-gray-500">Batch: {assignment.batchNumber}</p>
+                          {assignment.serialNumber && (
+                            <p className="text-sm text-gray-500">Serial: {assignment.serialNumber}</p>
+                          )}
+                        </div>
+                      </div>
                       <div className="p-4 rounded-lg bg-gray-50">
                         <p className="text-sm text-gray-600">Distributor Details</p>
                         <div className="mt-1 space-y-1">
                           <p className="font-medium text-gray-900">{assignment.distributor.name}</p>
-                          <p className="text-sm text-gray-500">{assignment.distributor.address}</p>
-                          <p className="text-sm text-gray-500">{assignment.distributor.license}</p>
-                        </div>
-                      </div>
-                      <div className="p-4 rounded-lg bg-gray-50">
-                        <p className="text-sm text-gray-600">Products</p>
-                        <div className="mt-1 space-y-1">
-                          <p className="text-sm text-gray-900">
-                            Serial Numbers: {assignment.serialNumbers?.join(', ')}
-                          </p>
+                          <p className="text-sm text-gray-500">Address: {assignment.distributor.address}</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <h4 className="font-medium text-gray-900">Shipping Information</h4>
-                    <div className="grid gap-4">
-                      <div className="p-4 rounded-lg bg-gray-50">
-                        <p className="text-sm text-gray-600">Tracking Details</p>
-                        <div className="mt-1 space-y-1">
-                          <p className="font-medium text-gray-900">
-                            Status: {assignment.shipmentStatus || assignment.status}
+                    <h4 className="font-medium text-gray-900">Shipment Timeline</h4>
+                    <div className="space-y-3">
+                      {assignment.shipmentHistory?.length > 0 ? assignment.shipmentHistory.map((shipment, index) => (
+                        <div key={index} className="p-4 rounded-lg bg-gray-50">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="font-medium text-gray-900">{shipment.status}</p>
+                            <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(shipment.status)}`}>
+                              {shipment.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {new Date(shipment.timestamp).toLocaleString()}
                           </p>
                           <p className="text-sm text-gray-500">
-                            Updated: {new Date(assignment.lastUpdated || assignment.assignedAt).toLocaleString()}
+                            From: {shipment.from} → To: {shipment.to}
                           </p>
+                          <p className="text-sm text-gray-500">
+                            Quantity: {shipment.quantity}
+                          </p>
+                          {shipment.remarks && (
+                            <p className="mt-1 text-sm text-gray-500">{shipment.remarks}</p>
+                          )}
+                          {shipment.txHash && (
+                            <p className="mt-1 font-mono text-xs text-gray-400">
+                              Tx: {shipment.txHash.substring(0, 20)}...
+                            </p>
+                          )}
                         </div>
-                      </div>
-                      {assignment.remarks && (
+                      )) : (
                         <div className="p-4 rounded-lg bg-gray-50">
-                          <p className="text-sm text-gray-600">Remarks</p>
-                          <p className="mt-1 text-gray-900">{assignment.remarks}</p>
+                          <p className="text-sm text-gray-500">No shipment history available</p>
                         </div>
                       )}
                     </div>
