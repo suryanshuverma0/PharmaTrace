@@ -53,7 +53,7 @@ const RegisterProduct = () => {
             message: (
               <>
                 You need to register a batch before adding a product.{' '}
-                <Link to="/register-batch" className="text-blue-600 underline">
+                <Link to="/manufacturer/register/batch" className="text-blue-600 underline">
                   Register a batch now
                 </Link>.
               </>

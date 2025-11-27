@@ -124,52 +124,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("token");
   };
 
-  // const registerUserWithRole = async (userData) => {
-  //   try {
-  //     setIsLoading(true);
-  //     if (!connectedAddress) {
-  //       const connectResult = await connectWallet();
-  //       if (!connectResult.success) {
-  //         return { success: false, error: connectResult.error };
-  //       }
-  //     }
-
-  //     // Generate a message to sign for verification
-  //     const message = `Register as ${userData.role} - ${
-  //       userData.name
-  //     } - ${Date.now()}`;
-  //     const signature = await MetaMaskService.signMessage(message);
-
-  //     const registrationData = {
-  //       address: connectedAddress,
-  //       signature,
-  //       message,
-  //       ...userData,
-  //     };
-
-  //     const result = await registerUser(registrationData);
-
-  //     if (result.success) {
-  //       setUser({
-  //         ...user,
-  //         role: userData.role,
-  //         name: userData.name,
-  //         email: userData.email,
-  //         phone: userData.phone,
-  //         country: userData.country,
-  //         isRegistered: true,
-  //       });
-  //       return { success: true };
-  //     } else {
-  //       return { success: false, error: result.error };
-  //     }
-  //   } catch (error) {
-  //     return { success: false, error: error.message };
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
 
   const registerUserWithRole = async (userData, isFormData = false) => {
   try {
