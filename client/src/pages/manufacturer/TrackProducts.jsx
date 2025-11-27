@@ -26,103 +26,10 @@ const TrackProducts = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Function to format journey data
+  // Function to format journey data - now using backend data directly
   const formatJourneyData = (product) => {
-    const journey = [];
-
-    // Add manufacturing step
-    journey.push({
-      step: "Manufactured",
-      location: product.productionLocation || "Manufacturing Facility",
-      date: new Date(product.manufactureDate).toLocaleString(),
-      verifiedBy: product.manufacturer,
-      role: "Manufacturer",
-      temperature: product.storageTemp || "20°C",
-      humidity: product.humidity || "45%"
-    });
-
-    // Add quality check if available
-    if (product.qualityCheck) {
-      journey.push({
-        step: "Quality Check",
-        location: product.productionLocation,
-        date: new Date(product.qualityCheckDate).toLocaleString(),
-        verifiedBy: product.qualityCheckBy || "QA Team",
-        role: "QA Specialist",
-        status: "Passed",
-        notes: product.qualityNotes || "Meets all quality standards"
-      });
-    }
-
-    // Add shipping info if in transit or delivered
-    if (product.status === 'in-transit' || product.status === 'delivered') {
-      journey.push({
-        step: "Shipped",
-        location: product.shipmentOrigin || product.productionLocation,
-        date: new Date(product.shipmentDate).toLocaleString(),
-        verifiedBy: product.shipmentVerifiedBy || "Logistics Team",
-        role: "Logistics Manager",
-        carrier: product.carrier || "SecurePharm Logistics",
-        trackingId: product.trackingId
-      });
-    }
-
-    // Add current status
-    journey.push({
-      step: product.status?.charAt(0).toUpperCase() + product.status?.slice(1) || "In Processing",
-      location: product.currentLocation || "Manufacturing Facility",
-      date: new Date().toLocaleString(),
-      verifiedBy: product.lastVerifiedBy || "System",
-      role: "Status Update",
-      storageConditions: `Temperature: ${product.currentTemp || "20°C"}, Humidity: ${product.currentHumidity || "45%"}`
-    });
-
-    return journey;
-  };
-  const sampleProduct = {
-    name: "Amoxicillin 500mg",
-    serialNumber: "AMX500-B247",
-    batchNumber: "B247",
-    manufacturer: "PharmaCorp Inc.",
-    currentLocation: "Chicago Distribution Center",
-    journey: [
-      {
-        step: "Manufactured",
-        location: "Boston Manufacturing Facility",
-        date: "2025-06-01 09:30 AM",
-        verifiedBy: "John Smith",
-        role: "Production Manager",
-        temperature: "21°C",
-        humidity: "45%"
-      },
-      {
-        step: "Quality Check",
-        location: "Boston Manufacturing Facility",
-        date: "2025-06-01 02:15 PM",
-        verifiedBy: "Sarah Johnson",
-        role: "QA Specialist",
-        status: "Passed",
-        notes: "Meets all quality standards"
-      },
-      {
-        step: "Shipped",
-        location: "Boston Manufacturing Facility",
-        date: "2025-06-02 10:45 AM",
-        verifiedBy: "Mike Wilson",
-        role: "Logistics Manager",
-        carrier: "SecurePharm Logistics",
-        trackingId: "SP12345678"
-      },
-      {
-        step: "In Transit",
-        location: "Chicago Distribution Center",
-        date: "2025-06-03 03:20 PM",
-        verifiedBy: "David Chen",
-        role: "Distribution Manager",
-        status: "Arrived",
-        storageConditions: "Temperature: 20°C, Humidity: 40%"
-      }
-    ]
+    // Backend now provides properly formatted journey data
+    return product.journey || [];
   };
 
   const handleSearch = async (serialNumber) => {
@@ -139,15 +46,17 @@ const TrackProducts = () => {
       const response = await apiClient.get(`/tracking/track/${serialNumber}`);
       const product = response.data;
 
-      // Format the product data with journey
-      const formattedProduct = {
-        ...product,
-        journey: formatJourneyData(product)
-      };
-
-      setSelectedProduct(formattedProduct);
+      // Product data already includes formatted journey from backend
+      setSelectedProduct(product);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to find product. Please check the serial number.");
+      console.error('Error tracking product:', err);
+      if (err.response?.status === 403) {
+        setError("You can only track products from your own batches.");
+      } else if (err.response?.status === 404) {
+        setError("Product not found. Please check the serial number.");
+      } else {
+        setError(err.response?.data?.message || "Failed to find product. Please check the serial number.");
+      }
       setSelectedProduct(null);
     } finally {
       setLoading(false);
@@ -155,17 +64,25 @@ const TrackProducts = () => {
   };
 
   const getStepIcon = (step) => {
-    switch (step.toLowerCase()) {
+    const stepLower = step.toLowerCase();
+    switch (stepLower) {
       case 'manufactured':
+      case 'manufacturing':
         return <Factory className="w-6 h-6" />;
       case 'quality check':
+      case 'quality checked':
         return <CheckCircle className="w-6 h-6" />;
       case 'shipped':
+      case 'dispatched':
         return <Package className="w-6 h-6" />;
       case 'in transit':
+      case 'received':
+      case 'stored':
         return <Truck className="w-6 h-6" />;
       case 'delivered':
         return <Store className="w-6 h-6" />;
+      case 'current status':
+        return <MapPin className="w-6 h-6" />;
       default:
         return <Box className="w-6 h-6" />;
     }
@@ -235,24 +152,79 @@ const TrackProducts = () => {
           {/* Product Info */}
           <Card>
             <div className="p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
-                    {selectedProduct.name}
+                    {selectedProduct.name || selectedProduct.productName}
                   </h2>
                   <div className="mt-2 space-y-1">
                     <p className="text-gray-600">
-                      Serial Number: {selectedProduct.serialNumber}
+                      Serial Number: <span className="font-medium">{selectedProduct.serialNumber}</span>
                     </p>
                     <p className="text-gray-600">
-                      Batch Number: {selectedProduct.batchNumber}
+                      Batch Number: <span className="font-medium">{selectedProduct.batchNumber}</span>
+                    </p>
+                    <p className="text-gray-600">
+                      Manufactured: <span className="font-medium">{new Date(selectedProduct.manufactureDate).toLocaleDateString()}</span>
+                    </p>
+                    <p className="text-gray-600">
+                      Expires: <span className="font-medium">{new Date(selectedProduct.expiryDate).toLocaleDateString()}</span>
                     </p>
                   </div>
                 </div>
-                <div className="px-4 py-2 text-sm text-blue-800 bg-blue-100 rounded-lg">
-                  Current Location: {selectedProduct.currentLocation}
+                <div className="space-y-2">
+                  <div className={`px-4 py-2 text-sm font-medium rounded-lg ${
+                    selectedProduct.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                    selectedProduct.status === 'in-transit' || selectedProduct.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                    selectedProduct.status === 'produced' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    Status: {selectedProduct.status?.charAt(0).toUpperCase() + selectedProduct.status?.slice(1) || 'Unknown'}
+                  </div>
+                  <div className="px-4 py-2 text-sm text-purple-800 bg-purple-100 rounded-lg">
+                    Location: {selectedProduct.currentLocation}
+                  </div>
+                  {selectedProduct.blockchainVerified && (
+                    <div className="px-4 py-2 text-sm text-green-800 bg-green-100 rounded-lg flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      Blockchain Verified
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Batch Details */}
+              {selectedProduct.batchDetails && (
+                <div className="pt-4 border-t">
+                  <h4 className="mb-3 text-lg font-semibold text-gray-900">Batch Information</h4>
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {selectedProduct.batchDetails.quantityProduced}
+                      </div>
+                      <div className="text-sm text-gray-600">Total Produced</div>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">
+                        {selectedProduct.batchDetails.quantityAvailable}
+                      </div>
+                      <div className="text-sm text-gray-600">Available</div>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-600">
+                        {selectedProduct.batchDetails.quantityAssigned}
+                      </div>
+                      <div className="text-sm text-gray-600">Assigned</div>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {selectedProduct.totalShipments || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">Shipments</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -267,13 +239,17 @@ const TrackProducts = () => {
                 <div className="space-y-8">
                   {selectedProduct.journey.map((step, index) => (
                     <div key={index} className="relative flex gap-6">
-                      <div className="relative flex items-center justify-center flex-shrink-0 w-16 h-16 p-4 bg-white border rounded-full shadow-sm">
-                        <div className="text-blue-600">
+                      <div className={`relative flex items-center justify-center flex-shrink-0 w-16 h-16 p-4 border rounded-full shadow-sm ${
+                        step.isCurrentStatus ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                      }`}>
+                        <div className={`${step.isCurrentStatus ? 'text-blue-600' : 'text-blue-600'}`}>
                           {getStepIcon(step.step)}
                         </div>
                       </div>
                       <div className="flex-1">
-                        <div className="p-6 bg-white border shadow-sm rounded-xl">
+                        <div className={`p-6 border shadow-sm rounded-xl ${
+                          step.isCurrentStatus ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                        }`}>
                           <div className="flex flex-wrap items-center justify-between gap-4">
                             <div>
                               <h4 className="text-lg font-semibold text-gray-900">
@@ -283,11 +259,22 @@ const TrackProducts = () => {
                                 <div className="flex items-center text-gray-600">
                                   <MapPin className="w-4 h-4 mr-1" />
                                   {step.location}
+                                  {step.fromLocation && (
+                                    <span className="ml-2 text-gray-500">
+                                      (from {step.fromLocation})
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex items-center text-gray-600">
                                   <Calendar className="w-4 h-4 mr-1" />
-                                  {step.date}
+                                  {new Date(step.date).toLocaleString()}
                                 </div>
+                                {step.quantity && (
+                                  <div className="flex items-center text-gray-600">
+                                    <Package className="w-4 h-4 mr-1" />
+                                    Quantity: {step.quantity}
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="text-right">
@@ -298,21 +285,62 @@ const TrackProducts = () => {
                               <div className="text-sm text-gray-500">
                                 {step.role}
                               </div>
+                              {step.status && (
+                                <div className={`mt-1 px-2 py-1 text-xs rounded-full ${
+                                  step.status === 'Completed' || step.status === 'Delivered' ? 'bg-green-100 text-green-800' :
+                                  step.status === 'In Transit' ? 'bg-blue-100 text-blue-800' :
+                                  step.status === 'Produced' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {step.status}
+                                </div>
+                              )}
                             </div>
                           </div>
-                          {Object.entries(step).map(([key, value]) => {
-                            if (!['step', 'location', 'date', 'verifiedBy', 'role'].includes(key)) {
-                              return (
-                                <div key={key} className="pt-4 mt-4 border-t">
-                                  <div className="text-sm text-gray-600">
-                                    <span className="font-medium">{key.charAt(0).toUpperCase() + key.slice(1)}:</span>{' '}
-                                    {value}
-                                  </div>
-                                </div>
-                              );
-                            }
-                            return null;
-                          })}
+                          
+                          {/* Additional details */}
+                          <div className="grid grid-cols-1 gap-4 pt-4 mt-4 border-t md:grid-cols-2">
+                            {/* Shipping details */}
+                            {(step.carrier || step.trackingId) && (
+                              <div className="space-y-1">
+                                <h6 className="text-sm font-medium text-gray-700">Shipping Details</h6>
+                                {step.carrier && (
+                                  <p className="text-sm text-gray-600">Carrier: {step.carrier}</p>
+                                )}
+                                {step.trackingId && (
+                                  <p className="text-sm text-gray-600">Tracking: {step.trackingId}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Blockchain info */}
+                            {step.txHash && (
+                              <div className="space-y-1">
+                                <h6 className="text-sm font-medium text-gray-700">Blockchain</h6>
+                                <p className="text-sm text-gray-600 font-mono">
+                                  Tx: {step.txHash.substring(0, 12)}...
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Additional remarks */}
+                            {step.remarks && (
+                              <div className="space-y-1 md:col-span-2">
+                                <h6 className="text-sm font-medium text-gray-700">Remarks</h6>
+                                <p className="text-sm text-gray-600">{step.remarks}</p>
+                              </div>
+                            )}
+
+                            {/* Batch info for manufacturing step */}
+                            {step.batchNumber && step.quantityProduced && (
+                              <div className="space-y-1 md:col-span-2">
+                                <h6 className="text-sm font-medium text-gray-700">Batch Details</h6>
+                                <p className="text-sm text-gray-600">
+                                  Batch: {step.batchNumber} | Quantity: {step.quantityProduced}
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

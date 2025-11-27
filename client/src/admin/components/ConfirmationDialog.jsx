@@ -5,7 +5,7 @@ import { XCircle, CheckCircle } from "lucide-react";
 const ConfirmationModal = ({ isOpen, closeModal, onConfirm, message ,color }) => {
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={closeModal}>
+      <Dialog as="div" className="fixed inset-0" style={{ zIndex: 15000 }} onClose={closeModal}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -15,7 +15,7 @@ const ConfirmationModal = ({ isOpen, closeModal, onConfirm, message ,color }) =>
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-40" />
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
         </Transition.Child>
 
         <div className="fixed inset-0 flex items-center justify-center p-4">
@@ -28,18 +28,18 @@ const ConfirmationModal = ({ isOpen, closeModal, onConfirm, message ,color }) =>
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <Dialog.Panel className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 relative">
+            <Dialog.Panel className="relative w-full max-w-md p-6 bg-white border-2 border-gray-200 shadow-2xl rounded-2xl">
               <button
                 onClick={closeModal}
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 transition"
+                className="absolute text-gray-500 transition-colors top-4 right-4 hover:text-gray-900"
               >
                 <XCircle className="w-6 h-6" />
               </button>
 
               <div className="flex flex-col items-center text-center">
-                <CheckCircle className="w-12 h-12 text-yellow-500 mb-4" />
-                <Dialog.Title className="text-xl font-bold mb-2">Confirm Action</Dialog.Title>
-                <p className="text-gray-700 mb-6">{message}</p>
+                <CheckCircle className={`w-12 h-12 mb-4 ${color === "red" ? "text-red-500" : "text-green-500"}`} />
+                <Dialog.Title className="mb-2 text-xl font-bold text-gray-900">Confirm Action</Dialog.Title>
+                <p className="mb-6 text-gray-700">{message}</p>
                 <div className="flex gap-4">
                  <button
   onClick={onConfirm}

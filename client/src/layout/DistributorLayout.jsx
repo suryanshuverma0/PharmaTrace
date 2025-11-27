@@ -2,8 +2,12 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import DistributorSidebar from '../components/distributor/DistributorSidebar';
+import { useModalZIndexFix } from '../hooks/useModalZIndex';
 
 const DistributorLayout = () => {
+  // Apply global modal z-index fixes
+  useModalZIndexFix();
+
   return (
     <div className="flex flex-col h-screen">
       <Navbar />

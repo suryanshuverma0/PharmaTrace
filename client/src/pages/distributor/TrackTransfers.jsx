@@ -42,8 +42,14 @@ const TrackTransfers = () => {
             distributions: [],
             lastUpdated: t.timestamp || new Date().toISOString(),
             manufacturer: t.manufacturer || 'Unknown Manufacturer',
-            environmentalConditions: t.environmentalConditions || null,
-            qualityChecks: []
+            manufacturerAddress: t.manufacturerAddress || null,
+            batchInfo: t.batchInfo || null,
+            qualityChecks: [],
+            stats: {
+              delivered: 0,
+              inTransit: 0,
+              returned: 0
+            }
           };
         }
 
@@ -60,8 +66,9 @@ const TrackTransfers = () => {
           timestamp: t.timestamp,
           transactionHash: t.transactionHash,
           remarks: t.remarks,
-          environmentalConditions: t.environmentalConditions,
-          location: t.location
+          location: t.location,
+          trackingInfo: t.trackingInfo,
+          qualityCheck: t.qualityCheck
         });
 
         // Track quality checks
@@ -156,34 +163,30 @@ const TrackTransfers = () => {
             </button>
           </div>
 
-          <div className="grid gap-4 mb-6 md:grid-cols-3">
+          <div className="grid gap-4 mb-6 md:grid-cols-2">
             <div className="p-4 rounded-lg bg-blue-50">
               <h4 className="font-semibold text-blue-800">Distribution Stats</h4>
               <div className="mt-2 space-y-1">
-                <p>Total Quantity: {batch.total}</p>
-                <p>Delivered: {batch.stats.delivered}</p>
-                <p>In Transit: {batch.stats.inTransit}</p>
-                <p>Remaining: {batch.left}</p>
+                <p><span className="font-medium">Total Quantity:</span> {batch.total}</p>
+                <p><span className="font-medium">Delivered:</span> {batch.stats.delivered}</p>
+                <p><span className="font-medium">In Transit:</span> {batch.stats.inTransit}</p>
+                <p><span className="font-medium">Remaining:</span> {batch.left}</p>
               </div>
             </div>
-            
-            {batch.environmentalConditions && (
-              <div className="p-4 rounded-lg bg-green-50">
-                <h4 className="font-semibold text-green-800">Environmental Conditions</h4>
-                <div className="mt-2 space-y-1">
-                  <p>Temperature: {batch.environmentalConditions.temperature}</p>
-                  <p>Humidity: {batch.environmentalConditions.humidity}</p>
-                  <p>Status: {batch.environmentalConditions.status}</p>
-                </div>
-              </div>
-            )}
 
             <div className="p-4 rounded-lg bg-purple-50">
               <h4 className="font-semibold text-purple-800">Batch Information</h4>
               <div className="mt-2 space-y-1">
-                <p>Product: {batch.product}</p>
-                <p>Manufacturer: {batch.manufacturer}</p>
-                <p>Success Rate: {batch.successRate.toFixed(1)}%</p>
+                <p><span className="font-medium">Product:</span> {batch.product}</p>
+                <p><span className="font-medium">Manufacturer:</span> {batch.manufacturer}</p>
+                {batch.batchInfo && (
+                  <>
+                    <p><span className="font-medium">Dosage:</span> {batch.batchInfo.dosageForm} - {batch.batchInfo.strength}</p>
+                    <p><span className="font-medium">Expiry Date:</span> {batch.batchInfo.expiryDate ? new Date(batch.batchInfo.expiryDate).toLocaleDateString() : 'N/A'}</p>
+                  </>
+                )}
+                <p><span className="font-medium">Success Rate:</span> {batch.successRate.toFixed(1)}%</p>
+                <p><span className="font-medium">Last Updated:</span> {formatDistanceToNow(new Date(batch.lastUpdated))} ago</p>
               </div>
             </div>
           </div>
@@ -221,6 +224,20 @@ const TrackTransfers = () => {
                         )}
                         {dist.remarks && (
                           <p className="mt-1 text-gray-600">{dist.remarks}</p>
+                        )}
+                        {dist.qualityCheck && (
+                          <div className="p-2 mt-2 rounded-md bg-green-50">
+                            <p className="text-sm font-medium text-green-800">Quality Check: {dist.qualityCheck.result}</p>
+                            <p className="text-xs text-green-600">By: {dist.qualityCheck.performedBy}</p>
+                            {dist.qualityCheck.notes && (
+                              <p className="mt-1 text-xs text-green-600">{dist.qualityCheck.notes}</p>
+                            )}
+                          </div>
+                        )}
+                        {dist.transactionHash && (
+                          <p className="mt-1 font-mono text-xs text-blue-600">
+                            TX: {dist.transactionHash.substring(0, 10)}...
+                          </p>
                         )}
                       </div>
                     </div>

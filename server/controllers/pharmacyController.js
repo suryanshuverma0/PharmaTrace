@@ -3,6 +3,7 @@ const Batch = require('../models/Batch');
 const Product = require('../models/Product');
 const Pharmacist = require('../models/Pharmacist');
 const User = require('../models/User');
+const { signer, batchContract, provider } = require("../utils/blockchain");
 
 // Get pharmacy dashboard data
 const getPharmacyDashboard = async (req, res) => {
@@ -387,6 +388,45 @@ const confirmReceipt = async (req, res) => {
 
     // Save the batch with new shipment history
     await batch.save();
+
+    // Store confirmation in blockchain
+    try {
+      const blockchainShipmentData = {
+        batchNumber: batch.batchNumber,
+        timestamp: Math.floor(Date.now() / 1000),
+        from: originalShipment.from || 'Unknown Distributor',
+        to: pharmacist.pharmacyName,
+        fromAddress: originalShipment.fromAddress || '',
+        toAddress: pharmacyAddress,
+        status: 'Received',
+        quantity: actualReceivedQty.toString(),
+        remarks: `Receipt confirmed by ${pharmacist.pharmacyName}. ${qualityResult === 'Pass' ? 'Quality check passed.' : 'Quality issues reported.'} ${quantityDiscrepancy ? `Quantity discrepancy: Expected ${expectedQuantity}, Received ${actualReceivedQty}.` : ''} ${damageReported ? `Damage reported: ${damageDetails}` : ''} Verified by: ${pharmacist.user?.name || 'Pharmacy Staff'}`
+      };
+
+      console.log('=== STORING PHARMACY RECEIPT IN BLOCKCHAIN ===');
+      console.log('Shipment data:', blockchainShipmentData);
+      
+      const tx = await batchContract.addShipmentEntry(
+        blockchainShipmentData.batchNumber,
+        blockchainShipmentData.from,
+        blockchainShipmentData.to,
+        blockchainShipmentData.fromAddress || '0x0000000000000000000000000000000000000000',
+        blockchainShipmentData.toAddress || '0x0000000000000000000000000000000000000000',
+        blockchainShipmentData.status,
+        parseInt(blockchainShipmentData.quantity),
+        blockchainShipmentData.remarks
+      );
+
+      const receipt = await tx.wait();
+      console.log('Blockchain confirmation transaction hash:', receipt.transactionHash);
+      console.log('Block number:', receipt.blockNumber);
+      console.log('=== PHARMACY RECEIPT STORED IN BLOCKCHAIN ===');
+      
+    } catch (blockchainError) {
+      console.error('Failed to store pharmacy receipt in blockchain:', blockchainError);
+      // Continue with the response even if blockchain fails
+      console.log('MongoDB operation completed successfully, blockchain storage failed');
+    }
 
     // Log the confirmation for audit trail
     console.log('=== PHARMACY RECEIPT CONFIRMATION ===');

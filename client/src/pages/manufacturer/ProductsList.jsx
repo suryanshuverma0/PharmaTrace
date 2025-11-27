@@ -21,6 +21,7 @@ import { Select } from '../../components/UI/Select';
 import apiClient from '../../services/api/api';
 import ProductDetailsModal from '../../components/modals/ProductDetailsModal';
 import ProductModal from '../../components/modals/ProductModal';
+import ModalWrapper from '../../components/common/ModalWrapper';
 const ProductsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -306,66 +307,66 @@ const ProductsList = () => {
       </div>
 
       {/* QR Code Modal */}
-      {showQRModal && selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md p-6 bg-white rounded-2xl">
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 mb-4 text-green-500">
-                <QrCode className="w-full h-full" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold text-gray-900">
-                Product QR Code
-              </h3>
+      <ModalWrapper
+        isOpen={showQRModal && selectedProduct}
+        onClose={() => setShowQRModal(false)}
+        size="md"
+        title="Product QR Code"
+      >
+        {selectedProduct && (
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 mb-4 text-green-500">
+              <QrCode className="w-full h-full" />
+            </div>
 
-              <div className="w-full p-4 mb-4 rounded-lg bg-gray-50">
-                <div className="mb-2">
-                  <p className="text-sm text-gray-600">Serial Number</p>
-                  <p className="font-mono text-sm break-all">{selectedProduct.serialNumber}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Digital Fingerprint</p>
-                  <p className="font-mono text-sm break-all">{selectedProduct.fingerprint}</p>
-                </div>
+            <div className="w-full p-4 mb-4 rounded-lg bg-gray-50">
+              <div className="mb-2">
+                <p className="text-sm text-gray-600">Serial Number</p>
+                <p className="font-mono text-sm break-all">{selectedProduct.serialNumber}</p>
               </div>
-
-              <div className="p-4 mb-6 bg-white border rounded-lg">
-                <img
-                  src={selectedProduct.qrCodeUrl}
-                  alt="Product QR Code"
-                  className="w-48 h-48 mx-auto"
-                />
+              <div>
+                <p className="text-sm text-gray-600">Digital Fingerprint</p>
+                <p className="font-mono text-sm break-all">{selectedProduct.fingerprint}</p>
               </div>
+            </div>
 
-              <div className="flex flex-wrap justify-center gap-4">
-                <Button
-                  variant="secondary"
-                  className="flex items-center gap-2"
-                  onClick={() => downloadQRCode(selectedProduct.qrCodeUrl, `QR-${selectedProduct.serialNumber}.png`)}
-                >
-                  <Download className="w-5 h-5" />
-                  Download QR
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="flex items-center gap-2"
-                  onClick={() => window.print()}
-                >
-                  <Printer className="w-5 h-5" />
-                  Print QR
-                </Button>
-              </div>
+            <div className="p-4 mb-6 bg-white border rounded-lg">
+              <img
+                src={selectedProduct.qrCodeUrl}
+                alt="Product QR Code"
+                className="w-48 h-48 mx-auto"
+              />
+            </div>
 
+            <div className="flex flex-wrap justify-center gap-4">
               <Button
-                variant="primary"
-                className="w-full mt-6"
-                onClick={() => setShowQRModal(false)}
+                variant="secondary"
+                className="flex items-center gap-2"
+                onClick={() => downloadQRCode(selectedProduct.qrCodeUrl, `QR-${selectedProduct.serialNumber}.png`)}
               >
-                Close
+                <Download className="w-5 h-5" />
+                Download QR
+              </Button>
+              <Button
+                variant="secondary"
+                className="flex items-center gap-2"
+                onClick={() => window.print()}
+              >
+                <Printer className="w-5 h-5" />
+                Print QR
               </Button>
             </div>
+
+            <Button
+              variant="primary"
+              className="w-full mt-6"
+              onClick={() => setShowQRModal(false)}
+            >
+              Close
+            </Button>
           </div>
-        </div>
-      )}
+        )}
+      </ModalWrapper>
 
       {/* Product Details Modal */}
       {showProductModal && selectedProduct && (

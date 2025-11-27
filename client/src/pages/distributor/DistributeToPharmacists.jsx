@@ -18,9 +18,9 @@ const DistributeBatches = () => {
 
   const [batches, setBatches] = useState([]);
   const [pharmacies, setPharmacies] = useState([]);
-  const [selectedPharmacy, setSelectedPharmacy] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [remarks, setRemarks] = useState('');
+  
+  // Store form data for each batch separately
+  const [batchForms, setBatchForms] = useState({});
 
   // Fetch available batches and pharmacies
   useEffect(() => {
@@ -42,6 +42,17 @@ const DistributeBatches = () => {
           // Filter only batches with remaining quantity > 0
           const availableBatches = batchesRes.data.batches.filter(batch => batch.quantity > 0);
           setBatches(availableBatches);
+          
+          // Initialize form state for each batch
+          const initialForms = {};
+          availableBatches.forEach(batch => {
+            initialForms[batch.batchId] = {
+              selectedPharmacy: '',
+              quantity: '',
+              remarks: ''
+            };
+          });
+          setBatchForms(initialForms);
         }
 
         if (!pharmaciesRes?.pharmacies) {
@@ -67,13 +78,41 @@ const DistributeBatches = () => {
     fetchData();
   }, [user, isAuthenticated]);
 
+  // Helper functions to update form data for specific batch
+  const updateBatchForm = (batchId, field, value) => {
+    setBatchForms(prev => ({
+      ...prev,
+      [batchId]: {
+        ...prev[batchId],
+        [field]: value
+      }
+    }));
+  };
+
+  const getBatchForm = (batchId) => {
+    return batchForms[batchId] || { selectedPharmacy: '', quantity: '', remarks: '' };
+  };
+
+  const resetBatchForm = (batchId) => {
+    setBatchForms(prev => ({
+      ...prev,
+      [batchId]: {
+        selectedPharmacy: '',
+        quantity: '',
+        remarks: ''
+      }
+    }));
+  };
+
   const handleDistribute = async (batch) => {
-    if (!selectedPharmacy || !quantity || isNaN(quantity) || quantity <= 0) {
+    const form = getBatchForm(batch.batchId);
+    
+    if (!form.selectedPharmacy || !form.quantity || isNaN(form.quantity) || form.quantity <= 0) {
       toast.error('Please select pharmacy and enter valid quantity');
       return;
     }
 
-    if (quantity > batch.quantity) {
+    if (form.quantity > batch.quantity) {
       toast.error(`Only ${batch.quantity} units available`);
       return;
     }
@@ -82,15 +121,15 @@ const DistributeBatches = () => {
       setDistributing(true);
       
       // Find selected pharmacy details
-      const selectedPharmacyDetails = pharmacies.find(p => p.id === selectedPharmacy);
-      const pharmacyAddress = selectedPharmacyDetails?.name || selectedPharmacy;
+      const selectedPharmacyDetails = pharmacies.find(p => p.id === form.selectedPharmacy);
+      const pharmacyAddress = selectedPharmacyDetails?.name || form.selectedPharmacy;
       
       // Use the consistent distributor batch endpoint
       await apiClient.post('/distributer/distribute-batch', {
         batchNumber: batch.batchId, // Use batchId as batchNumber
         pharmacyAddress: pharmacyAddress,
-        quantity: parseInt(quantity),
-        remarks: remarks || `Distribution to ${selectedPharmacyDetails?.name || 'pharmacy'}`
+        quantity: parseInt(form.quantity),
+        remarks: form.remarks || `Distribution to ${selectedPharmacyDetails?.name || 'pharmacy'}`
       });
 
       toast.success('Successfully distributed to pharmacy');
@@ -100,12 +139,21 @@ const DistributeBatches = () => {
       if (response?.data?.batches) {
         const availableBatches = response.data.batches.filter(batch => batch.quantity > 0);
         setBatches(availableBatches);
+        
+        // Update form state for refreshed batches
+        const updatedForms = {};
+        availableBatches.forEach(batch => {
+          updatedForms[batch.batchId] = batchForms[batch.batchId] || {
+            selectedPharmacy: '',
+            quantity: '',
+            remarks: ''
+          };
+        });
+        setBatchForms(updatedForms);
       }
 
-      // Reset form
-      setQuantity('');
-      setSelectedPharmacy('');
-      setRemarks('');
+      // Reset form for this specific batch
+      resetBatchForm(batch.batchId);
       
     } catch (err) {
       console.error('Distribution error:', err);
@@ -138,87 +186,91 @@ const DistributeBatches = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {batches.map((batch) => (
-          <Card key={batch.batchId} className="p-4">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold">{batch.product}</h3>
-                <p className="text-sm text-gray-600">Batch: {batch.batchId}</p>
-              </div>
-              <div className="px-3 py-1 text-sm text-blue-700 rounded-full bg-blue-50">
-                {batch.quantity} available
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-4 text-sm text-gray-600">
-              <div>
-                <p>Manufacturing Date:</p>
-                <p className="font-medium text-gray-900">
-                  {format(new Date(batch.manufactureDate), 'MMM dd, yyyy')}
-                </p>
-              </div>
-              <div>
-                <p>Expiry Date:</p>
-                <p className="font-medium text-gray-900">
-                  {format(new Date(batch.expiryDate), 'MMM dd, yyyy')}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+        {batches.map((batch) => {
+          const form = getBatchForm(batch.batchId);
+          
+          return (
+            <Card key={batch.batchId} className="p-4">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <label className="block mb-1 text-sm font-medium">Select Pharmacy</label>
-                  <Select
-                    options={pharmacies.map(p => ({
-                      value: p.id,
-                      label: `${p.name} - ${p.location}`
-                    }))}
-                    value={selectedPharmacy}
-                    onChange={setSelectedPharmacy}
-                    placeholder="Choose pharmacy..."
-                  />
+                  <h3 className="text-lg font-semibold">{batch.product}</h3>
+                  <p className="text-sm text-gray-600">Batch: {batch.batchId}</p>
+                </div>
+                <div className="px-3 py-1 text-sm text-blue-700 rounded-full bg-blue-50">
+                  {batch.quantity} available
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4 text-sm text-gray-600">
+                <div>
+                  <p>Manufacturing Date:</p>
+                  <p className="font-medium text-gray-900">
+                    {format(new Date(batch.manufactureDate), 'MMM dd, yyyy')}
+                  </p>
                 </div>
                 <div>
-                  <label className="block mb-1 text-sm font-medium">Quantity</label>
+                  <p>Expiry Date:</p>
+                  <p className="font-medium text-gray-900">
+                    {format(new Date(batch.expiryDate), 'MMM dd, yyyy')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Select Pharmacy</label>
+                    <Select
+                      options={pharmacies.map(p => ({
+                        value: p.id,
+                        label: `${p.name} - ${p.location}`
+                      }))}
+                      value={form.selectedPharmacy}
+                      onChange={(value) => updateBatchForm(batch.batchId, 'selectedPharmacy', value)}
+                      placeholder="Choose pharmacy..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Quantity</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max={batch.quantity}
+                      value={form.quantity}
+                      onChange={(e) => updateBatchForm(batch.batchId, 'quantity', e.target.value)}
+                      placeholder="Enter quantity"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-sm font-medium">Remarks (Optional)</label>
                   <Input
-                    type="number"
-                    min="1"
-                    max={batch.quantity}
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    placeholder="Enter quantity"
+                    value={form.remarks}
+                    onChange={(e) => updateBatchForm(batch.batchId, 'remarks', e.target.value)}
+                    placeholder="Add any notes..."
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block mb-1 text-sm font-medium">Remarks (Optional)</label>
-                <Input
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  placeholder="Add any notes..."
-                />
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  onClick={() => handleDistribute(batch)}
+                  disabled={distributing}
+                >
+                  {distributing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Distribute Batch'
+                  )}
+                </Button>
               </div>
-
-              <Button
-                variant="primary"
-                className="w-full"
-                onClick={() => handleDistribute(batch)}
-                disabled={distributing}
-              >
-                {distributing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  'Distribute Batch'
-                )}
-              </Button>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
 
         {batches.length === 0 && (
           <div className="col-span-2 py-8 text-center text-gray-500">

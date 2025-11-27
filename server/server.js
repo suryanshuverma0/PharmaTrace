@@ -1,4 +1,9 @@
 const dotenv = require("dotenv");
+const path = require("path");
+
+// Load environment variables first
+dotenv.config({ path: path.join(__dirname, '.env') });
+
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -12,7 +17,6 @@ const verificationRoutes = require("./routes/verificationRoutes");
 
 const connect_db = require("./config/db");
 
-dotenv.config();
 connect_db();
 
 const app = express();
@@ -30,6 +34,9 @@ app.use("/api/tracking", require("./routes/trackingRoutes"));
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/distribution", require("./routes/distributionRoutes"));
 app.use("/api/verification", verificationRoutes);
+app.use("/api/blockchain", require("./routes/blockchainVerificationRoutes"));
+
+
 
 // Admin routes
 app.use(
@@ -66,7 +73,6 @@ app.get("/api/tracking/check", async (req, res) => {
 
 // Ensure uploads directory exists
 const fs = require("fs");
-const path = require("path");
 const uploadsDir = path.join(__dirname, "public", "uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -149,5 +155,4 @@ const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log("🔥 SERVER WITH DEBUG LOGS STARTED!");
 });

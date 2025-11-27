@@ -28,42 +28,121 @@ const trackProduct = async (req, res) => {
       });
     }
 
-    // Get the batch information
-    const batch = await Batch.findById(product.batchId);
+    // Get the batch information with populated shipment history
+    const batch = await Batch.findById(product.batchId)
+      .populate('shipmentHistory.verifiedBy.user', 'companyName address licenseNumber');
+
+    if (!batch) {
+      return res.status(404).json({
+        message: 'Batch information not found'
+      });
+    }
+
+    // Get current location from latest shipment history
+    const currentLocation = batch.shipmentHistory.length > 0 
+      ? batch.shipmentHistory[batch.shipmentHistory.length - 1].to 
+      : product.manufacturerId.address;
+
+    // Format shipment history for journey tracking
+    const journey = [];
+
+    // Add manufacturing step (always first)
+    journey.push({
+      step: "Manufactured",
+      location: batch.productionLocation || product.manufacturerId.address,
+      date: batch.manufactureDate,
+      verifiedBy: product.manufacturerId.companyName,
+      role: "Manufacturer",
+      temperature: batch.storageConditions || product.storageCondition || "2°C to 8°C",
+      humidity: "45% to 65%",
+      status: "Completed",
+      batchNumber: batch.batchNumber,
+      quantityProduced: batch.quantityProduced
+    });
+
+    // Add shipment history from batch
+    if (batch.shipmentHistory && batch.shipmentHistory.length > 0) {
+      batch.shipmentHistory.forEach((shipment, index) => {
+        journey.push({
+          step: getShipmentStepName(shipment.status, index),
+          location: shipment.to,
+          date: shipment.timestamp,
+          verifiedBy: shipment.actor?.name || shipment.verifiedBy?.user?.companyName || 'System',
+          role: shipment.actor?.type || shipment.verifiedBy?.role || 'Logistics',
+          fromLocation: shipment.from,
+          quantity: shipment.quantity,
+          status: shipment.status,
+          txHash: shipment.txHash,
+          carrier: shipment.actor?.name,
+          trackingId: shipment.txHash ? shipment.txHash.substring(0, 12) + '...' : undefined,
+          // Environmental conditions
+          ...(shipment.environmentalConditions && {
+            temperature: shipment.environmentalConditions.temperature,
+            humidity: shipment.environmentalConditions.humidity,
+            environmentalStatus: shipment.environmentalConditions.status
+          }),
+          // Quality check info
+          ...(shipment.qualityCheck && {
+            qualityCheckBy: shipment.qualityCheck.performedBy,
+            qualityResult: shipment.qualityCheck.result,
+            qualityNotes: shipment.qualityCheck.notes,
+            qualityDate: shipment.qualityCheck.date
+          }),
+          remarks: shipment.remarks
+        });
+      });
+    }
+
+    // Add current status
+    const currentStatus = batch.shipmentStatus || 'Produced';
+    if (currentStatus !== 'Produced') {
+      journey.push({
+        step: "Current Status",
+        location: currentLocation,
+        date: new Date(),
+        verifiedBy: "System",
+        role: "Status Update",
+        status: currentStatus,
+        isCurrentStatus: true
+      });
+    }
 
     // Format product data with all necessary information
     const productData = {
+      name: product.productName,
       productName: product.productName,
       serialNumber: product.serialNumber,
       batchNumber: batch.batchNumber,
       manufactureDate: batch.manufactureDate,
       expiryDate: batch.expiryDate,
-      status: product.status || 'manufactured',
+      status: currentStatus.toLowerCase().replace(' ', '-'),
       manufacturer: product.manufacturerId.companyName,
-      productionLocation: product.manufacturerId.address,
+      productionLocation: batch.productionLocation || product.manufacturerId.address,
+      currentLocation: currentLocation,
       manufacturerDetails: {
         licenseNumber: product.manufacturerId.licenseNumber,
         email: product.manufacturerId.email,
-        phone: product.manufacturerId.phoneNumber
+        phone: product.manufacturerId.phoneNumber,
+        address: product.manufacturerId.address
       },
-      storageTemp: product.storageCondition || '2°C to 8°C',
+      batchDetails: {
+        quantityProduced: batch.quantityProduced,
+        quantityAvailable: batch.quantityAvailable,
+        quantityAssigned: batch.quantityAssigned,
+        shipmentStatus: batch.shipmentStatus,
+        storageConditions: batch.storageConditions
+      },
+      storageTemp: batch.storageConditions || product.storageCondition || '2°C to 8°C',
       humidity: '45% to 65%',
-      // Add shipping details if available
-      ...(product.shipping && {
-        shipmentDate: product.shipping.date,
-        shipmentOrigin: product.shipping.origin,
-        carrier: product.shipping.carrier,
-        trackingId: product.shipping.trackingId
-      }),
-      // Add quality check details if available
-      ...(product.qualityCheck && {
-        qualityCheckDate: product.qualityCheck.date,
-        qualityCheckBy: product.qualityCheck.verifiedBy,
-        qualityNotes: product.qualityCheck.notes
-      }),
-      lastVerifiedBy: product.lastVerifiedBy,
-      currentLocation: product.currentLocation || product.manufacturerId.address,
-      fingerprint: product.fingerprint
+      journey: journey,
+      fingerprint: product.fingerprint,
+      blockchainVerified: batch.blockchainVerified,
+      txHash: batch.txHash,
+      blockNumber: batch.blockNumber,
+      lastVerifiedBy: product.lastVerifiedBy || 'System',
+      totalShipments: batch.shipmentHistory?.length || 0,
+      createdAt: product.createdAt,
+      updatedAt: batch.updatedAt
     };
 
     res.json(productData);
@@ -73,6 +152,28 @@ const trackProduct = async (req, res) => {
       message: 'Failed to track product',
       error: error.message
     });
+  }
+};
+
+// Helper function to determine shipment step name
+const getShipmentStepName = (status, index) => {
+  switch (status.toLowerCase()) {
+    case 'in transit':
+      return 'In Transit';
+    case 'delivered':
+      return 'Delivered';
+    case 'shipped':
+      return 'Shipped';
+    case 'received':
+      return 'Received';
+    case 'quality checked':
+      return 'Quality Check';
+    case 'stored':
+      return 'Stored';
+    case 'dispatched':
+      return 'Dispatched';
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1);
   }
 };
 

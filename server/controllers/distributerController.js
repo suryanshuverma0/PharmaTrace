@@ -3,6 +3,9 @@ const Distributor = require('../models/Distributor');
 const Product = require('../models/Product');
 const Batch = require('../models/Batch');
 const User = require('../models/User');
+const Manufacturer = require('../models/Manufacturer');
+const mongoose = require('mongoose');
+const { signer, batchContract, provider } = require("../utils/blockchain");
 
 // Fetch products assigned to distributor (filter by distributor address if provided)
 const getDistributorProducts = async (req, res) => {
@@ -63,14 +66,25 @@ const getDistributorBatches = async (req, res) => {
           { shipmentHistory: { $elemMatch: { toAddress: distributorAddress } } },
           { shipmentHistory: { $elemMatch: { to: distributorCompanyName } } }
         ]
-      });
+      }).populate('manufacturerId', 'name address');
     } else {
-      batches = await Batch.find();
+      batches = await Batch.find().populate('manufacturerId', 'name address');
     }
     
     // Map to frontend format
     const formatted = await Promise.all(batches.map(async b => {
       const product = await Product.findOne({ batchId: b._id });
+
+      // Get manufacturer company name from Manufacturer model
+      let manufacturerName = 'Unknown Manufacturer';
+      if (b.manufacturerId) {
+        const manufacturerDoc = await Manufacturer.findOne({ user: b.manufacturerId._id });
+        if (manufacturerDoc && manufacturerDoc.companyName) {
+          manufacturerName = manufacturerDoc.companyName;
+        } else if (b.manufacturerId.name) {
+          manufacturerName = b.manufacturerId.name;
+        }
+      }
 
       // Sum quantities assigned TO this distributor (manufacturer -> distributor)
       const assignedToDistributor = (b.shipmentHistory || []).reduce((sum, entry) => {
@@ -125,7 +139,9 @@ const getDistributorBatches = async (req, res) => {
         totalAssignedToDistributor: assignedToDistributor,
         shippedOutByDistributor,
         status: b.shipmentStatus,
-        manufacturer: b.manufacturerId ? b.manufacturerId.toString() : '',
+        manufacturer: b.manufacturerId ? b.manufacturerId._id.toString() : '',
+        manufacturerName: manufacturerName,
+        manufacturerAddress: b.manufacturerId ? b.manufacturerId.address : '',
         serialNumber: product ? product.serialNumber : '',
         shipmentHistory: b.shipmentHistory || []
       };
@@ -325,6 +341,69 @@ const getDistributorTransfers = async (req, res) => {
       const productDoc = await Product.findOne({ batchId: batch._id });
       const productName = productDoc ? productDoc.productName : (batch.dosageForm + ' ' + batch.strength);
       
+      // Get manufacturer details - try multiple approaches
+      let manufacturerName = 'Unknown Manufacturer';
+      let manufacturerAddress = null;
+      
+      // Debug logging
+      console.log('Batch debug info:', {
+        batchId: batch.batchNumber,
+        manufacturerId: batch.manufacturerId,
+        manufacturer: batch.manufacturer,
+        shipmentHistoryLength: batch.shipmentHistory?.length,
+        firstShipment: batch.shipmentHistory?.[0]
+      });
+      
+      // First, try to get manufacturer from batch.manufacturerId (which refs User model)
+      if (batch.manufacturerId) {
+        // manufacturerId refs User model, so get user first
+        const manufacturerUser = await User.findById(batch.manufacturerId);
+        if (manufacturerUser) {
+          // Then find the manufacturer profile for this user
+          const manufacturer = await Manufacturer.findOne({ user: batch.manufacturerId });
+          if (manufacturer) {
+            manufacturerName = manufacturer.companyName || manufacturerUser.companyName || 'Unknown Manufacturer';
+            manufacturerAddress = manufacturerUser.address;
+            console.log('Found manufacturer from ID via User+Manufacturer:', manufacturerName);
+          } else {
+            // Fallback to user's company name if manufacturer profile doesn't exist
+            manufacturerName = manufacturerUser.companyName || manufacturerUser.fullName || 'Unknown Manufacturer';
+            manufacturerAddress = manufacturerUser.address;
+            console.log('Found manufacturer from User only:', manufacturerName);
+          }
+        }
+      }
+      
+      // If still unknown, try to get from batch.manufacturer field
+      if (manufacturerName === 'Unknown Manufacturer' && batch.manufacturer) {
+        manufacturerName = batch.manufacturer;
+        console.log('Found manufacturer from field:', manufacturerName);
+      }
+      
+      // If still unknown, check shipment history for manufacturer info
+      if (manufacturerName === 'Unknown Manufacturer') {
+        const producedEntry = batch.shipmentHistory?.find(entry => entry.status === 'Produced');
+        if (producedEntry) {
+          manufacturerName = producedEntry.from || producedEntry.fromAddress || manufacturerName;
+          manufacturerAddress = producedEntry.fromAddress;
+          console.log('Found manufacturer from shipment history:', manufacturerName);
+        }
+      }
+      
+      // Last resort: try to find manufacturer name from the shipment history "from" field
+      if (manufacturerName === 'Unknown Manufacturer' && batch.shipmentHistory?.length > 0) {
+        // Look for any shipment that has a "from" field that's not a wallet address
+        for (const shipment of batch.shipmentHistory) {
+          if (shipment.from && !shipment.from.startsWith('0x') && shipment.from.length > 10) {
+            manufacturerName = shipment.from;
+            console.log('Found manufacturer from any shipment:', manufacturerName);
+            break;
+          }
+        }
+      }
+      
+      console.log('Final manufacturer name:', manufacturerName);
+      
       // Only include transfers where this distributor is the sender
       for (const shipment of batch.shipmentHistory) {
         const isFromDistributor = shipment.from === distributorAddress || 
@@ -349,8 +428,26 @@ const getDistributorTransfers = async (req, res) => {
             timestamp: shipment.timestamp,
             remarks: shipment.remarks,
             transactionHash: shipment.transactionHash,
-            environmentalConditions: shipment.environmentalConditions,
-            qualityCheck: shipment.qualityCheck
+            manufacturer: manufacturerName,
+            manufacturerAddress: manufacturerAddress,
+            // Remove environmentalConditions as requested
+            // environmentalConditions: shipment.environmentalConditions,
+            qualityCheck: shipment.qualityCheck,
+            // Add additional useful information
+            batchInfo: {
+              productionDate: batch.productionDate,
+              expiryDate: batch.expiryDate,
+              dosageForm: batch.dosageForm,
+              strength: batch.strength,
+              batchNumber: batch.batchNumber,
+              totalQuantity: batch.quantity
+            },
+            // Add shipment tracking information
+            trackingInfo: {
+              transactionHash: shipment.transactionHash,
+              timestamp: shipment.timestamp,
+              shipmentId: shipment._id
+            }
           });
         }
       }
@@ -430,8 +527,55 @@ const receiveProduct = async (req, res) => {
       batch.shipmentHistory.push(newShipmentEntry);
       batch.shipmentStatus = 'Delivered';
       await batch.save();
+
+      // Store shipment entry in blockchain as well
+      try {
+        console.log("📦 Adding receive acknowledgment to blockchain:", {
+          batchNumber: batch.batchNumber,
+          from: newShipmentEntry.from,
+          to: newShipmentEntry.to,
+          fromAddress: newShipmentEntry.fromAddress || '',
+          toAddress: newShipmentEntry.toAddress || '',
+          status: newShipmentEntry.status,
+          quantity: parseInt(newShipmentEntry.quantity),
+          remarks: newShipmentEntry.remarks || ''
+        });
+
+        const blockchainShipmentTx = await batchContract.addShipmentEntry(
+          batch.batchNumber,
+          newShipmentEntry.from,
+          newShipmentEntry.to,
+          newShipmentEntry.fromAddress || '0x0000000000000000000000000000000000000000',
+          newShipmentEntry.toAddress || '0x0000000000000000000000000000000000000000',
+          newShipmentEntry.status,
+          parseInt(newShipmentEntry.quantity),
+          newShipmentEntry.remarks || ''
+        );
+
+        console.log("Blockchain receive acknowledgment transaction sent, waiting for confirmation...");
+        const shipmentReceipt = await blockchainShipmentTx.wait();
+
+        if (shipmentReceipt.status !== 1) {
+          throw new Error("Blockchain receive acknowledgment transaction failed");
+        }
+
+        console.log("✅ Blockchain receive acknowledgment confirmed:", shipmentReceipt.hash);
+        console.log("📋 Gas used:", shipmentReceipt.gasUsed.toString());
+
+        // Update the MongoDB shipment entry with blockchain transaction details
+        const lastShipmentIndex = batch.shipmentHistory.length - 1;
+        batch.shipmentHistory[lastShipmentIndex].txHash = shipmentReceipt.hash;
+        batch.shipmentHistory[lastShipmentIndex].blockNumber = shipmentReceipt.blockNumber;
+        await batch.save();
+
+        console.log("✅ Shipment entry with blockchain transaction details saved to MongoDB");
+
+      } catch (blockchainError) {
+        console.error("❌ Blockchain receive acknowledgment failed:", blockchainError);
+        // Continue execution even if blockchain fails - MongoDB already updated
+      }
     }
-    
+
     res.json({ message: 'Product received successfully' });
   } catch (error) {
     console.error('Error in receiveProduct:', error);
@@ -492,6 +636,12 @@ const shipProduct = async (req, res) => {
       }
     };
     
+    // Get the batch for blockchain storage
+    const batch = await Batch.findById(product.batchId);
+    if (!batch) {
+      return res.status(404).json({ message: 'Batch not found' });
+    }
+
     await Batch.updateOne(
       { _id: product.batchId },
       { 
@@ -499,6 +649,59 @@ const shipProduct = async (req, res) => {
         $set: { shipmentStatus: 'In Transit' } 
       }
     );
+
+    // Store shipment entry in blockchain as well
+    try {
+      console.log("📦 Adding shipment to pharmacy to blockchain:", {
+        batchNumber: batch.batchNumber,
+        from: newShipmentEntry.from,
+        to: newShipmentEntry.to,
+        fromAddress: newShipmentEntry.fromAddress || '',
+        toAddress: newShipmentEntry.toAddress || '',
+        status: newShipmentEntry.status,
+        quantity: parseInt(newShipmentEntry.quantity),
+        remarks: newShipmentEntry.remarks || ''
+      });
+
+      const blockchainShipmentTx = await batchContract.addShipmentEntry(
+        batch.batchNumber,
+        newShipmentEntry.from,
+        newShipmentEntry.to,
+        newShipmentEntry.fromAddress || '0x0000000000000000000000000000000000000000',
+        newShipmentEntry.toAddress || '0x0000000000000000000000000000000000000000',
+        newShipmentEntry.status,
+        parseInt(newShipmentEntry.quantity),
+        newShipmentEntry.remarks || ''
+      );
+
+      console.log("Blockchain shipment transaction sent, waiting for confirmation...");
+      const shipmentReceipt = await blockchainShipmentTx.wait();
+
+      if (shipmentReceipt.status !== 1) {
+        throw new Error("Blockchain shipment transaction failed");
+      }
+
+      console.log("✅ Blockchain shipment transaction confirmed:", shipmentReceipt.hash);
+      console.log("📋 Gas used:", shipmentReceipt.gasUsed.toString());
+
+      // Update the MongoDB shipment entry with blockchain transaction details
+      await Batch.updateOne(
+        { _id: product.batchId, "shipmentHistory.timestamp": newShipmentEntry.timestamp },
+        { 
+          $set: { 
+            "shipmentHistory.$.txHash": shipmentReceipt.hash,
+            "shipmentHistory.$.blockNumber": shipmentReceipt.blockNumber
+          }
+        }
+      );
+
+      console.log("✅ Shipment entry with blockchain transaction details saved to MongoDB");
+
+    } catch (blockchainError) {
+      console.error("❌ Blockchain shipment failed:", blockchainError);
+      // Continue execution even if blockchain fails - MongoDB already updated
+    }
+
     res.json({ message: 'Product shipped successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to ship product', error: error.message });
@@ -532,6 +735,40 @@ const distributeBatchToPharmacy = async (req, res) => {
     const distributorProfile = await Distributor.findOne({ user: req.user.userId }).lean();
     const distributorName = distributorProfile ? distributorProfile.companyName : 'Unknown Distributor';
     const distributorLocation = distributorProfile ? distributorProfile.warehouseAddress : '';
+
+    // Determine pharmacy name and address - handle both string names and addresses
+    let pharmacyName = pharmacyAddress;
+    let pharmacyEthAddress = '';
+    
+    // Check if pharmacyAddress is actually a pharmacy name, try to find the actual address
+    if (pharmacyAddress && !pharmacyAddress.startsWith('0x')) {
+      // It's a pharmacy name, try to find the actual address
+      const pharmacyUser = await User.findOne({ 
+        $or: [
+          { name: { $regex: new RegExp(pharmacyAddress, 'i') } },
+          { address: pharmacyAddress }
+        ]
+      });
+      
+      if (pharmacyUser && pharmacyUser.address && pharmacyUser.address.startsWith('0x')) {
+        pharmacyEthAddress = pharmacyUser.address;
+        pharmacyName = pharmacyUser.name || pharmacyAddress;
+      } else {
+        // Use a placeholder address for blockchain storage if no valid address found
+        pharmacyEthAddress = '0x0000000000000000000000000000000000000000';
+        pharmacyName = pharmacyAddress;
+      }
+    } else if (pharmacyAddress && pharmacyAddress.startsWith('0x')) {
+      // It's already an Ethereum address
+      pharmacyEthAddress = pharmacyAddress;
+      // Try to find the pharmacy name
+      const pharmacyUser = await User.findOne({ address: pharmacyAddress });
+      pharmacyName = pharmacyUser ? pharmacyUser.name : pharmacyAddress;
+    } else {
+      // Invalid format, use placeholder
+      pharmacyEthAddress = '0x0000000000000000000000000000000000000000';
+      pharmacyName = pharmacyAddress || 'Unknown Pharmacy';
+    }
 
     // Compute distributor holdings
     const assignedToDistributor = (batch.shipmentHistory || []).reduce((sum, entry) => {
@@ -578,8 +815,8 @@ const distributeBatchToPharmacy = async (req, res) => {
       timestamp: new Date(),
       from: distributorName,
       fromAddress: distributorAddress,
-      to: pharmacyAddress,
-      toAddress: pharmacyAddress,
+      to: pharmacyName,
+      toAddress: pharmacyEthAddress,
       status: 'In Transit',
       quantity: qty.toString(),
       remarks: remarks || 'Distribution to pharmacy',
@@ -604,6 +841,53 @@ const distributeBatchToPharmacy = async (req, res) => {
     batch.shipmentHistory.push(newShipmentEntry);
     batch.shipmentStatus = 'In Transit';
     await batch.save();
+
+    // Store shipment entry in blockchain as well
+    try {
+      console.log("📦 Adding batch distribution to blockchain:", {
+        batchNumber: batch.batchNumber,
+        from: newShipmentEntry.from,
+        to: newShipmentEntry.to,
+        fromAddress: newShipmentEntry.fromAddress || '',
+        toAddress: newShipmentEntry.toAddress || '',
+        status: newShipmentEntry.status,
+        quantity: parseInt(newShipmentEntry.quantity),
+        remarks: newShipmentEntry.remarks || ''
+      });
+
+      const blockchainShipmentTx = await batchContract.addShipmentEntry(
+        batch.batchNumber,
+        newShipmentEntry.from,
+        newShipmentEntry.to,
+        newShipmentEntry.fromAddress || '0x0000000000000000000000000000000000000000',
+        newShipmentEntry.toAddress || '0x0000000000000000000000000000000000000000',
+        newShipmentEntry.status,
+        parseInt(newShipmentEntry.quantity),
+        newShipmentEntry.remarks || ''
+      );
+
+      console.log("Blockchain batch distribution transaction sent, waiting for confirmation...");
+      const shipmentReceipt = await blockchainShipmentTx.wait();
+
+      if (shipmentReceipt.status !== 1) {
+        throw new Error("Blockchain batch distribution transaction failed");
+      }
+
+      console.log("✅ Blockchain batch distribution transaction confirmed:", shipmentReceipt.hash);
+      console.log("📋 Gas used:", shipmentReceipt.gasUsed.toString());
+
+      // Update the MongoDB shipment entry with blockchain transaction details
+      const lastShipmentIndex = batch.shipmentHistory.length - 1;
+      batch.shipmentHistory[lastShipmentIndex].txHash = shipmentReceipt.hash;
+      batch.shipmentHistory[lastShipmentIndex].blockNumber = shipmentReceipt.blockNumber;
+      await batch.save();
+
+      console.log("✅ Batch distribution entry with blockchain transaction details saved to MongoDB");
+
+    } catch (blockchainError) {
+      console.error("❌ Blockchain batch distribution failed:", blockchainError);
+      // Continue execution even if blockchain fails - MongoDB already updated
+    }
 
     res.json({
       message: 'Distribution recorded',

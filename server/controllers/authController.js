@@ -44,10 +44,29 @@ const registerUser = async (req, res, next) => {
     );
     console.log("=== Registration Request End ===");
 
+    // Handle file upload errors
+    if (req.fileValidationError) {
+      console.error("File validation error:", req.fileValidationError);
+      return res.status(400).json({ 
+        success: false, 
+        message: "File upload error", 
+        error: req.fileValidationError 
+      });
+    }
+
     // License document comes from multer + Cloudinary
-    const licenseDocument =
-      req.file?.path || req.file?.filename || req.file?.secure_url || null;
+    const licenseDocument = req.file?.secure_url || req.file?.path || req.file?.filename || null;
     console.log("License Document URL:", licenseDocument);
+    
+    // Log cloudinary file details if available
+    if (req.file) {
+      console.log("Cloudinary upload details:", {
+        secure_url: req.file.secure_url,
+        public_id: req.file.public_id,
+        format: req.file.format,
+        bytes: req.file.bytes
+      });
+    }
 
     // Parse user data from body
     const {

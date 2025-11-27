@@ -26,8 +26,20 @@ export const formatLocationDisplay = (location) => {
   if (location.city) parts.push(location.city);
   if (location.country) parts.push(location.country);
   
-  if (parts.length === 0 && location.latitude && location.longitude) {
-    return formatCoordinates(location.latitude, location.longitude);
+  // If no city/country but we have coordinates
+  if (parts.length === 0 && (location.latitude || location.coordinates?.latitude)) {
+    const lat = location.latitude || location.coordinates?.latitude;
+    const lng = location.longitude || location.coordinates?.longitude;
+    
+    if (lat && lng) {
+      // Known locations based on coordinates
+      if (lat >= 27 && lat <= 29 && lng >= 83 && lng <= 89) {
+        return 'Kathmandu, Nepal';
+      }
+      // Add more known coordinate ranges as needed
+      
+      return formatCoordinates(lat, lng);
+    }
   }
   
   return parts.length > 0 ? parts.join(', ') : 'Unknown Location';
@@ -149,17 +161,42 @@ export const generateLocationSummary = (locations) => {
 };
 
 /**
- * Mock reverse geocoding (in real app, use Google Maps API or similar)
+ * Reverse geocoding using OpenStreetMap Nominatim API (free)
  */
 export const reverseGeocode = async (latitude, longitude) => {
-  // This is a mock implementation
-  // In production, you would call a real geocoding service
-  
   try {
-    // Mock delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1&zoom=10&accept-language=en`,
+      {
+        headers: {
+          'User-Agent': 'PharmaTrace/1.0'
+        }
+      }
+    );
     
-    // Mock response based on coordinates
+    if (!response.ok) {
+      throw new Error('Geocoding service unavailable');
+    }
+    
+    const data = await response.json();
+    
+    if (data && data.address) {
+      const address = data.address;
+      const city = address.city || address.town || address.village || address.hamlet || 
+                   address.municipality || address.district || address.county;
+      const country = address.country;
+      const region = address.state || address.province || address.region;
+      
+      return {
+        country: country || 'Unknown',
+        city: city || 'Unknown',
+        region: region || 'Unknown',
+        formatted: city && country ? `${city}, ${country}` : formatCoordinates(latitude, longitude),
+        fullAddress: data.display_name
+      };
+    }
+    
+    // Fallback to mock data for known coordinates
     if (latitude >= 27 && latitude <= 29 && longitude >= 83 && longitude <= 89) {
       return {
         country: 'Nepal',
@@ -175,11 +212,23 @@ export const reverseGeocode = async (latitude, longitude) => {
       region: 'Unknown',
       formatted: formatCoordinates(latitude, longitude)
     };
+    
   } catch (error) {
     console.error('Reverse geocoding error:', error);
+    
+    // Fallback to mock data for known coordinates
+    if (latitude >= 27 && latitude <= 29 && longitude >= 83 && longitude <= 89) {
+      return {
+        country: 'Nepal',
+        city: 'Kathmandu',  
+        region: 'Bagmati Province',
+        formatted: 'Kathmandu, Nepal'
+      };
+    }
+    
     return {
       country: 'Unknown',
-      city: 'Unknown', 
+      city: 'Unknown',
       region: 'Unknown',
       formatted: formatCoordinates(latitude, longitude)
     };

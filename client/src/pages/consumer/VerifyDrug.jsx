@@ -66,7 +66,7 @@ const VerifyDrug = () => {
   const handleScanResult = (serialNum, rawData) => {
     console.log('Scanned serial number:', serialNum);
     setSerialNumber(serialNum);
-    setVerificationMethod('manual');
+    setVerificationMethod('qr');
     performVerification(serialNum);
   };
 
@@ -83,17 +83,9 @@ const VerifyDrug = () => {
     checkLocationPermission();
 
     try {
-      // Import our enhanced verification API with location tracking
-      const { default: enhancedVerificationAPI } = await import('../../services/verificationAPI');
-      
-      // Determine tracking method based on verification method
-      let trackingMethod = 'manual_verification';
-      if (verificationMethod === 'qr') {
-        trackingMethod = 'qr_scan';
-      }
-
-      // Call verification with location tracking
-      const result = await enhancedVerificationAPI.verifyProduct(serialNum, trackingMethod);
+      // Use the blockchain verification API with tracking method
+      const trackingMethod = verificationMethod === 'qr' ? 'qr_scan' : 'manual_verification';
+      const result = await verificationAPI.verifyProduct(serialNum, trackingMethod);
       
       // Validate API response structure
       if (!result || typeof result !== 'object') {

@@ -127,6 +127,16 @@ const registerBatch = async (req, res) => {
 
     console.log("Blockchain transaction confirmed:", receipt.hash);
 
+    // Get the blockchain-generated fingerprint
+    let blockchainFingerprint;
+    try {
+      blockchainFingerprint = await batchContract.getFingerprintByBatch(batchNumber);
+      console.log("Blockchain-generated batch fingerprint:", blockchainFingerprint);
+    } catch (fingerprintError) {
+      console.warn("Could not get blockchain batch fingerprint, using local:", fingerprintError.message);
+      blockchainFingerprint = digitalFingerprint; // fallback to local fingerprint
+    }
+
     // Create new batch in database with blockchain data
     const batch = new Batch({
       manufacturerId: req.user.userId,
@@ -141,7 +151,7 @@ const registerBatch = async (req, res) => {
       storageConditions: storageConditions || '',
       productionLocation: productionLocation || '',
       approvalCertId: approvalCertId || '',
-      digitalFingerprint,
+      digitalFingerprint: blockchainFingerprint, // Use blockchain fingerprint
       // Blockchain transaction details
       txHash: receipt.hash,
       blockNumber: receipt.blockNumber,
@@ -410,7 +420,72 @@ const assignBatchToDistributor = async (req, res) => {
         }
       };
 
-      // Update batch with shipment history, status, and assigned quantity
+      // Update batch shipment history on blockchain first
+      try {
+        // Get manufacturer's blockchain address
+        const manufacturerAddress = manufacturer.user?.address || await signer.getAddress() || '';
+        
+        // Ensure we have valid addresses for blockchain
+        const fromAddress = manufacturerAddress;
+        const toAddress = distributorUser.address;
+        
+        console.log("📦 Adding shipment entry to blockchain:", {
+          batchNumber: batch.batchNumber,
+          from: shipmentEntry.from,
+          to: shipmentEntry.to,
+          fromAddress,
+          toAddress,
+          status: shipmentEntry.status,
+          quantity: parseInt(shipmentEntry.quantity),
+          remarks: shipmentEntry.remarks || ''
+        });
+        
+        const blockchainShipmentTx = await batchContract.addShipmentEntry(
+          batch.batchNumber,
+          shipmentEntry.from,
+          shipmentEntry.to,
+          fromAddress,
+          toAddress,
+          shipmentEntry.status,
+          parseInt(shipmentEntry.quantity),
+          shipmentEntry.remarks || ''
+        );
+        
+        console.log("Blockchain shipment transaction sent, waiting for confirmation...");
+        const shipmentReceipt = await blockchainShipmentTx.wait();
+        
+        if (shipmentReceipt.status !== 1) {
+          throw new Error("Blockchain shipment transaction failed");
+        }
+        
+        console.log("✅ Blockchain shipment transaction confirmed:", shipmentReceipt.hash);
+        console.log("📋 Gas used:", shipmentReceipt.gasUsed.toString());
+        
+        // Add blockchain transaction hash to shipment entry
+        shipmentEntry.txHash = shipmentReceipt.hash;
+        shipmentEntry.blockNumber = shipmentReceipt.blockNumber;
+        
+        // Verify the shipment was added by checking history length
+        try {
+          const historyLength = await batchContract.getBatchShipmentHistoryLength(batch.batchNumber);
+          console.log("📊 Blockchain shipment history length after addition:", historyLength.toString());
+        } catch (verifyError) {
+          console.log("⚠️ Could not verify shipment history length:", verifyError.message);
+        }
+        
+      } catch (blockchainError) {
+        console.error("❌ Blockchain shipment update failed:", blockchainError);
+        console.error("Error details:", {
+          code: blockchainError.code,
+          reason: blockchainError.reason,
+          message: blockchainError.message
+        });
+        
+        // Continue with database update even if blockchain fails (can be synced later)
+        shipmentEntry.blockchainError = blockchainError.message;
+      }
+
+      // Update batch with shipment history, status, and assigned quantity in MongoDB
       const updatedBatch = await Batch.findOneAndUpdate(
         { batchNumber: batchId },
         { 

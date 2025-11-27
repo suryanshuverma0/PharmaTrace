@@ -5,11 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ConsumerSidebar from '../components/consumer/ConsumerSidebar';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import { useModalZIndexFix } from '../hooks/useModalZIndex';
 
 const ConsumerLayout = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Apply global modal z-index fixes
+  useModalZIndexFix();
 
   // Handle screen resize
   useEffect(() => {
