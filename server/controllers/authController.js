@@ -5,8 +5,7 @@ const Distributor = require("../models/Distributor");
 const Pharmacist = require("../models/Pharmacist");
 require("dotenv").config();
 
-const { userRegistry } = require("../utils/blockchain"); 
-
+const { userRegistry } = require("../utils/blockchain");
 
 const jwt = require("jsonwebtoken");
 const verifySignature = require("../utils/verifySignature");
@@ -16,6 +15,9 @@ const {
 } = require("../utils/email/accountActivation");
 
 const JWT_SECRET = process.env.JWT_SECRET || "pharma-trace-secret";
+
+const logBlockchainTransaction = require("../utils/logTransaction");
+
 
 const validateRoleData = (role, data) => {
   const errors = [];
@@ -196,39 +198,44 @@ const registerUser = async (req, res, next) => {
     if (!emailResult.success)
       console.warn("Activation email failed:", emailResult.error);
 
-    const RoleEnum = { 
-      None: 0, 
-      Superadmin: 1, 
-      Manufacturer: 2, 
-      Distributor: 3, 
-      Pharmacist: 4, 
-      Consumer: 5 
+    const RoleEnum = {
+      None: 0,
+      Superadmin: 1,
+      Manufacturer: 2,
+      Distributor: 3,
+      Pharmacist: 4,
+      Consumer: 5,
     };
-    
+
     // Map user role to RoleEnum
     const getRoleEnumValue = (role) => {
       const roleMap = {
-        'consumer': RoleEnum.Consumer,
-        'pharmacist': RoleEnum.Pharmacist,
-        'distributor': RoleEnum.Distributor,
-        'manufacturer': RoleEnum.Manufacturer,
-        'superadmin': RoleEnum.Superadmin
+        consumer: RoleEnum.Consumer,
+        pharmacist: RoleEnum.Pharmacist,
+        distributor: RoleEnum.Distributor,
+        manufacturer: RoleEnum.Manufacturer,
+        superadmin: RoleEnum.Superadmin,
       };
       return roleMap[role] || RoleEnum.None;
     };
-    
+
     const userRoleEnum = getRoleEnumValue(newUser.role);
-    
+
     const tx = await userRegistry.setUser(
-              newUser.address,
-              newUser.isApproved,
-              userRoleEnum
-            );
-            await tx.wait();
-            console.log(`User ${newUser.address} role set to ${newUser.role} (${userRoleEnum})`);
+      newUser.address,
+      newUser.isApproved,
+      userRoleEnum
+    );
+   const receipt = await tx.wait();
+    console.log(
+      `User ${newUser.address} role set to ${newUser.role} (${userRoleEnum})`
+    );
 
     newUser.txHash = tx.hash;
     await newUser.save();
+
+    await logBlockchainTransaction(tx, receipt, newUser.address, newUser.role);
+
 
     // Return success
     return res.status(201).json({
@@ -251,7 +258,6 @@ const registerUser = async (req, res, next) => {
     next(error);
   }
 };
-
 
 const loginUser = async (req, res) => {
   const { address, message, signature } = req.body;
@@ -381,12 +387,12 @@ const getUserByAddress = async (req, res) => {
 const checkSuperAdmin = async (req, res) => {
   try {
     const { address } = req.body;
-    
+
     // Validate that address is provided
     if (!address) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "Wallet address is required",
-        isSuperAdmin: false 
+        isSuperAdmin: false,
       });
     }
 
@@ -405,32 +411,34 @@ const checkSuperAdmin = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         message: "User not found",
         isSuperAdmin: false,
-        address: normalizedAddress
+        address: normalizedAddress,
       });
     }
 
     // Check if user is superadmin and account is active/approved
-    const isSuperAdmin = user.role === 'superadmin' && user.isActive && user.isApproved;
+    const isSuperAdmin =
+      user.role === "superadmin" && user.isActive && user.isApproved;
 
     return res.status(200).json({
-      message: isSuperAdmin ? "User is a superadmin" : "User is not a superadmin",
+      message: isSuperAdmin
+        ? "User is a superadmin"
+        : "User is not a superadmin",
       isSuperAdmin,
       address: user.address,
       role: user.role,
       isActive: user.isActive,
       isApproved: user.isApproved,
-      name: user.name
+      name: user.name,
     });
-
   } catch (error) {
     console.error("Error checking superadmin status:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: "Internal server error",
       error: error.message,
-      isSuperAdmin: false 
+      isSuperAdmin: false,
     });
   }
 };
