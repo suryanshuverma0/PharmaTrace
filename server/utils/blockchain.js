@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const { ethers } = require("ethers");
 
 // Import ABIs for both contracts
@@ -10,9 +11,9 @@ const batchContractABI =
 const userRegistryABI =
   require("../../blockchain/artifacts/contracts/UserRegistry.sol/UserRegistry.json").abi;
 // Validate environment variables
-// if (!process.env.BLOCKCHAIN_RPC) {
-//   throw new Error("BLOCKCHAIN_RPC is not set in .env");
-// }
+if (!process.env.BLOCKCHAIN_RPC) {
+  throw new Error("BLOCKCHAIN_RPC is not set in .env");
+}
 if (!process.env.PRIVATE_KEY) {
   throw new Error("PRIVATE_KEY is not set in .env");
 }
