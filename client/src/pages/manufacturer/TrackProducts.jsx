@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search,
@@ -21,6 +22,7 @@ import { ProductTrackingSkeleton } from '../../components/UI/Skeleton';
 import apiClient from '../../services/api/api';
 
 const TrackProducts = () => {
+  const { serialNumber: urlSerialNumber } = useParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -31,6 +33,14 @@ const TrackProducts = () => {
     // Backend now provides properly formatted journey data
     return product.journey || [];
   };
+
+  // Effect to handle URL parameter and auto-track
+  useEffect(() => {
+    if (urlSerialNumber) {
+      setSearchQuery(urlSerialNumber);
+      handleSearch(urlSerialNumber);
+    }
+  }, [urlSerialNumber]);
 
   const handleSearch = async (serialNumber) => {
     if (!serialNumber.trim()) {
@@ -185,7 +195,7 @@ const TrackProducts = () => {
                     Location: {selectedProduct.currentLocation}
                   </div>
                   {selectedProduct.blockchainVerified && (
-                    <div className="px-4 py-2 text-sm text-green-800 bg-green-100 rounded-lg flex items-center gap-1">
+                    <div className="flex items-center gap-1 px-4 py-2 text-sm text-green-800 bg-green-100 rounded-lg">
                       <CheckCircle className="w-4 h-4" />
                       Blockchain Verified
                     </div>
@@ -198,25 +208,25 @@ const TrackProducts = () => {
                 <div className="pt-4 border-t">
                   <h4 className="mb-3 text-lg font-semibold text-gray-900">Batch Information</h4>
                   <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="p-3 text-center rounded-lg bg-gray-50">
                       <div className="text-2xl font-bold text-blue-600">
                         {selectedProduct.batchDetails.quantityProduced}
                       </div>
                       <div className="text-sm text-gray-600">Total Produced</div>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="p-3 text-center rounded-lg bg-gray-50">
                       <div className="text-2xl font-bold text-green-600">
                         {selectedProduct.batchDetails.quantityAvailable}
                       </div>
                       <div className="text-sm text-gray-600">Available</div>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="p-3 text-center rounded-lg bg-gray-50">
                       <div className="text-2xl font-bold text-orange-600">
                         {selectedProduct.batchDetails.quantityAssigned}
                       </div>
                       <div className="text-sm text-gray-600">Assigned</div>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="p-3 text-center rounded-lg bg-gray-50">
                       <div className="text-2xl font-bold text-purple-600">
                         {selectedProduct.totalShipments || 0}
                       </div>
@@ -317,7 +327,7 @@ const TrackProducts = () => {
                             {step.txHash && (
                               <div className="space-y-1">
                                 <h6 className="text-sm font-medium text-gray-700">Blockchain</h6>
-                                <p className="text-sm text-gray-600 font-mono">
+                                <p className="font-mono text-sm text-gray-600">
                                   Tx: {step.txHash.substring(0, 12)}...
                                 </p>
                               </div>
