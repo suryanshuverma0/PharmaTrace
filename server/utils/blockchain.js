@@ -4,12 +4,12 @@ const { ethers } = require("ethers");
 
 // Import ABIs for both contracts
 const productContractABI =
-  require("../../blockchain/artifacts/contracts/ProductRegistry.sol/ProductRegistry.json").abi;
+  require("../abis/ProductRegistry.json").abi;
 const batchContractABI =
-  require("../../blockchain/artifacts/contracts/BatchRegistry.sol/BatchRegistry.json").abi;
+  require("../abis/BatchRegistry.json").abi;
 
 const userRegistryABI =
-  require("../../blockchain/artifacts/contracts/UserRegistry.sol/UserRegistry.json").abi;
+  require("../abis/UserRegistry.json").abi;
 // Validate environment variables
 if (!process.env.BLOCKCHAIN_RPC) {
   throw new Error("BLOCKCHAIN_RPC is not set in .env");
