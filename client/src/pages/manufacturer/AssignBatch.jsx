@@ -301,9 +301,33 @@ const AssignBatch = () => {
           Select a batch and assign it to a distributor for shipment.
         </p>
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-            <span className="ml-3 text-blue-600">Loading...</span>
+          <div className="space-y-6 animate-pulse">
+            {/* Batch Selection Skeleton */}
+            <div>
+              <div className="w-24 h-5 mb-2 bg-gray-200 rounded"></div>
+              <div className="w-full h-10 bg-gray-200 rounded-lg"></div>
+            </div>
+
+            {/* Distributor Selection Skeleton */}
+            <div>
+              <div className="w-32 h-5 mb-2 bg-gray-200 rounded"></div>
+              <div className="w-full h-10 bg-gray-200 rounded-lg"></div>
+            </div>
+
+            {/* Quantity Input Skeleton */}
+            <div>
+              <div className="w-16 h-5 mb-2 bg-gray-200 rounded"></div>
+              <div className="w-full h-10 bg-gray-200 rounded-lg"></div>
+            </div>
+
+            {/* Remarks Textarea Skeleton */}
+            <div>
+              <div className="w-20 h-5 mb-2 bg-gray-200 rounded"></div>
+              <div className="w-full h-24 bg-gray-200 rounded-lg"></div>
+            </div>
+
+            {/* Submit Button Skeleton */}
+            <div className="w-full h-12 bg-gray-200 rounded-lg"></div>
           </div>
         ) : (
           <form onSubmit={handleAssign} className="space-y-6">

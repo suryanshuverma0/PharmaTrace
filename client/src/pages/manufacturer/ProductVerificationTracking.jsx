@@ -181,11 +181,97 @@ const ProductVerificationTracking = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
+      <div className="p-6 mx-auto space-y-6 max-w-7xl animate-pulse">
+        {/* Header Skeleton */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="h-8 mb-2 bg-gray-200 rounded w-80"></div>
+            <div className="h-5 bg-gray-200 rounded w-96"></div>
+          </div>
           <div className="flex items-center space-x-3">
-            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
-            <span className="text-lg text-gray-600">Loading analytics data...</span>
+            <div className="w-32 h-8 bg-gray-200 rounded-lg"></div>
+            <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
+            <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
+          </div>
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="p-4 bg-white border shadow-sm rounded-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="w-24 h-4 mb-2 bg-gray-200 rounded"></div>
+                  <div className="w-16 h-8 mb-2 bg-gray-200 rounded"></div>
+                  <div className="w-20 h-3 bg-gray-200 rounded"></div>
+                </div>
+                <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+              </div>
+              <div className="flex items-center mt-3">
+                <div className="w-12 h-4 bg-gray-200 rounded"></div>
+                <div className="w-20 h-4 ml-1 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Interactive Map Skeleton */}
+        <div className="grid grid-cols-1 gap-6">
+          <div className="p-6 bg-white border shadow-sm rounded-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-48 h-6 bg-gray-200 rounded"></div>
+              <div className="flex items-center space-x-4">
+                <div className="w-24 h-4 bg-gray-200 rounded"></div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-gray-200 rounded-full"></div>
+                  <div className="w-8 h-3 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-200 rounded-lg h-96"></div>
+          </div>
+        </div>
+
+        {/* Charts Section Skeleton */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Time Series Chart Skeleton */}
+          <div className="p-6 bg-white border shadow-sm rounded-xl">
+            <div className="w-32 h-6 mb-4 bg-gray-200 rounded"></div>
+            <div className="h-64 bg-gray-200 rounded-lg"></div>
+          </div>
+
+          {/* Real-time Feed Skeleton */}
+          <div className="p-6 bg-white border shadow-sm rounded-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-32 h-6 bg-gray-200 rounded"></div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-gray-200 rounded-full"></div>
+                <div className="w-8 h-3 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="p-3 border border-gray-200 rounded-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                      <div className="w-32 h-4 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="w-16 h-5 bg-gray-200 rounded-full"></div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-1">
+                      <div className="w-3 h-3 bg-gray-200 rounded"></div>
+                      <div className="w-24 h-3 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <div className="w-3 h-3 bg-gray-200 rounded"></div>
+                      <div className="w-12 h-3 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

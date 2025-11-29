@@ -165,8 +165,77 @@ const ProductsList = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-600">Loading products...</p>
+      <div className="min-h-screen p-6 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="mb-8">
+          <div className="h-8 mb-2 bg-gray-200 rounded w-72"></div>
+          <div className="h-6 bg-gray-200 rounded w-96"></div>
+        </div>
+
+        {/* Filters and Search Skeleton */}
+        <div className="grid gap-4 mb-6 md:flex md:items-center md:justify-between">
+          <div className="flex items-center justify-between flex-1 gap-4">
+            <div className="w-40 h-10 bg-gray-200 rounded-lg"></div>
+          </div>
+          <div className="w-24 h-10 bg-gray-200 rounded-lg"></div>
+        </div>
+
+        {/* Batches List Skeleton */}
+        <div className="space-y-6">
+          {Array.from({ length: 3 }).map((_, batchIndex) => (
+            <div key={batchIndex} className="overflow-hidden bg-white border shadow-lg rounded-2xl border-gray-200/50">
+              {/* Batch Header Skeleton */}
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
+                  <div className="flex items-start flex-1 gap-4">
+                    <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+                    <div className="flex-1 min-w-0 space-y-3">
+                      <div className="w-40 h-6 bg-gray-200 rounded"></div>
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap gap-4">
+                          <div className="flex items-center gap-1">
+                            <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                            <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                            <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                            <div className="w-16 h-4 bg-gray-200 rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-20 h-6 bg-gray-200 rounded-full"></div>
+                </div>
+              </div>
+
+              {/* Products Grid Skeleton */}
+              <div className="p-6 bg-gray-50">
+                <div className="grid grid-cols-1 gap-4">
+                  {Array.from({ length: 2 }).map((_, productIndex) => (
+                    <div key={productIndex} className="p-4 bg-white border rounded-xl border-gray-200/50">
+                      <div className="flex justify-between">
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="w-48 h-5 bg-gray-200 rounded"></div>
+                          <div className="w-32 h-4 bg-gray-200 rounded"></div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="bg-gray-200 rounded-lg w-9 h-9"></div>
+                          <div className="bg-gray-200 rounded-lg w-9 h-9"></div>
+                          <div className="bg-gray-200 rounded-lg w-9 h-9"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

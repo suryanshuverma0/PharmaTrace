@@ -164,8 +164,121 @@ const ManufacturerDashboard = () => {
 
       {/* Loading State */}
       {loading && (
-        <div className="p-4 mx-6 mb-6 text-blue-800 bg-blue-100 rounded-xl">
-          Loading dashboard data...
+        <div className="animate-pulse">
+          {/* Header Skeleton */}
+          <div className="p-6 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <div className="h-8 mb-2 bg-gray-200 rounded w-96"></div>
+                <div className="h-6 mb-4 bg-gray-200 rounded w-80"></div>
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                    <div className="w-32 h-4 bg-gray-200 rounded"></div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                    <div className="w-40 h-4 bg-gray-200 rounded"></div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                    <div className="w-24 h-4 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 sm:mt-0">
+                <div className="w-40 h-12 bg-gray-200 rounded-xl"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Grid Skeleton */}
+          <div className="mx-6 mb-8">
+            <div className="grid grid-cols-1 gap-6 mb-6 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="p-4 bg-white border shadow-lg rounded-2xl border-gray-200/50">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
+                    <div className="w-16 h-6 bg-gray-200 rounded-full"></div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="w-16 h-8 bg-gray-200 rounded"></div>
+                    <div className="w-24 h-4 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Additional Stats Row Skeleton */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="p-4 bg-white border rounded-xl">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-gray-200 rounded-lg w-9 h-9"></div>
+                    <div className="space-y-2">
+                      <div className="w-16 h-5 bg-gray-200 rounded"></div>
+                      <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Actions & Recent Products Skeleton */}
+          <div className="grid grid-cols-1 gap-8 mx-6 lg:grid-cols-3">
+            {/* Quick Actions Skeleton */}
+            <div className="space-y-6 lg:col-span-1">
+              <div className="p-6 bg-white border shadow-lg rounded-2xl border-gray-200/50">
+                <div className="w-32 h-6 mb-4 bg-gray-200 rounded"></div>
+                <div className="space-y-3">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="flex items-center w-full p-4 border bg-gray-50 rounded-xl">
+                      <div className="bg-gray-200 rounded-lg w-9 h-9"></div>
+                      <div className="flex-1 ml-4 space-y-2">
+                        <div className="w-24 h-4 bg-gray-200 rounded"></div>
+                        <div className="w-32 h-3 bg-gray-200 rounded"></div>
+                      </div>
+                      <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Batches Skeleton */}
+            <div className="space-y-6 lg:col-span-2">
+              <div className="p-6 bg-white border shadow-lg rounded-2xl border-gray-200/50">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-32 h-6 bg-gray-200 rounded"></div>
+                  <div className="w-20 h-8 bg-gray-200 rounded-lg"></div>
+                </div>
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="p-4 border bg-white/50 rounded-xl">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+                          <div className="space-y-2">
+                            <div className="w-32 h-5 bg-gray-200 rounded"></div>
+                            <div className="flex gap-4">
+                              <div className="w-20 h-3 bg-gray-200 rounded"></div>
+                              <div className="w-16 h-3 bg-gray-200 rounded"></div>
+                              <div className="w-24 h-3 bg-gray-200 rounded"></div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="w-20 h-6 bg-gray-200 rounded-full"></div>
+                          <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

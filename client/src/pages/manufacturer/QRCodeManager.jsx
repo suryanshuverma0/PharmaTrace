@@ -18,7 +18,6 @@ import {
 import ProductModal from '../../components/modals/ProductModal';
 import { Input } from '../../components/UI/Input';
 import { Button } from '../../components/UI/Button';
-import { Select } from '../../components/UI/Select';
 import apiClient from '../../services/api/api';
 
 const QRCodeManager = () => {
@@ -208,8 +207,73 @@ const QRCodeManager = () => {
 
       {/* Loading State */}
       {loading ? (
-        <div className="p-6 text-center bg-white rounded-xl">
-          <p className="text-gray-600">Loading batches...</p>
+        <div className="space-y-6">
+          {/* Skeleton Batch Cards */}
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="overflow-hidden bg-white border shadow-lg rounded-2xl border-gray-200/50">
+              {/* Batch Header Skeleton */}
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
+                  <div className="flex items-start flex-1 gap-4">
+                    {/* Icon Skeleton */}
+                    <div className="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-gray-200 rounded-xl animate-pulse"></div>
+                    <div className="flex-1 min-w-0">
+                      {/* Batch Title Skeleton */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-48 h-6 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="w-5 h-5 bg-gray-200 rounded animate-pulse"></div>
+                      </div>
+                      {/* Batch Details Skeleton */}
+                      <div className="mt-2 space-y-2">
+                        <div className="flex flex-wrap gap-4">
+                          <div className="flex items-center gap-1">
+                            <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Status Badge Skeleton */}
+                  <div className="w-20 h-8 px-4 py-2 bg-gray-200 rounded-full animate-pulse"></div>
+                </div>
+              </div>
+
+              {/* Products Section Skeleton (only for first batch) */}
+              {index === 0 && (
+                <div className="p-6 bg-gray-50">
+                  <div className="grid grid-cols-1 gap-4">
+                    {[...Array(2)].map((_, productIndex) => (
+                      <div key={productIndex} className="p-4 bg-white border rounded-xl border-gray-200/50">
+                        <div className="flex justify-between">
+                          <div className="flex-1 min-w-0">
+                            {/* Product Name Skeleton */}
+                            <div className="w-40 h-5 bg-gray-200 rounded animate-pulse"></div>
+                            {/* Serial Number Skeleton */}
+                            <div className="w-32 h-4 mt-2 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                          {/* Action Buttons Skeleton */}
+                          <div className="flex items-center gap-2">
+                            <div className="bg-gray-200 rounded-lg w-9 h-9 animate-pulse"></div>
+                            <div className="bg-gray-200 rounded-lg w-9 h-9 animate-pulse"></div>
+                            <div className="bg-gray-200 rounded-lg w-9 h-9 animate-pulse"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="p-6 text-center bg-red-50 rounded-xl">

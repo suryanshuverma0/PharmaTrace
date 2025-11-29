@@ -52,9 +52,72 @@ const RegisteredBatch = () => {
       )}
 
       {loading && (
-        <div className="max-w-6xl p-4 mx-auto mb-6 text-blue-800 bg-blue-100 rounded-xl">
-          Loading batches...
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="max-w-6xl mx-auto animate-pulse"
+        >
+          <Card className="overflow-hidden">
+            <div className="p-6">
+              {/* Header Skeleton */}
+              <div className="flex items-center justify-between gap-2 mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                  <div className="w-48 h-6 bg-gray-200 rounded"></div>
+                </div>
+                <div className="w-32 bg-gray-200 rounded-lg h-9"></div>
+              </div>
+              
+              {/* Quantity Explanation Skeleton */}
+              <div className="p-4 mb-6 border rounded-lg bg-gray-50">
+                <div className="w-40 h-5 mb-2 bg-gray-200 rounded"></div>
+                <div className="space-y-2">
+                  <div className="w-full h-4 bg-gray-200 rounded"></div>
+                  <div className="w-3/4 h-4 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+              
+              {/* Table Skeleton */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3"><div className="w-20 h-4 bg-gray-200 rounded"></div></th>
+                      <th className="px-6 py-3"><div className="w-20 h-4 bg-gray-200 rounded"></div></th>
+                      <th className="px-6 py-3"><div className="w-16 h-4 bg-gray-200 rounded"></div></th>
+                      <th className="px-6 py-3"><div className="w-24 h-4 bg-gray-200 rounded"></div></th>
+                      <th className="px-6 py-3"><div className="w-20 h-4 bg-gray-200 rounded"></div></th>
+                      <th className="px-6 py-3"><div className="w-16 h-4 bg-gray-200 rounded"></div></th>
+                      <th className="px-6 py-3"><div className="w-20 h-4 bg-gray-200 rounded"></div></th>
+                      <th className="px-6 py-3"><div className="w-16 h-4 bg-gray-200 rounded"></div></th>
+                      <th className="px-6 py-3"><div className="h-4 bg-gray-200 rounded w-18"></div></th>
+                      <th className="px-6 py-3"><div className="w-24 h-4 bg-gray-200 rounded"></div></th>
+                      <th className="px-6 py-3"><div className="w-16 h-4 bg-gray-200 rounded"></div></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <tr key={index} className="bg-white border-b">
+                        <td className="px-6 py-4"><div className="w-24 h-4 bg-gray-200 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="w-16 h-4 bg-gray-200 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="w-12 h-4 bg-gray-200 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="w-20 h-4 bg-gray-200 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="w-20 h-4 bg-gray-200 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="w-12 h-4 bg-gray-200 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="w-12 h-4 bg-gray-200 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="w-12 h-4 bg-gray-200 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="w-12 h-4 bg-gray-200 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="w-16 h-4 bg-gray-200 rounded"></div></td>
+                        <td className="px-6 py-4"><div className="w-20 h-6 bg-gray-200 rounded-full"></div></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
       )}
 
       <motion.div

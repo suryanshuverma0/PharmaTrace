@@ -97,8 +97,60 @@ const AssignedBatches = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-32 h-32 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+      <div className="min-h-screen p-6 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="mb-8">
+          <div className="w-64 h-8 mb-2 bg-gray-200 rounded"></div>
+          <div className="h-6 bg-gray-200 rounded w-96"></div>
+        </div>
+
+        {/* Filters Skeleton */}
+        <div className="grid gap-4 mb-6 md:flex md:items-center md:justify-between">
+          <div className="flex flex-1 gap-4">
+            <div className="flex-1 h-10 bg-gray-200 rounded-lg"></div>
+            <div className="w-48 h-10 bg-gray-200 rounded-lg"></div>
+          </div>
+        </div>
+
+        {/* Assignments List Skeleton */}
+        <div className="space-y-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="overflow-hidden bg-white border shadow-sm rounded-xl">
+              <div className="p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-32 h-6 bg-gray-200 rounded"></div>
+                        <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-4">
+                          <div className="flex items-center gap-1">
+                            <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                            <div className="w-24 h-4 bg-gray-200 rounded"></div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                            <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                            <div className="w-16 h-4 bg-gray-200 rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-6 bg-gray-200 rounded-full"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -109,7 +161,7 @@ const AssignedBatches = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Assigned Batches</h1>
         <p className="mt-2 text-lg text-gray-600">
-          Track and manage your batch assignments to distributors helloe
+          Track and manage your batch assignments to distributors
         </p>
       </div>
 
