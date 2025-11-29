@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Card } from "../../components/UI/Card";
 import { Button } from "../../components/UI/Button";
 import {
@@ -14,6 +15,7 @@ import { useAuth } from "../../context/AuthContext";
 import { pharmacyAPI } from "../../services/api/pharmacyAPI";
 import ReceiptConfirmationModal from "../../components/modals/ReceiptConfirmationModal";
 import toast from "react-hot-toast";
+import { Building2, FileText } from "lucide-react";
 
 const PharmacyDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -119,10 +121,51 @@ const PharmacyDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="mb-6">
+          <div className="w-64 h-8 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-4 mt-2 bg-gray-200 rounded w-96 animate-pulse"></div>
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, index) => (
+            <div key={index} className="p-6 bg-white border border-gray-200 shadow-sm rounded-xl">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+                <div className="ml-4 space-y-2">
+                  <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-16 h-6 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Content Cards Skeleton */}
+        <div className="space-y-6">
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="p-6 bg-white border border-gray-200 shadow-sm rounded-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-40 h-6 bg-gray-200 rounded animate-pulse"></div>
+                <div className="w-20 h-8 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="w-24 h-3 bg-gray-200 rounded animate-pulse"></div>
+                      </div>
+                      <div className="w-20 h-6 bg-gray-200 rounded-full animate-pulse"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -146,90 +189,133 @@ const PharmacyDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Pharmacy Info Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {pharmacy?.name || "Pharmacy Dashboard"}
-        </h1>
-        <p className="text-gray-600">
-          License: {pharmacy?.license} | Location: {pharmacy?.location}
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <FaClock className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">
-                Incoming Batches
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="mb-2 text-3xl font-bold text-gray-900">
+              <span className='text-2xl font-semibold text-gray-700'>Welcome Back,</span> <br></br> {pharmacy?.name || 'Pharmacy Dashboard'}
+            </h2>
+            <div className="space-y-1">
+              <p className="text-lg text-gray-600">
+                Here's your pharmacy and inventory overview
               </p>
-              <p className="text-2xl font-bold text-gray-900">
-                {stats?.totalIncoming || 0}
-              </p>
+              {pharmacy && (
+                <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Building2 className="w-4 h-4" />
+                    {pharmacy.location}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <FileText className="w-4 h-4" />
+                    License: {pharmacy.license}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="p-3 bg-green-100 rounded-lg">
-              <FaWarehouse className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">
-                Inventory Items
-              </p>
-              <p className="text-2xl font-bold text-gray-900">
-                {stats?.totalInventory || 0}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="p-3 bg-yellow-100 rounded-lg">
-              <FaExclamationTriangle className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Expiry Alerts</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {stats?.totalExpiryAlerts || 0}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <FaBox className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Units</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {stats?.totalValue || 0}
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Incoming Batches */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="flex items-center text-lg font-semibold text-gray-900">
-            <FaClock className="w-5 h-5 mr-2 text-blue-600" />
-            Incoming Batches
-          </h2>
-          <span className="text-sm text-gray-500">
-            {incomingBatches?.length || 0} pending deliveries
-          </span>
         </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="mb-8">
+        <div className="grid grid-cols-1 gap-6 mb-6 sm:grid-cols-2 lg:grid-cols-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="p-4 bg-white border shadow-lg rounded-2xl border-gray-200/50"
+          >
+            <div className="flex items-center justify-between">
+              <div className="p-2 bg-blue-100 rounded-xl">
+                <div className="text-blue-600"><FaClock className="w-6 h-6" /></div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="text-2xl font-bold text-gray-900">
+                {stats?.totalIncoming || 0}
+              </div>
+              <div className="text-sm text-gray-600">Incoming Batches</div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="p-4 bg-white border shadow-lg rounded-2xl border-gray-200/50"
+          >
+            <div className="flex items-center justify-between">
+              <div className="p-2 bg-green-100 rounded-xl">
+                <div className="text-green-600"><FaWarehouse className="w-6 h-6" /></div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="text-2xl font-bold text-gray-900">
+                {stats?.totalInventory || 0}
+              </div>
+              <div className="text-sm text-gray-600">Inventory Items</div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="p-4 bg-white border shadow-lg rounded-2xl border-gray-200/50"
+          >
+            <div className="flex items-center justify-between">
+              <div className="p-2 rounded-xl bg-amber-100">
+                <div className="text-amber-600"><FaExclamationTriangle className="w-6 h-6" /></div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="text-2xl font-bold text-gray-900">
+                {stats?.totalExpiryAlerts || 0}
+              </div>
+              <div className="text-sm text-gray-600">Expiry Alerts</div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="p-4 bg-white border shadow-lg rounded-2xl border-gray-200/50"
+          >
+            <div className="flex items-center justify-between">
+              <div className="p-2 bg-purple-100 rounded-xl">
+                <div className="text-purple-600"><FaBox className="w-6 h-6" /></div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="text-2xl font-bold text-gray-900">
+                {stats?.totalValue || 0}
+              </div>
+              <div className="text-sm text-gray-600">Total Units</div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-1">
+        {/* Incoming Batches */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="p-6 bg-white border shadow-lg rounded-2xl border-gray-200/50"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="flex items-center text-lg font-semibold text-transparent bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text">
+              <FaClock className="w-5 h-5 mr-2 text-blue-600" />
+              Incoming Batches
+            </h2>
+            <span className="text-sm text-gray-500">
+              {incomingBatches?.length || 0} pending deliveries
+            </span>
+          </div>
 
         {incomingBatches && incomingBatches.length > 0 ? (
           <div className="space-y-4">
@@ -311,106 +397,118 @@ const PharmacyDashboard = () => {
             <p>No incoming batches</p>
           </div>
         )}
-      </Card>
+        </motion.div>
 
-      {/* Expiry Alerts */}
-      {expiryAlerts && expiryAlerts.length > 0 && (
-        <Card className="p-6 border-yellow-200 bg-yellow-50">
+        {/* Expiry Alerts */}
+        {expiryAlerts && expiryAlerts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="p-6 border border-yellow-200 shadow-lg rounded-2xl bg-yellow-50"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="flex items-center text-lg font-semibold text-yellow-800">
+                <FaExclamationTriangle className="w-5 h-5 mr-2" />
+                Expiry Alerts
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/pharmacy/expiry-alerts")}
+              >
+                View All
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {expiryAlerts.slice(0, 3).map((alert) => (
+                <div
+                  key={alert.distributionId}
+                  className="p-3 bg-white border border-yellow-200 rounded-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{alert.product}</p>
+                      <p className="text-sm text-gray-600">
+                        Batch: {alert.batchId}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p
+                        className={`text-sm font-semibold ${getExpiryColor(
+                          alert.daysUntilExpiry
+                        )}`}
+                      >
+                        {alert.daysUntilExpiry} days left
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(alert.expiryDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Recent Inventory */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="p-6 bg-white border shadow-lg rounded-2xl border-gray-200/50"
+        >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="flex items-center text-lg font-semibold text-yellow-800">
-              <FaExclamationTriangle className="w-5 h-5 mr-2" />
-              Expiry Alerts
+            <h2 className="flex items-center text-lg font-semibold text-gray-900">
+              <FaWarehouse className="w-5 h-5 mr-2 text-green-600" />
+              Recent Inventory
             </h2>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate("/pharmacy/expiry-alerts")}
+              onClick={() => navigate("/pharmacy/inventory")}
             >
-              View All
+              View All Inventory
             </Button>
           </div>
 
-          <div className="space-y-3">
-            {expiryAlerts.slice(0, 3).map((alert) => (
-              <div
-                key={alert.distributionId}
-                className="p-3 bg-white border border-yellow-200 rounded-lg"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">{alert.product}</p>
-                    <p className="text-sm text-gray-600">
-                      Batch: {alert.batchId}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p
-                      className={`text-sm font-semibold ${getExpiryColor(
-                        alert.daysUntilExpiry
-                      )}`}
-                    >
-                      {alert.daysUntilExpiry} days left
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(alert.expiryDate).toLocaleDateString()}
-                    </p>
+          {inventory && inventory.length > 0 ? (
+            <div className="space-y-3">
+              {inventory.slice(0, 5).map((item) => (
+                <div
+                  key={item.distributionId}
+                  className="p-3 border border-gray-200 rounded-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{item.product}</p>
+                      <p className="text-sm text-gray-600">
+                        Batch: {item.batchId}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">
+                        {item.quantity} units
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Received: {new Date(item.receivedAt).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-gray-500">
+              <FaWarehouse className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>No inventory items</p>
+            </div>
+          )}
+        </motion.div>
 
-      {/* Recent Inventory */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="flex items-center text-lg font-semibold text-gray-900">
-            <FaWarehouse className="w-5 h-5 mr-2 text-green-600" />
-            Recent Inventory
-          </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/pharmacy/inventory")}
-          >
-            View All Inventory
-          </Button>
-        </div>
-
-        {inventory && inventory.length > 0 ? (
-          <div className="space-y-3">
-            {inventory.slice(0, 5).map((item) => (
-              <div
-                key={item.distributionId}
-                className="p-3 border border-gray-200 rounded-lg"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">{item.product}</p>
-                    <p className="text-sm text-gray-600">
-                      Batch: {item.batchId}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">
-                      {item.quantity} units
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Received: {new Date(item.receivedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="py-8 text-center text-gray-500">
-            <FaWarehouse className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-            <p>No inventory items</p>
-          </div>
-        )}
-      </Card>
+      </div>
 
       {/* Receipt Confirmation Modal */}
       <ReceiptConfirmationModal

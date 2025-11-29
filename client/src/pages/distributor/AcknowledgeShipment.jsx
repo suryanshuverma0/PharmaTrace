@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   CheckCircle,
   Package,
   Truck,
   Calendar,
   Building2,
-  Hash
+  Hash,
+  Loader2
 } from 'lucide-react';
 import { Card } from '../../components/UI/Card';
 import { Button } from '../../components/UI/Button';
@@ -18,6 +19,7 @@ const AcknowledgeShipment = () => {
   const [notification, setNotification] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [acknowledgingBatch, setAcknowledgingBatch] = useState(null);
 
 
   useEffect(() => {
@@ -127,18 +129,24 @@ const AcknowledgeShipment = () => {
 
   const handleAcknowledge = async (batchId) => {
     try {
+      setAcknowledgingBatch(batchId);
+      
       // Use serialNumber directly from the shipment if available
       const shipment = shipments.find(s => s.batchId === batchId);
       const serialNumber = shipment && shipment.serialNumber;
       if (!serialNumber) throw new Error('No serial number found for this batch');
+      
       await apiClient.post('/distributer/receive', { serialNumber });
-      setNotification('Shipment acknowledged!');
-      fetchShipments(currentUser, currentUser?.companyName);
-      setTimeout(() => setNotification(null), 2000);
+      
+      setNotification(`✅ Shipment ${batchId} acknowledged successfully!`);
+      await fetchShipments(currentUser, currentUser?.companyName);
+      setTimeout(() => setNotification(null), 3000);
     } catch (error) {
       console.error('Error acknowledging shipment:', error);
-      setNotification('Failed to acknowledge shipment: ' + error.message);
-      setTimeout(() => setNotification(null), 3000);
+      setNotification(`❌ Failed to acknowledge shipment: ${error.message}`);
+      setTimeout(() => setNotification(null), 4000);
+    } finally {
+      setAcknowledgingBatch(null);
     }
   };
 
@@ -231,10 +239,20 @@ const AcknowledgeShipment = () => {
               <Button 
                 variant="primary" 
                 onClick={() => handleAcknowledge(shipment.batchId)}
+                disabled={acknowledgingBatch === shipment.batchId}
                 className="flex items-center justify-center w-full gap-2"
               >
-                <CheckCircle className="w-5 h-5" />
-                Acknowledge Receipt
+                {acknowledgingBatch === shipment.batchId ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    Acknowledge Receipt
+                  </>
+                )}
               </Button>
             </motion.div>
           ))}

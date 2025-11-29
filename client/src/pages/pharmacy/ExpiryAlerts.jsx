@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Card } from '../../components/UI/Card';
 import { Button } from '../../components/UI/Button';
 import { FaExclamationTriangle, FaCalendarAlt, FaSearch, FaArrowLeft, FaBox } from 'react-icons/fa';
@@ -78,11 +79,83 @@ const ExpiryAlerts = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 border-4 border-yellow-500 rounded-full border-t-transparent animate-spin"></div>
-          <p className="text-gray-600">Loading expiry alerts...</p>
+      <div className="space-y-6 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div>
+              <div className="w-48 h-8 mb-2 bg-gray-200 rounded"></div>
+              <div className="w-64 h-5 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="w-20 h-4 mb-1 bg-gray-200 rounded"></div>
+            <div className="w-16 h-8 bg-gray-200 rounded"></div>
+          </div>
         </div>
+
+        {/* Search and Filters Skeleton */}
+        <Card className="p-4">
+          <div className="flex flex-col gap-4 md:flex-row">
+            <div className="flex-1">
+              <div className="w-full h-10 bg-gray-200 rounded-lg"></div>
+            </div>
+            <div className="flex gap-2">
+              <div className="w-56 h-10 bg-gray-200 rounded-lg"></div>
+              <div className="w-40 h-10 bg-gray-200 rounded-lg"></div>
+              <div className="w-20 h-10 bg-gray-200 rounded-lg"></div>
+            </div>
+          </div>
+          <div className="w-64 h-4 mt-2 bg-gray-200 rounded"></div>
+        </Card>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Card key={index} className="p-4">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+                <div className="ml-4 space-y-2">
+                  <div className="w-16 h-4 bg-gray-200 rounded"></div>
+                  <div className="w-12 h-6 bg-gray-200 rounded"></div>
+                  <div className="w-20 h-3 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {/* Alerts List Skeleton */}
+        <Card className="p-6">
+          <div className="w-32 h-6 mb-4 bg-gray-200 rounded"></div>
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                    <div className="space-y-1">
+                      <div className="w-40 h-5 bg-gray-200 rounded"></div>
+                      <div className="w-28 h-4 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                  <div className="w-16 h-6 bg-gray-200 rounded-full"></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="space-y-1">
+                      <div className="w-16 h-4 bg-gray-200 rounded"></div>
+                      <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-3 mt-3 border-t border-gray-200">
+                  <div className="w-48 h-4 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
     );
   }
@@ -100,24 +173,33 @@ const ExpiryAlerts = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div>
-            <h1 className="flex items-center text-2xl font-bold text-gray-900">
-              Expiry Alerts
-            </h1>
-            <p className="text-gray-600">Manage medicines approaching expiration</p>
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
+        >
+          <div className="flex items-center space-x-4">
+            <div>
+              <h1 className="flex items-center text-2xl font-bold text-gray-900">
+                Expiry Alerts
+              </h1>
+              <p className="text-gray-600">Manage medicines approaching expiration</p>
+            </div>
           </div>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-500">Total Alerts</p>
-          <p className="text-2xl font-bold text-gray-900">{filteredAlerts.length}</p>
-        </div>
-      </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500">Total Alerts</p>
+            <p className="text-2xl font-bold text-gray-900">{filteredAlerts.length}</p>
+          </div>
+        </motion.div>
 
-      {/* Search and Filters */}
-      <Card className="p-4">
+        {/* Search and Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="p-4">
         <div className="flex flex-col gap-4 md:flex-row">
           <div className="flex-1">
             <div className="relative">
@@ -161,61 +243,85 @@ const ExpiryAlerts = () => {
             </Button>
           </div>
         </div>
-        <div className="mt-2 text-sm text-gray-600">
-          Currently showing items expiring within {alertThresholdDays} days
+          <div className="mt-2 text-sm text-gray-600">
+            Currently showing items expiring within {alertThresholdDays} days
+          </div>
+          </Card>
+        </motion.div>
+
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="p-4 border-red-200 bg-red-50 transition-all duration-300 hover:shadow-lg">
+              <div className="flex items-center">
+                <div className="p-3 bg-red-100 rounded-lg">
+                  <FaExclamationTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-red-600">Critical</p>
+                  <p className="text-2xl font-bold text-red-900">
+                    {expiryAlerts.filter(alert => alert.daysUntilExpiry <= 7).length}
+                  </p>
+                  <p className="text-xs text-red-600">≤7 days</p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card className="p-4 border-yellow-200 bg-yellow-50 transition-all duration-300 hover:shadow-lg">
+              <div className="flex items-center">
+                <div className="p-3 bg-yellow-100 rounded-lg">
+                  <FaExclamationTriangle className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-yellow-600">Warning</p>
+                  <p className="text-2xl font-bold text-yellow-900">
+                    {expiryAlerts.filter(alert => alert.daysUntilExpiry > 7 && alert.daysUntilExpiry <= 30).length}
+                  </p>
+                  <p className="text-xs text-yellow-600">8-30 days</p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Card className="p-4 border-green-200 bg-green-50 transition-all duration-300 hover:shadow-lg">
+              <div className="flex items-center">
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <FaCalendarAlt className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-green-600">Normal</p>
+                  <p className="text-2xl font-bold text-green-900">
+                    {expiryAlerts.filter(alert => alert.daysUntilExpiry > 30).length}
+                  </p>
+                  <p className="text-xs text-green-600">&gt;30 days</p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
-      </Card>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-4 border-red-200 bg-red-50">
-          <div className="flex items-center">
-            <div className="p-3 bg-red-100 rounded-lg">
-              <FaExclamationTriangle className="w-6 h-6 text-red-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-red-600">Critical</p>
-              <p className="text-2xl font-bold text-red-900">
-                {expiryAlerts.filter(alert => alert.daysUntilExpiry <= 7).length}
-              </p>
-              <p className="text-xs text-red-600">≤7 days</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-yellow-200 bg-yellow-50">
-          <div className="flex items-center">
-            <div className="p-3 bg-yellow-100 rounded-lg">
-              <FaExclamationTriangle className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-yellow-600">Warning</p>
-              <p className="text-2xl font-bold text-yellow-900">
-                {expiryAlerts.filter(alert => alert.daysUntilExpiry > 7 && alert.daysUntilExpiry <= 30).length}
-              </p>
-              <p className="text-xs text-yellow-600">8-30 days</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-green-200 bg-green-50">
-          <div className="flex items-center">
-            <div className="p-3 bg-green-100 rounded-lg">
-              <FaCalendarAlt className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-green-600">Normal</p>
-              <p className="text-2xl font-bold text-green-900">
-                {expiryAlerts.filter(alert => alert.daysUntilExpiry > 30).length}
-              </p>
-              <p className="text-xs text-green-600">&gt;30 days</p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Alerts List */}
-      <Card className="p-6">
+        {/* Alerts List */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <Card className="p-6">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Expiry Alerts</h2>
         
         {filteredAlerts.length === 0 ? (
@@ -294,7 +400,8 @@ const ExpiryAlerts = () => {
             ))}
           </div>
         )}
-      </Card>
+          </Card>
+        </motion.div>
     </div>
   );
 };
