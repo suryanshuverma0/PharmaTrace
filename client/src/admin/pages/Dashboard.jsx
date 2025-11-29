@@ -161,10 +161,87 @@ const Dashboard = () => {
     { title: "Total Batches", value: stats.totalBatches, icon: Package, color: "from-amber-100 to-amber-50", iconColor: "text-amber-600" },
   ];
 
+  // Skeleton Components
+  const CardSkeleton = ({ primary = false }) => (
+    <div className={`${primary ? 'p-6' : 'p-4'} bg-white rounded-2xl border border-gray-100 shadow-lg animate-pulse`}>
+      <div className="flex items-start justify-between">
+        <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+        {primary && <div className="w-12 h-6 bg-gray-200 rounded-full"></div>}
+      </div>
+      <div className="mt-4 space-y-2">
+        <div className={`${primary ? 'w-24 h-4' : 'w-20 h-3'} bg-gray-200 rounded`}></div>
+        <div className={`${primary ? 'w-16 h-8' : 'w-12 h-6'} bg-gray-200 rounded`}></div>
+      </div>
+    </div>
+  );
+
+  const MapSkeleton = () => (
+    <div className="p-6 bg-white border border-gray-100 shadow-lg lg:col-span-2 rounded-2xl animate-pulse">
+      <div className="flex items-center justify-between mb-6">
+        <div className="w-40 h-6 bg-gray-200 rounded"></div>
+        <div className="flex items-center space-x-4">
+          <div className="w-24 h-8 bg-gray-200 rounded-lg"></div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-gray-200 rounded-full"></div>
+            <div className="w-8 h-3 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+      <div className="h-96 bg-gray-200 rounded-lg"></div>
+    </div>
+  );
+
+  const ActivitySkeleton = () => (
+    <div className="p-6 bg-white border border-gray-100 shadow-lg rounded-2xl animate-pulse">
+      <div className="flex items-center justify-between mb-6">
+        <div className="w-32 h-6 bg-gray-200 rounded"></div>
+        <div className="w-5 h-5 bg-gray-200 rounded"></div>
+      </div>
+      <div className="space-y-4">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="flex items-center p-3 space-x-3">
+            <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
+            <div className="flex-1 space-y-2">
+              <div className="w-full h-4 bg-gray-200 rounded"></div>
+              <div className="w-20 h-3 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-20 h-20 border-b-2 border-blue-600 rounded-full animate-spin"></div>
+      <div className="min-h-screen p-6 space-y-8">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="w-64 h-8 bg-gray-200 rounded animate-pulse"></div>
+            <div className="w-96 h-5 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <div className="w-40 h-5 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+
+        {/* Primary Cards Skeleton */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <CardSkeleton key={index} primary={true} />
+          ))}
+        </div>
+
+        {/* Secondary Cards Skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <CardSkeleton key={index} />
+          ))}
+        </div>
+
+        {/* Analytics and Activities Skeleton */}
+        <div className="grid gap-8 lg:grid-cols-3">
+          <MapSkeleton />
+          <ActivitySkeleton />
+        </div>
       </div>
     );
   }

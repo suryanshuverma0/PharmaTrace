@@ -176,7 +176,13 @@ const Pharmacists = () => {
       </div>
 
       {/* Pharmacist Table */}
-      <PharmacistTable pharmacists={filtered} refresh={fetchPharmacists} onRowClick={openModal} setFilter={setFilter} />
+      <PharmacistTable 
+        pharmacists={filtered} 
+        refresh={fetchPharmacists} 
+        onRowClick={openModal} 
+        setFilter={setFilter}
+        loading={loading}
+      />
 
       {/* Modal */}
       <PharmacistModal

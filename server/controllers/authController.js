@@ -296,14 +296,12 @@ const loginUser = async (req, res) => {
     if (!user.isActive) {
       return res.status(403).json({
         message:
-          "Account not activated. Please check your email for the activation link.",
+          "Your account is not yet activated. Please wait for admin approval",
       });
     }
-
-    // Check approval status
     if (!user.isApproved) {
       return res.status(403).json({
-        message: "Account not approved. Please contact support for assistance.",
+        message: "Your account is not yet approved. Please wait for admin approval",
       });
     }
 

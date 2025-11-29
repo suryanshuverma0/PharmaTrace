@@ -80,7 +80,12 @@ const AdminUserModal = ({
       return;
     }
 
+    // Close confirmation dialog immediately
+    setConfirmAction(null);
+    
+    // Show loading state in main modal
     setLoading(true);
+    
     try {
       console.log(`${approve ? 'Approving' : 'Disapproving'} ${userType}:`, user._id);
       
@@ -99,7 +104,6 @@ const AdminUserModal = ({
       toast.error(`Error occurred while ${approve ? 'approving' : 'disapproving'} ${userType}`);
     } finally {
       setLoading(false);
-      setConfirmAction(null);
     }
   };
 
@@ -143,11 +147,10 @@ const AdminUserModal = ({
                 <Dialog.Panel className="relative w-full max-w-3xl p-6 overflow-hidden bg-white border-2 border-indigo-200 shadow-2xl rounded-2xl">
                   {/* Decorative Header Background */}
                   <div className="absolute top-0 left-0 right-0 h-16 opacity-50 bg-gradient-to-br from-indigo-50 to-blue-50" />
-                  
                   {/* Close Button */}
                   <button
                     onClick={closeModal}
-                    className="absolute z-10 p-2 text-gray-400 transition-all duration-200 bg-white rounded-full shadow-md top-3 right-3 hover:text-gray-600 hover:bg-gray-50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="absolute z-10 p-2 text-gray-400 transition-all duration-200 bg-white rounded-full shadow-md top-3 right-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 hover:text-gray-600 hover:bg-gray-50 hover:shadow-lg"
                   >
                     <XCircle className="w-5 h-5" />
                   </button>
@@ -276,10 +279,16 @@ const StatusBadge = ({ approved, children }) => (
 );
 
 const Button = ({ onClick, loading, color, label, size = "md" }) => {
-  const colors = {
+  const baseColors = {
     green: "bg-green-600 hover:bg-green-700 text-white",
     red: "bg-red-600 hover:bg-red-700 text-white",
     gray: "bg-gray-200 hover:bg-gray-300 text-gray-800",
+  };
+  
+  const loadingColors = {
+    green: "bg-green-500 cursor-not-allowed text-white",
+    red: "bg-red-500 cursor-not-allowed text-white",
+    gray: "bg-gray-300 cursor-not-allowed text-gray-600",
   };
   
   const sizes = {
@@ -287,13 +296,24 @@ const Button = ({ onClick, loading, color, label, size = "md" }) => {
     md: "px-6 py-2 text-base"
   };
   
+  const currentColor = loading ? loadingColors[color || "gray"] : baseColors[color || "gray"];
+  
   return (
     <button
-      onClick={onClick}
+      onClick={loading ? undefined : onClick}
       disabled={loading}
-      className={`${sizes[size]} rounded-lg font-medium shadow-md transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${colors[color || "gray"]}`}
+      className={`${sizes[size]} rounded-lg font-medium shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${currentColor} ${loading ? 'transform scale-95' : 'hover:transform hover:scale-105'}`}
     >
-      {loading ? "Processing..." : label}
+      <div className="flex items-center justify-center gap-2 min-h-[20px]">
+        {loading ? (
+          <>
+            <div className="w-4 h-4 border-2 border-current rounded-full animate-spin border-t-transparent opacity-80"></div>
+            <span>Processing...</span>
+          </>
+        ) : (
+          <span>{label}</span>
+        )}
+      </div>
     </button>
   );
 };

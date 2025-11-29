@@ -180,7 +180,12 @@ const Manufacturers = () => {
       </div>
 
       {/* Table container */}
-      <ManufacturerTable manufacturers={filtered} refresh={fetchManufacturers} setFilter={setFilter} />
+      <ManufacturerTable 
+        manufacturers={filtered} 
+        refresh={fetchManufacturers} 
+        setFilter={setFilter}
+        loading={loading}
+      />
 
       {/* Modal */}
       <ManufacturerModal

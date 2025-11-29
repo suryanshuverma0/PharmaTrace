@@ -178,7 +178,13 @@ const Distributors = () => {
       </div>
 
       {/* Distributor Table */}
-      <DistributorTable distributors={filtered} refresh={fetchDistributors} onRowClick={openModal} setFilter={setFilter} />
+      <DistributorTable 
+        distributors={filtered} 
+        refresh={fetchDistributors} 
+        onRowClick={openModal} 
+        setFilter={setFilter}
+        loading={loading}
+      />
 
       {/* Modal */}
       <DistributorModal

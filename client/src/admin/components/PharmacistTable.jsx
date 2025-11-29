@@ -6,7 +6,37 @@ import PharmacistModal from "./PharmacistModal";
 import ConfirmationModal from "./ConfirmationDialog";
 import { approvePharmacist as approveApi } from "../api/api";
 
-const PharmacistTable = ({ pharmacists, refresh, setFilter }) => {
+// Skeleton component
+const TableRowSkeleton = () => (
+  <tr className="border-b animate-pulse">
+    <td className="px-4 py-3">
+      <div className="w-6 h-4 bg-gray-200 rounded"></div>
+    </td>
+    <td className="px-4 py-3">
+      <div className="space-y-2">
+        <div className="w-32 h-4 bg-gray-200 rounded"></div>
+        <div className="w-24 h-3 bg-gray-200 rounded"></div>
+      </div>
+    </td>
+    <td className="px-4 py-3">
+      <div className="w-40 h-4 bg-gray-200 rounded"></div>
+    </td>
+    <td className="px-4 py-3">
+      <div className="w-16 h-4 bg-gray-200 rounded"></div>
+    </td>
+    <td className="px-4 py-3">
+      <div className="w-20 h-4 bg-gray-200 rounded"></div>
+    </td>
+    <td className="px-4 py-3">
+      <div className="w-20 h-6 bg-gray-200 rounded-full"></div>
+    </td>
+    <td className="px-4 py-3 text-right">
+      <div className="w-16 h-6 bg-gray-200 rounded"></div>
+    </td>
+  </tr>
+);
+
+const PharmacistTable = ({ pharmacists, refresh, setFilter, loading = false }) => {
   const [loadingIds, setLoadingIds] = useState([]);
   const [selected, setSelected] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null); // {id, approve, message}
@@ -50,7 +80,12 @@ const PharmacistTable = ({ pharmacists, refresh, setFilter }) => {
           </tr>
         </thead>
         <tbody>
-          {pharmacists.length > 0 ? (
+          {loading ? (
+            // Show skeleton rows while loading
+            Array.from({ length: 5 }).map((_, index) => (
+              <TableRowSkeleton key={index} />
+            ))
+          ) : pharmacists.length > 0 ? (
             pharmacists.map((p, i) => (
               <motion.tr
                 key={p._id}
