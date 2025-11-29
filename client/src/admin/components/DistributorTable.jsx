@@ -42,7 +42,10 @@ const DistributorTable = ({ distributors, refresh, setFilter, loading = false })
   const [confirmAction, setConfirmAction] = useState(null); // {id, approve, message}
 
   const handleApprove = async (id, approve) => {
+    // Close confirmation immediately and start loading
+    setConfirmAction(null);
     setLoadingIds((prev) => [...prev, id]);
+    
     try {
       const res = await approveApi(id, approve);
       if (res?.success) {
@@ -57,7 +60,6 @@ const DistributorTable = ({ distributors, refresh, setFilter, loading = false })
       toast.error("An error occurred while updating status");
     } finally {
       setLoadingIds((prev) => prev.filter((i) => i !== id));
-      setConfirmAction(null);
     }
   };
 
@@ -133,9 +135,20 @@ const DistributorTable = ({ distributors, refresh, setFilter, loading = false })
                           )
                         }
                         disabled={loadingIds.includes(d._id)}
-                        className="px-3 py-1 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-70"
+                        className={`px-3 py-1 text-sm text-white rounded-lg transition-all flex items-center gap-2 ${
+                          loadingIds.includes(d._id)
+                            ? 'bg-red-400 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-700'
+                        }`}
                       >
-                        {loadingIds.includes(d._id) ? "..." : "Disapprove"}
+                        {loadingIds.includes(d._id) ? (
+                          <>
+                            <div className="w-3 h-3 border border-white rounded-full animate-spin border-t-transparent"></div>
+                            Processing...
+                          </>
+                        ) : (
+                          'Disapprove'
+                        )}
                       </button>
                     ) : (
                       <button
@@ -147,9 +160,20 @@ const DistributorTable = ({ distributors, refresh, setFilter, loading = false })
                           )
                         }
                         disabled={loadingIds.includes(d._id)}
-                        className="px-3 py-1 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-70"
+                        className={`px-3 py-1 text-sm text-white rounded-lg transition-all flex items-center gap-2 ${
+                          loadingIds.includes(d._id)
+                            ? 'bg-green-400 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700'
+                        }`}
                       >
-                        {loadingIds.includes(d._id) ? "..." : "Approve"}
+                        {loadingIds.includes(d._id) ? (
+                          <>
+                            <div className="w-3 h-3 border border-white rounded-full animate-spin border-t-transparent"></div>
+                            Processing...
+                          </>
+                        ) : (
+                          'Approve'
+                        )}
                       </button>
                     )}
                   </div>

@@ -43,22 +43,24 @@ const ManufacturerTable = ({ manufacturers, refresh, setFilter, loading = false 
   const [confirmAction, setConfirmAction] = useState(null); // {id, approve, message}
 
   const handleApprove = async (id, approve) => {
+    // Close confirmation immediately and start loading
+    setConfirmAction(null);
     setLoadingIds((prev) => [...prev, id]);
+    
     try {
       const res = await approveApi(id, approve);
       if (res?.success) {
-        toast.success(res.message); // ✅ Show success toast
+        toast.success(res.message);
         refresh();
         setFilter("all");
       } else {
-        toast.error("Failed to update status"); // ✅ Show error toast
+        toast.error("Failed to update status");
       }
     } catch (err) {
       console.error(err);
-      toast.error("An error occurred"); // ✅ Show error toast
+      toast.error("An error occurred");
     } finally {
       setLoadingIds((prev) => prev.filter((i) => i !== id));
-      setConfirmAction(null);
     }
   };
 
@@ -133,9 +135,21 @@ const ManufacturerTable = ({ manufacturers, refresh, setFilter, loading = false 
                             "Are you sure you want to disapprove this manufacturer?"
                           )
                         }
-                        className="px-3 py-1 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700"
+                        disabled={loadingIds.includes(m._id)}
+                        className={`px-3 py-1 text-sm text-white rounded-lg transition-all flex items-center gap-2 ${
+                          loadingIds.includes(m._id)
+                            ? 'bg-red-400 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-700'
+                        }`}
                       >
-                        Disapprove
+                        {loadingIds.includes(m._id) ? (
+                          <>
+                            <div className="w-3 h-3 border border-white rounded-full animate-spin border-t-transparent"></div>
+                            Processing...
+                          </>
+                        ) : (
+                          'Disapprove'
+                        )}
                       </button>
                     ) : (
                       <button
@@ -146,9 +160,21 @@ const ManufacturerTable = ({ manufacturers, refresh, setFilter, loading = false 
                             "Are you sure you want to approve this manufacturer?"
                           )
                         }
-                        className="px-3 py-1 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700"
+                        disabled={loadingIds.includes(m._id)}
+                        className={`px-3 py-1 text-sm text-white rounded-lg transition-all flex items-center gap-2 ${
+                          loadingIds.includes(m._id)
+                            ? 'bg-green-400 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700'
+                        }`}
                       >
-                        Approve
+                        {loadingIds.includes(m._id) ? (
+                          <>
+                            <div className="w-3 h-3 border border-white rounded-full animate-spin border-t-transparent"></div>
+                            Processing...
+                          </>
+                        ) : (
+                          'Approve'
+                        )}
                       </button>
                     )}
                   </div>
