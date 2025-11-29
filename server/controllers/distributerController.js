@@ -18,17 +18,37 @@ const getDistributorProducts = async (req, res) => {
       'Expires': '0'
     });
     
-    // For demo: get distributor address from query or header (in real app, use auth)
-    const distributorAddress = req.query.address || req.headers['x-distributor-address'];
-    let products;
-    if (distributorAddress) {
-      // Find batches assigned to this distributor
-      const batches = await Batch.find({ shipmentHistory: { $elemMatch: { to: distributorAddress } } });
-      const batchIds = batches.map(b => b._id);
-      products = await Product.find({ batchId: { $in: batchIds } }).select('serialNumber productName manufacturerId status batchId batchNumber');
-    } else {
-      products = await Product.find().select('serialNumber productName manufacturerId status batchId batchNumber');
+    let distributorAddress = req.query.address || req.headers['x-distributor-address'];
+    let distributorCompanyName = null;
+    
+    // Get distributor info from authenticated user
+    if (req.user && req.user.role === 'distributor') {
+      const authUser = await User.findById(req.user.userId).lean();
+      if (!distributorAddress) distributorAddress = authUser?.address;
+      
+      // Get distributor's company name for matching
+      const distributorProfile = await Distributor.findOne({ user: req.user.userId }).lean();
+      distributorCompanyName = distributorProfile?.companyName;
     }
+    
+    // If no distributor address found, return empty array (not all products)
+    if (!distributorAddress && !distributorCompanyName) {
+      return res.json({ products: [] });
+    }
+    
+    // Find batches assigned to this distributor
+    const batches = await Batch.find({ 
+      $or: [
+        { shipmentHistory: { $elemMatch: { to: distributorAddress } } },
+        { shipmentHistory: { $elemMatch: { toAddress: distributorAddress } } },
+        { shipmentHistory: { $elemMatch: { to: distributorCompanyName } } }
+      ]
+    });
+    
+    const batchIds = batches.map(b => b._id);
+    const products = await Product.find({ batchId: { $in: batchIds } })
+      .select('serialNumber productName manufacturerId status batchId batchNumber');
+    
     res.json({ products });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch products', error: error.message });
