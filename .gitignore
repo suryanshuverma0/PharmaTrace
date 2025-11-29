@@ -5,9 +5,10 @@
 **/dist/
 **/build/
 
-# Ignore environment files
+# Ignore all environment files
 **/.env
 **/.env.*.local
+.env.production
 
 # Logs
 **/npm-debug.log*

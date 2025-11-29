@@ -7,15 +7,22 @@ require("dotenv").config({
   path: path.join(__dirname, "..", "server", ".env"),
 });
 
-const {userRegistry } = require("../server/utils/blockchain"); 
+// Import ethers for blockchain interaction
+const { ethers } = require("ethers");
+
+// UserRegistry ABI (you'll need to add this)
+const USER_REGISTRY_ABI = [
+  "function setUser(address user, bool isApproved, uint8 role) external",
+  "function getUser(address user) external view returns (bool isApproved, uint8 role)",
+  "function isAuthorized(address user, uint8 requiredRole) external view returns (bool)",
+  "event UserRoleSet(address indexed user, bool isApproved, uint8 role)"
+];
 
 // ANSI Color codes for terminal styling
 const colors = {
   reset: "\x1b[0m",
   bright: "\x1b[1m",
   dim: "\x1b[2m",
-
-  // Foreground colors
   black: "\x1b[30m",
   red: "\x1b[31m",
   green: "\x1b[32m",
@@ -24,8 +31,6 @@ const colors = {
   magenta: "\x1b[35m",
   cyan: "\x1b[36m",
   white: "\x1b[37m",
-
-  // Background colors
   bgBlack: "\x1b[40m",
   bgRed: "\x1b[41m",
   bgGreen: "\x1b[42m",
@@ -128,6 +133,49 @@ const isValidEmail = (email) => {
   return emailPattern.test(email);
 };
 
+// Setup blockchain connection
+const setupBlockchain = () => {
+  try {
+    // Get configuration from environment
+    const rpcUrl = process.env.BLOCKCHAIN_RPC || process.env.PROVIDER_URL;
+    const privateKey = process.env.PRIVATE_KEY;
+    const userContractAddress = process.env.USER_CONTRACT_ADDRESS;
+
+    if (!rpcUrl) {
+      throw new Error("BLOCKCHAIN_RPC not found in .env");
+    }
+
+    if (!privateKey) {
+      throw new Error("PRIVATE_KEY not found in .env");
+    }
+
+    if (!userContractAddress) {
+      throw new Error("USER_CONTRACT_ADDRESS not found in .env");
+    }
+
+    // Remove 0x prefix if present in private key
+    const cleanPrivateKey = privateKey.startsWith('0x') ? privateKey.slice(2) : privateKey;
+
+    // Create provider and signer
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const signer = new ethers.Wallet(cleanPrivateKey, provider);
+
+    // Create contract instance
+    const userRegistry = new ethers.Contract(userContractAddress, USER_REGISTRY_ABI, signer);
+
+    log.success("Blockchain connection established");
+    log.info(`Network: ${rpcUrl}`);
+    log.info(`Contract: ${userContractAddress}`);
+    log.info(`Signer: ${signer.address}`);
+
+    return userRegistry;
+  } catch (error) {
+    log.warning(`Blockchain setup failed: ${error.message}`);
+    log.info("Superuser will be created in database only");
+    return null;
+  }
+};
+
 // Display animated banner
 const showBanner = () => {
   console.clear();
@@ -135,7 +183,7 @@ const showBanner = () => {
   log.titleText("🔐  PHARMATRACE SUPERADMIN CREATOR  🔐");
   log.titleEnd();
   console.log(
-    `${colors.dim}    A secure tool to create privileged admin accounts${colors.reset}\n`
+    `${colors.dim}    Creating superuser for live deployment${colors.reset}\n`
   );
 };
 
@@ -143,7 +191,13 @@ const showBanner = () => {
 const createSuperUser = async () => {
   showBanner();
 
+  let userRegistry = null;
+
   try {
+    // Setup blockchain connection
+    log.loading("Setting up blockchain connection...");
+    userRegistry = setupBlockchain();
+
     // Get MongoDB URI from environment
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
 
@@ -151,17 +205,17 @@ const createSuperUser = async () => {
       throw new Error("MONGODB_URI not found in server/.env file");
     }
 
-    log.loading("Establishing connection to MongoDB...");
+    log.loading("Connecting to live MongoDB Atlas...");
     const maskedUri = mongoUri.replace(/\/\/.*@/, "//<credentials>@");
     console.log(`${colors.dim}  └─ ${maskedUri}${colors.reset}\n`);
 
     // Connect to MongoDB
     await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 15000,
     });
 
-    log.success("Connected to MongoDB successfully");
+    log.success("Connected to live MongoDB Atlas successfully");
     log.divider();
 
     // Get direct access to the database
@@ -191,23 +245,23 @@ const createSuperUser = async () => {
       address = address.toLowerCase();
 
       // Check if user already exists
-      log.loading("Checking database for existing user...");
+      log.loading("Checking live database for existing user...");
       const existingUser = await usersCollection.findOne(
         { address },
-        { maxTimeMS: 10000 }
+        { maxTimeMS: 15000 }
       );
 
       if (existingUser) {
         log.warning(
           `User already exists with role: ${colors.bright}${existingUser.role}${colors.reset}`
         );
-        const overwrite = await askQuestion("Update to superadmin?", "🔄");
+        const overwrite = await askQuestion("Update to superadmin? (y/n):", "🔄");
 
         if (
           overwrite.toLowerCase() === "yes" ||
           overwrite.toLowerCase() === "y"
         ) {
-          log.loading("Updating user permissions...");
+          log.loading("Updating user permissions in live database...");
           await usersCollection.updateOne(
             { address },
             {
@@ -220,12 +274,25 @@ const createSuperUser = async () => {
                 updatedAt: new Date(),
               },
             },
-            { maxTimeMS: 10000 }
+            { maxTimeMS: 15000 }
           );
+
+          // Update blockchain if available
+          if (userRegistry) {
+            try {
+              log.loading("Setting superadmin role on live blockchain...");
+              const RoleEnum = { None: 0, Superadmin: 1, Manufacturer: 2, Distributor: 3, Pharmacist: 4 };
+              const tx = await userRegistry.setUser(address, true, RoleEnum.Superadmin);
+              await tx.wait();
+              log.success("Blockchain role updated successfully");
+            } catch (blockchainError) {
+              log.warning(`Blockchain update failed: ${blockchainError.message}`);
+            }
+          }
 
           const updatedUser = await usersCollection.findOne(
             { address },
-            { maxTimeMS: 10000 }
+            { maxTimeMS: 15000 }
           );
 
           log.box("✓ SUPERADMIN UPDATED SUCCESSFULLY", [
@@ -234,6 +301,8 @@ const createSuperUser = async () => {
             `${colors.cyan}Email:${colors.reset}   ${updatedUser.email}`,
             `${colors.cyan}Role:${colors.reset}    ${colors.green}${updatedUser.role}${colors.reset}`,
             `${colors.cyan}Status:${colors.reset}  ${colors.green}Active & Approved${colors.reset}`,
+            `${colors.cyan}Database:${colors.reset} Live MongoDB Atlas`,
+            `${colors.cyan}Blockchain:${colors.reset} ${userRegistry ? 'Updated' : 'Skipped'}`,
           ]);
 
           rl.close();
@@ -269,7 +338,7 @@ const createSuperUser = async () => {
       log.loading("Verifying email availability...");
       const existingEmail = await usersCollection.findOne(
         { email },
-        { maxTimeMS: 10000 }
+        { maxTimeMS: 15000 }
       );
       if (existingEmail) {
         log.error(`Email ${email} is already registered`);
@@ -298,7 +367,7 @@ const createSuperUser = async () => {
 
     // Create superuser
     log.divider();
-    log.loading("Creating superadmin account...");
+    log.loading("Creating superadmin account in live database...");
 
     const superUserDoc = {
       address,
@@ -315,41 +384,39 @@ const createSuperUser = async () => {
     };
 
     const result = await usersCollection.insertOne(superUserDoc, {
-      maxTimeMS: 10000,
+      maxTimeMS: 15000,
     });
 
     if (result.insertedId) {
+      // Set blockchain role if available
+      let blockchainStatus = "Skipped (No connection)";
+      if (userRegistry) {
+        try {
+          log.loading("Setting superadmin role on live blockchain...");
+          const RoleEnum = { None: 0, Superadmin: 1, Manufacturer: 2, Distributor: 3, Pharmacist: 4 };
+          const tx = await userRegistry.setUser(address, true, RoleEnum.Superadmin);
+          await tx.wait();
+          blockchainStatus = "✅ Success";
+          log.success("Blockchain role set successfully");
+        } catch (blockchainError) {
+          blockchainStatus = `❌ Failed: ${blockchainError.message}`;
+          log.warning(`Blockchain role setting failed: ${blockchainError.message}`);
+        }
+      }
+
       log.box("✓ SUPERADMIN CREATED SUCCESSFULLY", [
         `${colors.cyan}Address:${colors.reset} ${superUserDoc.address}`,
         `${colors.cyan}Name:${colors.reset}    ${superUserDoc.name}`,
         `${colors.cyan}Email:${colors.reset}   ${superUserDoc.email}`,
         `${colors.cyan}Role:${colors.reset}    ${colors.green}${superUserDoc.role}${colors.reset}`,
         `${colors.cyan}Status:${colors.reset}  ${colors.green}Active & Approved${colors.reset}`,
+        `${colors.cyan}Database:${colors.reset} ✅ Live MongoDB Atlas`,
+        `${colors.cyan}Blockchain:${colors.reset} ${blockchainStatus}`,
         "",
-        `${colors.dim}You can now login with this wallet address${colors.reset}`,
+        `${colors.dim}You can now login at: ${process.env.FRONTEND_URL || 'your-frontend-url'}${colors.reset}`,
       ]);
-      const RoleEnum = {
-        None: 0,
-        Superadmin: 1,
-        Manufacturer: 2,
-        Distributor: 3,
-        Pharmacist: 4,
-      };
-      try {
-        const tx = await userRegistry.setUser(
-          superUserDoc.address,
-          superUserDoc.isApproved,
-          RoleEnum.Superadmin
-        );
-        await tx.wait();
-        log.success(`User ${superUserDoc.address} role set to Superadmin`);
-      } catch (blockchainError) {
-        log.error(
-          `Failed to set user role on blockchain: ${blockchainError.message}`
-        );
-      }
     } else {
-      throw new Error("Failed to create superuser");
+      throw new Error("Failed to create superuser in database");
     }
   } catch (error) {
     console.log("\n");
@@ -358,14 +425,10 @@ const createSuperUser = async () => {
     if (error.code === 11000) {
       log.warning("Wallet address or email already registered");
     } else if (error.name === "MongooseServerSelectionError") {
-      log.warning("Cannot connect to MongoDB. Please check:");
-      console.log(`${colors.dim}   • MongoDB is running${colors.reset}`);
-      console.log(
-        `${colors.dim}   • MONGODB_URI in server/.env is correct${colors.reset}`
-      );
-      console.log(
-        `${colors.dim}   • Network/firewall settings allow connection${colors.reset}`
-      );
+      log.warning("Cannot connect to MongoDB Atlas. Please check:");
+      console.log(`${colors.dim}   • Internet connection${colors.reset}`);
+      console.log(`${colors.dim}   • MONGODB_URI in server/.env is correct${colors.reset}`);
+      console.log(`${colors.dim}   • MongoDB Atlas allows connections from your IP${colors.reset}`);
     }
 
     process.exit(1);
@@ -380,9 +443,7 @@ const createSuperUser = async () => {
 
 // Handle process termination
 process.on("SIGINT", async () => {
-  console.log(
-    `\n\n${colors.yellow}⚠  Operation cancelled by user${colors.reset}`
-  );
+  console.log(`\n\n${colors.yellow}⚠  Operation cancelled by user${colors.reset}`);
   rl.close();
   if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();
