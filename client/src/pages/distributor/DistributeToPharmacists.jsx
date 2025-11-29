@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Card } from '../../components/UI/Card';
 import { Button } from '../../components/UI/Button';
 import { Select } from '../../components/UI/Select';
@@ -80,6 +81,22 @@ const DistributeBatches = () => {
 
   // Helper functions to update form data for specific batch
   const updateBatchForm = (batchId, field, value) => {
+    if (field === 'quantity') {
+      const batch = batches.find(b => b.batchId === batchId);
+      const numValue = parseInt(value) || 0;
+      
+      // Prevent quantity from exceeding available amount
+      if (batch && numValue > batch.quantity) {
+        toast.error(`Only ${batch.quantity} units available for this batch`);
+        return;
+      }
+      
+      // Prevent negative values
+      if (numValue < 0) {
+        return;
+      }
+    }
+    
     setBatchForms(prev => ({
       ...prev,
       [batchId]: {
@@ -165,8 +182,53 @@ const DistributeBatches = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      <div className="space-y-6">
+        <div className="mb-4">
+          <div className="w-48 h-4 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+        
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[...Array(2)].map((_, index) => (
+            <Card key={index} className="p-4">
+              <div className="flex items-start justify-between mb-4">
+                <div className="space-y-2">
+                  <div className="w-40 h-5 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="w-20 h-6 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="space-y-1">
+                  <div className="w-24 h-3 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="space-y-1">
+                  <div className="w-20 h-3 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-full h-10 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="w-16 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-full h-10 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+                  <div className="w-full h-10 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="w-full h-10 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -237,9 +299,26 @@ const DistributeBatches = () => {
                       min="1"
                       max={batch.quantity}
                       value={form.quantity}
-                      onChange={(e) => updateBatchForm(batch.batchId, 'quantity', e.target.value)}
-                      placeholder="Enter quantity"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow empty string for clearing
+                        if (value === '') {
+                          updateBatchForm(batch.batchId, 'quantity', value);
+                          return;
+                        }
+                        // Only allow valid positive integers
+                        if (/^\d+$/.test(value)) {
+                          updateBatchForm(batch.batchId, 'quantity', value);
+                        }
+                      }}
+                      placeholder={`Max: ${batch.quantity}`}
+                      className={`${form.quantity && parseInt(form.quantity) > batch.quantity ? 'border-red-500 focus:border-red-500' : ''}`}
                     />
+                    {form.quantity && parseInt(form.quantity) > batch.quantity && (
+                      <p className="mt-1 text-xs text-red-600">
+                        Exceeds available quantity ({batch.quantity})
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -303,7 +382,9 @@ const DistributionHistory = () => {
           batchNumber: transfer.batchId,
           pharmacy: {
             name: transfer.to,
-            location: 'N/A' // Location not available in transfer data
+            location: transfer.pharmacyLocation || null,
+            walletAddress: transfer.pharmacyWalletAddress || null,
+            licenseNumber: transfer.pharmacyLicenseNumber || null
           },
           quantity: transfer.quantity,
           status: transfer.status.toLowerCase().replace(' ', '_'),
@@ -324,9 +405,49 @@ const DistributionHistory = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-      </div>
+      <Card className="p-6">
+        <div className="mb-4">
+          <div className="w-40 h-6 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Date</th>
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Batch</th>
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Pharmacy</th>
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Quantity</th>
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Updated</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {[...Array(5)].map((_, index) => (
+                <tr key={index}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-12 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-16 h-6 bg-gray-200 rounded-full animate-pulse"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     );
   }
 
@@ -363,8 +484,18 @@ const DistributionHistory = () => {
                   {dist.batchNumber}
                 </td>
                 <td className="px-6 py-4 text-sm whitespace-nowrap">
-                  <div>{dist.pharmacy.name}</div>
-                  <div className="text-xs text-gray-500">{dist.pharmacy.location}</div>
+                  <div className="font-medium">{dist.pharmacy.name}</div>
+                  {dist.pharmacy.location && (
+                    <div className="text-xs text-gray-500">{dist.pharmacy.location}</div>
+                  )}
+                  {dist.pharmacy.walletAddress && (
+                    <div className="font-mono text-xs text-blue-600">
+                      {dist.pharmacy.walletAddress.slice(0, 6)}...{dist.pharmacy.walletAddress.slice(-4)}
+                    </div>
+                  )}
+                  {dist.pharmacy.licenseNumber && (
+                    <div className="text-xs text-gray-500">License: {dist.pharmacy.licenseNumber}</div>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-sm whitespace-nowrap">
                   {dist.quantity}

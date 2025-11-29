@@ -12,7 +12,6 @@ const TrackTransfers = () => {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [selectedBatch, setSelectedBatch] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
     fetchTransfers();
@@ -185,7 +184,6 @@ const TrackTransfers = () => {
                     <p><span className="font-medium">Expiry Date:</span> {batch.batchInfo.expiryDate ? new Date(batch.batchInfo.expiryDate).toLocaleDateString() : 'N/A'}</p>
                   </>
                 )}
-                <p><span className="font-medium">Success Rate:</span> {batch.successRate.toFixed(1)}%</p>
                 <p><span className="font-medium">Last Updated:</span> {formatDistanceToNow(new Date(batch.lastUpdated))} ago</p>
               </div>
             </div>
@@ -225,15 +223,6 @@ const TrackTransfers = () => {
                         {dist.remarks && (
                           <p className="mt-1 text-gray-600">{dist.remarks}</p>
                         )}
-                        {dist.qualityCheck && (
-                          <div className="p-2 mt-2 rounded-md bg-green-50">
-                            <p className="text-sm font-medium text-green-800">Quality Check: {dist.qualityCheck.result}</p>
-                            <p className="text-xs text-green-600">By: {dist.qualityCheck.performedBy}</p>
-                            {dist.qualityCheck.notes && (
-                              <p className="mt-1 text-xs text-green-600">{dist.qualityCheck.notes}</p>
-                            )}
-                          </div>
-                        )}
                         {dist.transactionHash && (
                           <p className="mt-1 font-mono text-xs text-blue-600">
                             TX: {dist.transactionHash.substring(0, 10)}...
@@ -253,35 +242,52 @@ const TrackTransfers = () => {
 
   return (
     <div className="space-y-0">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Track Transfers</h2>
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
-            <Input
-              type="text"
-              placeholder="Search batches..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-64 pl-10 pr-4"
-            />
-          </div>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 text-sm border rounded-lg"
-          >
-            <option value="all">All Status</option>
-            <option value="in_transit">In Transit</option>
-            <option value="delivered">Delivered</option>
-            <option value="returned">Returned</option>
-          </select>
+      <div className="flex items-center gap-4 mb-6">
+        <h2 className="text-2xl font-bold whitespace-nowrap">Track Transfers</h2>
+        <div className="relative flex-1">
+          <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+          <Input
+            type="text"
+            placeholder="Search batches..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4"
+          />
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, index) => (
+            <Card key={index} className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-24 h-5 bg-gray-200 rounded animate-pulse"></div>
+                <div className="w-16 h-6 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+              <div className="w-32 h-4 mb-3 bg-gray-200 rounded animate-pulse"></div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="w-40 h-4 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="pt-2 mt-2 border-t">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <div className="w-10 h-3 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-8 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="w-16 h-3 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-8 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-3 bg-gray-200 rounded w-14 animate-pulse"></div>
+                    <div className="w-8 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+              <div className="w-full h-2 mt-2 bg-gray-200 rounded-full animate-pulse"></div>
+            </Card>
+          ))}
         </div>
       ) : error ? (
         <div className="flex items-center justify-center h-64 text-red-500">

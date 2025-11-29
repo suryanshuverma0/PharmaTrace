@@ -4,6 +4,7 @@ const Product = require('../models/Product');
 const Batch = require('../models/Batch');
 const User = require('../models/User');
 const Manufacturer = require('../models/Manufacturer');
+const Pharmacist = require('../models/Pharmacist');
 const mongoose = require('mongoose');
 const { signer, batchContract, provider } = require("../utils/blockchain");
 
@@ -418,12 +419,48 @@ const getDistributorTransfers = async (req, res) => {
             shipment.status && shipment.status.toLowerCase() !== 'produced') {
           
           const qty = Number(shipment.quantity) || 0;
+          const pharmacyIdentifier = shipment.to || shipment.toAddress;
+          
+          // Try to get pharmacy wallet address and additional details
+          let pharmacyWalletAddress = null;
+          let pharmacyLocation = null;
+          let pharmacyLicenseNumber = null;
+          
+          if (pharmacyIdentifier) {
+            // First try to find pharmacy by name in Pharmacist collection
+            const pharmacist = await Pharmacist.findOne({ pharmacyName: pharmacyIdentifier })
+              .populate('user', 'address email phone');
+            
+            if (pharmacist && pharmacist.user) {
+              pharmacyWalletAddress = pharmacist.user.address;
+              pharmacyLocation = pharmacist.pharmacyLocation;
+              pharmacyLicenseNumber = pharmacist.licenseNumber;
+            } else {
+              // If not found by name, check if the identifier is already a wallet address
+              if (pharmacyIdentifier.startsWith('0x') && pharmacyIdentifier.length === 42) {
+                pharmacyWalletAddress = pharmacyIdentifier;
+                // Try to find pharmacy details by wallet address
+                const userByAddress = await User.findOne({ address: pharmacyIdentifier });
+                if (userByAddress) {
+                  const pharmacistByUser = await Pharmacist.findOne({ user: userByAddress._id });
+                  if (pharmacistByUser) {
+                    pharmacyLocation = pharmacistByUser.pharmacyLocation;
+                    pharmacyLicenseNumber = pharmacistByUser.licenseNumber;
+                  }
+                }
+              }
+            }
+          }
+          
           transfers.push({
             batchId: batch.batchNumber,
             product: productName,
             quantity: qty,
             status: shipment.status,
-            to: shipment.to || shipment.toAddress,
+            to: pharmacyIdentifier,
+            pharmacyWalletAddress: pharmacyWalletAddress,
+            pharmacyLocation: pharmacyLocation,
+            pharmacyLicenseNumber: pharmacyLicenseNumber,
             from: shipment.from || shipment.fromAddress,
             timestamp: shipment.timestamp,
             remarks: shipment.remarks,

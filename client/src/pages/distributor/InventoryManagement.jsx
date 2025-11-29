@@ -104,51 +104,69 @@ const InventoryManagement = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
+      onClick={() => setSelectedItem(null)}
     >
       <motion.div
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
         exit={{ scale: 0.95 }}
-        className="w-full max-w-2xl p-6 bg-white rounded-lg shadow-xl"
+        className="w-full max-w-md bg-white rounded-lg shadow-lg"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between mb-4">
-          <h3 className="text-xl font-bold">Product Details</h3>
-          <button
-            onClick={() => setSelectedItem(null)}
-            className="p-1 rounded hover:bg-gray-100"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="grid gap-4 mb-4 md:grid-cols-2">
-          <div className="p-4 rounded-lg bg-blue-50">
-            <h4 className="font-semibold text-blue-800">Product Information</h4>
-            <div className="mt-2 space-y-2">
-              <p><span className="text-gray-600">Name:</span> {item.product}</p>
-              <p><span className="text-gray-600">Batch ID:</span> {item.batchId}</p>
-              <p><span className="text-gray-600">Manufacturer:</span> {item.manufacturer || 'N/A'}</p>
-              <p><span className="text-gray-600">Manufacturing Date:</span> {formatDate(item.manufacturingDate)}</p>
-              <p><span className="text-gray-600">Expiry Date:</span> {formatDate(item.expiryDate)}</p>
-            </div>
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Product Details</h3>
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
           </div>
 
-          <div className="p-4 rounded-lg bg-green-50">
-            <h4 className="font-semibold text-green-800">Stock Information</h4>
-            <div className="mt-2 space-y-2">
-              <p><span className="text-gray-600">Available Quantity:</span> {item.quantity}</p>
-              <p><span className="text-gray-600">Stock Status:</span> 
-                <span className={`ml-2 px-2 py-1 rounded ${getStatusColor(item.stockStatus)}`}>
+          <div className="space-y-3">
+            <div>
+              <h4 className="font-medium text-gray-900">{item.product}</h4>
+              <p className="text-sm text-gray-500">Batch: {item.batchId}</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 py-3 border-t border-b">
+              <div className="text-center">
+                <div className="font-semibold">{item.quantity}</div>
+                <div className="text-xs text-gray-500">Available</div>
+              </div>
+              <div className="text-center">
+                <div className="font-semibold">{item.totalAssignedToDistributor}</div>
+                <div className="text-xs text-gray-500">Assigned</div>
+              </div>
+              <div className="text-center">
+                <div className="font-semibold">{item.shippedOutByDistributor || 0}</div>
+                <div className="text-xs text-gray-500">Shipped</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Manufacturer</span>
+                <span className="text-sm">{item.manufacturer || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Manufacturing Date</span>
+                <span className="text-sm">{formatDate(item.manufacturingDate)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Expiry Date</span>
+                <span className="text-sm">{formatDate(item.expiryDate)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Status</span>
+                <span className={`px-2 py-1 text-xs rounded ${getStatusColor(item.stockStatus)}`}>
                   {item.stockStatus.toUpperCase()}
                 </span>
-              </p>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-4 text-sm text-gray-500">
-          Last updated: {formatDistanceToNow(new Date(item.lastUpdated))} ago
         </div>
       </motion.div>
     </motion.div>
@@ -156,52 +174,138 @@ const InventoryManagement = () => {
 
   return (
     <div className="space-y-0">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Inventory Management</h2>
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
-            <Input
-              type="text"
-              placeholder="Search inventory..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-64 pl-10 pr-4"
-            />
-          </div>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="px-3 py-2 text-sm border rounded-lg"
+      <div className="flex items-center gap-4 mb-6">
+        <h2 className="text-2xl font-bold whitespace-nowrap">Inventory Management</h2>
+        <div className="relative flex-1">
+          <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+          <Input
+            type="text"
+            placeholder="Search inventory..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4"
+          />
+        </div>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="px-3 py-2 text-sm border rounded-lg whitespace-nowrap"
+        >
+          <option value="all">All Items</option>
+          <option value="low_stock">Low Stock</option>
+          <option value="expiring_soon">Expiring Soon</option>
+          <option value="expired">Expired</option>
+        </select>
+        <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-lg">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded ${viewMode === 'grid' ? 'bg-white shadow' : ''}`}
+            title="Grid View"
           >
-            <option value="all">All Items</option>
-            <option value="low_stock">Low Stock</option>
-            <option value="expiring_soon">Expiring Soon</option>
-            <option value="expired">Expired</option>
-          </select>
-          <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-lg">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded ${viewMode === 'grid' ? 'bg-white shadow' : ''}`}
-              title="Grid View"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-2 rounded ${viewMode === 'table' ? 'bg-white shadow' : ''}`}
-              title="Table View"
-            >
-              <Table2 className="w-4 h-4" />
-            </button>
-          </div>
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('table')}
+            className={`p-2 rounded ${viewMode === 'table' ? 'bg-white shadow' : ''}`}
+            title="Table View"
+          >
+            <Table2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-        </div>
+        viewMode === 'table' ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Product</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Batch ID</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Manufacturer</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Remaining (You Hold)</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Assigned To You</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Shipped Out</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Manufacturing Date</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Expiry Date</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {[...Array(5)].map((_, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-16 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-16 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-12 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-16 h-6 bg-gray-200 rounded-full animate-pulse"></div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, index) => (
+              <Card key={index} className="p-4">
+                {/* Header with Batch ID and Status */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-16 h-6 bg-gray-200 rounded-full animate-pulse"></div>
+                </div>
+                
+                {/* Product Name */}
+                <div className="w-40 h-6 mb-2 bg-gray-200 rounded animate-pulse"></div>
+                
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <div className="w-16 h-4 mb-1 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-12 h-6 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div>
+                    <div className="w-16 h-4 mb-1 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-12 h-6 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div>
+                    <div className="w-20 h-4 mb-1 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-8 h-6 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+
+                {/* Footer with Expiry */}
+                <div className="pt-4 mt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-16 h-6 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
       ) : error ? (
         <div className="flex items-center justify-center h-64 text-red-500">
           <AlertCircle className="w-6 h-6 mr-2" />

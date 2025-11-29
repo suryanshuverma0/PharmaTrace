@@ -128,8 +128,94 @@ const AssignedBatches = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-600">Loading assigned batches...</div>
+      <div className="min-h-screen p-6">
+        <div className="mb-8">
+          <div className="w-64 h-8 mb-2 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-6 bg-gray-200 rounded w-96 animate-pulse"></div>
+        </div>
+
+        <div className="space-y-6">
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="overflow-hidden bg-white border shadow-lg rounded-2xl border-gray-200/50">
+              {/* Batch Header Skeleton */}
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
+                  <div className="flex items-start flex-1 gap-4">
+                    {/* Icon Skeleton */}
+                    <div className="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-gray-200 rounded-xl animate-pulse"></div>
+                    <div className="flex-1 min-w-0">
+                      {/* Batch Title Skeleton */}
+                      <div className="w-48 h-6 mb-2 bg-gray-200 rounded animate-pulse"></div>
+                      {/* Product Details Skeleton */}
+                      <div className="w-64 h-5 mb-2 bg-gray-200 rounded animate-pulse"></div>
+                      {/* Batch Info Skeleton */}
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="w-16 h-3 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="w-24 h-3 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="w-20 h-3 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-row items-start gap-2">
+                    <div className="space-y-1.5">
+                      {/* Status Badge Skeleton */}
+                      <div className="w-20 px-4 py-2 bg-gray-200 rounded-full animate-pulse h-7"></div>
+                      {/* Assigned Date Skeleton */}
+                      <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                    {/* Expand Button Skeleton */}
+                    <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded Details Skeleton (only for first batch) */}
+              {index === 0 && (
+                <div className="p-6 bg-gray-50">
+                  {/* Stats Grid Skeleton */}
+                  <div className="grid gap-6 mb-6 sm:grid-cols-2 lg:grid-cols-4">
+                    {[...Array(3)].map((_, statIndex) => (
+                      <div key={statIndex} className="p-4 bg-white rounded-xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-5 h-5 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                        <div className="w-16 h-8 mb-1 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="w-24 h-3 bg-gray-200 rounded animate-pulse"></div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Shipment History Skeleton */}
+                  <div className="mt-6">
+                    <div className="w-32 h-6 mb-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="space-y-4">
+                      {[...Array(2)].map((_, historyIndex) => (
+                        <div key={historyIndex} className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                          <div className="flex-1">
+                            <div className="w-32 h-4 mb-2 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="w-48 h-3 mb-1 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="w-40 h-3 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -379,13 +465,6 @@ const AssignedBatches = () => {
                           ))}
                         </div>
                       </div>
-
-                      {batch.remarks && (
-                        <div className="flex items-center gap-2 px-4 py-3 mt-4 text-sm text-blue-700 bg-blue-50 rounded-xl">
-                          <AlertCircle className="w-5 h-5" />
-                          <span>{batch.remarks}</span>
-                        </div>
-                      )}
                     </div>
                   </motion.div>
                 )}
