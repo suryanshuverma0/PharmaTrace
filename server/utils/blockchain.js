@@ -84,31 +84,6 @@ async function testConnection() {
     );
     console.log("✅ Batch Contract deployed:", batchCode !== "0x");
 
-    // Test Product contract interaction
-    try {
-      const testProduct = await productContract.products("SNBLK32");
-      console.log(
-        "✅ Product Contract call successful, product data:",
-        testProduct
-      );
-    } catch (contractError) {
-      console.warn(
-        "⚠️ Product Contract call failed, may be expected if no product exists:",
-        contractError.message
-      );
-    }
-
-    // Test Batch contract interaction
-    try {
-      const totalBatches = await batchContract.getTotalBatches();
-      console.log(
-        "✅ Batch Contract call successful, total batches:",
-        totalBatches.toString()
-      );
-    } catch (contractError) {
-      console.warn("⚠️ Batch Contract call failed:", contractError.message);
-    }
-
     try {
       const admin = await userRegistry.admin();
       console.log("✅ UserRegistry admin:", admin);
