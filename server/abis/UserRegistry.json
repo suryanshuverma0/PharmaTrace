@@ -1,0 +1,158 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "UserRegistry",
+  "sourceName": "contracts/UserRegistry.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "oldAdmin",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newAdmin",
+          "type": "address"
+        }
+      ],
+      "name": "AdminChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "isApproved",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum UserRegistry.Role",
+          "name": "role",
+          "type": "uint8"
+        }
+      ],
+      "name": "UserWhitelisted",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "admin",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getUserRole",
+      "outputs": [
+        {
+          "internalType": "enum UserRegistry.Role",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "isUserApproved",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "approved",
+          "type": "bool"
+        },
+        {
+          "internalType": "enum UserRegistry.Role",
+          "name": "role",
+          "type": "uint8"
+        }
+      ],
+      "name": "setUser",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "users",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "isApproved",
+          "type": "bool"
+        },
+        {
+          "internalType": "enum UserRegistry.Role",
+          "name": "role",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x6080604052348015600f57600080fd5b50600080546001600160a01b03191633179055610369806100316000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c8063278208511461005c578063529d6ccf146100a357806370ec87a4146100df578063a87430ba146100f4578063f851a4401461012e575b600080fd5b61008d61006a36600461025d565b6001600160a01b0316600090815260016020526040902054610100900460ff1690565b60405161009a91906102b7565b60405180910390f35b6100cf6100b136600461025d565b6001600160a01b031660009081526001602052604090205460ff1690565b604051901515815260200161009a565b6100f26100ed3660046102cb565b610159565b005b61012061010236600461025d565b60016020526000908152604090205460ff8082169161010090041682565b60405161009a92919061031d565b600054610141906001600160a01b031681565b6040516001600160a01b03909116815260200161009a565b6000546001600160a01b031633146101a85760405162461bcd60e51b815260206004820152600e60248201526d139bdd08185d5d1a1bdc9a5e995960921b604482015260640160405180910390fd5b6001600160a01b0383166000908152600160205260409020805460ff198116841515908117835583929161ffff191661ff0019909116176101008360058111156101f4576101f461027f565b0217905550826001600160a01b03167f36785511cdd0ecc0b728f504d278869443ae902b8c1cc7f63c6933f16d47dcf5838360405161023492919061031d565b60405180910390a2505050565b80356001600160a01b038116811461025857600080fd5b919050565b60006020828403121561026f57600080fd5b61027882610241565b9392505050565b634e487b7160e01b600052602160045260246000fd5b600681106102b357634e487b7160e01b600052602160045260246000fd5b9052565b602081016102c58284610295565b92915050565b6000806000606084860312156102e057600080fd5b6102e984610241565b9250602084013580151581146102fe57600080fd5b915060408401356006811061031257600080fd5b809150509250925092565b821515815260408101610278602083018461029556fea2646970667358221220e200b48748d472ab71cc13bfdab7423d185e4c7cf1368f208cdf51316ea0a25d64736f6c634300081c0033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100575760003560e01c8063278208511461005c578063529d6ccf146100a357806370ec87a4146100df578063a87430ba146100f4578063f851a4401461012e575b600080fd5b61008d61006a36600461025d565b6001600160a01b0316600090815260016020526040902054610100900460ff1690565b60405161009a91906102b7565b60405180910390f35b6100cf6100b136600461025d565b6001600160a01b031660009081526001602052604090205460ff1690565b604051901515815260200161009a565b6100f26100ed3660046102cb565b610159565b005b61012061010236600461025d565b60016020526000908152604090205460ff8082169161010090041682565b60405161009a92919061031d565b600054610141906001600160a01b031681565b6040516001600160a01b03909116815260200161009a565b6000546001600160a01b031633146101a85760405162461bcd60e51b815260206004820152600e60248201526d139bdd08185d5d1a1bdc9a5e995960921b604482015260640160405180910390fd5b6001600160a01b0383166000908152600160205260409020805460ff198116841515908117835583929161ffff191661ff0019909116176101008360058111156101f4576101f461027f565b0217905550826001600160a01b03167f36785511cdd0ecc0b728f504d278869443ae902b8c1cc7f63c6933f16d47dcf5838360405161023492919061031d565b60405180910390a2505050565b80356001600160a01b038116811461025857600080fd5b919050565b60006020828403121561026f57600080fd5b61027882610241565b9392505050565b634e487b7160e01b600052602160045260246000fd5b600681106102b357634e487b7160e01b600052602160045260246000fd5b9052565b602081016102c58284610295565b92915050565b6000806000606084860312156102e057600080fd5b6102e984610241565b9250602084013580151581146102fe57600080fd5b915060408401356006811061031257600080fd5b809150509250925092565b821515815260408101610278602083018461029556fea2646970667358221220e200b48748d472ab71cc13bfdab7423d185e4c7cf1368f208cdf51316ea0a25d64736f6c634300081c0033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
