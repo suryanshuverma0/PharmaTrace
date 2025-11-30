@@ -422,9 +422,11 @@ const VerifyDrug = () => {
                     <h3 className="text-2xl font-semibold text-gray-900">
                       {verificationResult.product?.productName || 'Unknown Product'}
                     </h3>
-                    <p className="mt-2 text-gray-600">
-                      Manufactured by {verificationResult.manufacturer?.name || 'Unknown Manufacturer'}
-                    </p>
+                    {(verificationResult.manufacturer?.name || verificationResult.product?.manufacturer) && (
+                      <p className="mt-2 text-gray-600">
+                        Manufactured by {verificationResult.manufacturer?.name || verificationResult.product?.manufacturer}
+                      </p>
+                    )}
                   </div>
 
                   {verificationResult.success !== false && (
@@ -507,50 +509,21 @@ const VerifyDrug = () => {
 
                   {/* Enhanced error messages for different scenarios */}
                   {verificationResult.success === false && (
-                    <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-                      <div className="flex items-start">
-                        {/* <XCircle className="w-6 h-6 text-red-600 mt-0.5 mr-3 flex-shrink-0" /> */}
-                        <div className="flex-1">
-                          <h4 className="text-lg font-semibold text-red-800">
-                            {verificationResult.error === 'NOT_FOUND' ? 'Product Not Found' : 'Verification Failed'}
-                          </h4>
-                          <p className="mt-2 text-red-600">
-                            {verificationResult.error === 'NOT_FOUND' 
-                              ? `The serial number "${verificationResult.product?.serialNumber}" was not found in our database.`
-                              : verificationResult.message || 'Unable to verify this product.'
-                            }
-                          </p>
-                          
-                          {/* Helpful suggestions */}
-                          <div className="mt-4 text-sm text-red-600">
-                            <p className="mb-2 font-medium">What you can try:</p>
-                            <ul className="space-y-1 list-disc list-inside">
-                              <li>Double-check the serial number for typos</li>
-                              <li>Ensure you're scanning the correct QR code</li>
-                              <li>Try scanning the QR code again with better lighting</li>
-                              <li>Verify the product is from an authorized source</li>
-                              {verificationResult.error === 'NOT_FOUND' && (
-                                <li>Contact the manufacturer if you believe this is an error</li>
-                              )}
-                            </ul>
-                          </div>
-
-                          {/* Warning for potentially counterfeit products */}
-                          {verificationResult.error === 'NOT_FOUND' && (
-                            <div className="p-3 mt-4 border border-yellow-200 rounded-lg bg-yellow-50">
-                              <div className="flex items-start">
-                                <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
-                                <div className="text-sm">
-                                  <p className="font-medium text-yellow-800">Important Notice</p>
-                                  <p className="mt-1 text-yellow-700">
-                                    Products not found in our database may be counterfeit or unauthorized. 
-                                    For your safety, consult with a pharmacist before using this medication.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                    <div className="p-4 mb-4 border border-red-200 rounded-lg bg-red-50">
+                      <p className="text-sm text-center text-red-800 sm:text-base">
+                        Product with serial number <span className="font-mono font-medium break-all">{verificationResult.product?.serialNumber}</span> is not registered in our blockchain system.
+                      </p>
+                      <p className="mt-2 text-xs text-center text-red-600 sm:text-sm">
+                        This product may be counterfeit or unauthorized.
+                      </p>
+                      <div className="mt-4 text-center">
+                        <button
+                          onClick={() => navigate('/report-counterfeit')}
+                          className="inline-flex items-center px-4 py-2 text-sm text-red-600 transition-colors bg-red-100 border border-red-200 rounded-lg sm:text-base hover:bg-red-200"
+                        >
+                          <AlertTriangle className="w-4 h-4 mr-2" />
+                          Report Suspicious Product
+                        </button>
                       </div>
                     </div>
                   )}
@@ -608,7 +581,7 @@ const VerifyDrug = () => {
                     <div className="space-y-3">
                       <Button
                         variant="primary"
-                        className="justify-center w-full py-3"
+                        className="justify-center w-full py-3 text-sm sm:text-base"
                         onClick={() => {
                           setVerificationResult(null);
                           setSerialNumber('');
@@ -619,7 +592,7 @@ const VerifyDrug = () => {
                       </Button>
                       <Button
                         variant="secondary"
-                        className="justify-center w-full py-3"
+                        className="justify-center w-full py-3 text-sm sm:text-base"
                         onClick={() => {
                           setVerificationResult(null);
                           setError(null);

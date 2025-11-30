@@ -193,20 +193,88 @@ const JourneyDetails = () => {
   }
 
   if (error) {
+    const isNotFound = error.includes('404') || error.toLowerCase().includes('not found');
+    
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        {/* Header */}
+        <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur-md border-gray-200/50">
+          <div className="px-3 mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <button 
+                  onClick={() => navigate('/verify-product')}
+                  className="flex items-center px-2 py-2 text-gray-600 transition-colors rounded-lg hover:text-gray-900 hover:bg-gray-100 sm:px-3"
+                >
+                  <ChevronLeft className="w-5 h-5 mr-1" />
+                  <span className="hidden sm:inline">Back to Verification</span>
+                  <span className="sm:hidden">Back</span>
+                </button>
+                <div className="hidden w-px h-6 bg-gray-300 sm:block"></div>
+                <div className="flex items-center space-x-2">
+                  <Package className="w-5 h-5 text-blue-600" />
+                  <span className="hidden font-medium text-gray-900 sm:inline">Product Verification</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-red-500" />
-              <h2 className="mb-2 text-xl font-semibold text-gray-900">Unable to Load Journey</h2>
-              <p className="mb-4 text-gray-600">{error}</p>
-              <button
-                onClick={() => navigate('/verify-product')}
-                className="px-4 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600"
-              >
-                Back to Verification
-              </button>
+            <div className="max-w-2xl text-center">
+              {isNotFound ? (
+                <>
+                  {/* Product Not Found - Likely Counterfeit */}
+                  <div className="flex items-center justify-center w-24 h-24 mx-auto mb-6 bg-red-100 rounded-full">
+                    <AlertTriangle className="w-12 h-12 text-red-600" />
+                  </div>
+                  
+                  <h2 className="mb-4 text-2xl font-bold text-gray-900">⚠️ Product Not Verified</h2>
+                  
+                  <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-800 text-center">
+                      Product with serial number <span className="font-mono font-medium">{serialNumber}</span> is not registered in our blockchain system.
+                    </p>
+                    <p className="mt-2 text-sm text-red-600 text-center">
+                      This product may be counterfeit or unauthorized.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+                    <button
+                      onClick={() => navigate('/verify-product')}
+                      className="w-full sm:w-auto px-4 sm:px-6 py-3 text-sm sm:text-base text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Verify Another Product
+                    </button>
+                    <button
+                      onClick={() => navigate('/report-counterfeit')}
+                      className="w-full sm:w-auto px-4 sm:px-6 py-3 text-sm sm:text-base text-red-600 bg-red-100 border border-red-200 rounded-lg hover:bg-red-200 transition-colors"
+                    >
+                      <AlertTriangle className="w-4 h-4 mr-2 inline" />
+                      Report Suspicious Product
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* General Error */}
+                  <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 bg-gray-100 rounded-full">
+                    <AlertTriangle className="w-8 h-8 text-gray-600" />
+                  </div>
+                  
+                  <h2 className="mb-2 text-xl font-semibold text-gray-900">Unable to Load Journey</h2>
+                  <p className="mb-6 text-gray-600">{error}</p>
+                  
+                  <button
+                    onClick={() => navigate('/verify-product')}
+                    className="px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Back to Verification
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
