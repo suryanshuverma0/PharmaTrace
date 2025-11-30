@@ -109,6 +109,18 @@ const LandingPage = () => {
     });
   };
 
+  const handleVerificationComplete = (verificationResult) => {
+    console.log("Verification completed:", verificationResult);
+    // Navigate to verification page with the verification result
+    navigate("/verify-product", { 
+      state: { 
+        verificationResult,
+        verificationMethod: 'qr',
+        fromLanding: true 
+      } 
+    });
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -476,7 +488,7 @@ const LandingPage = () => {
       <QRScannerModal
         isOpen={showQRScanner}
         onClose={() => setShowQRScanner(false)}
-        onScanResult={handleScanResult}
+        onVerificationComplete={handleVerificationComplete}
         title="Scan Medication QR Code"
         description="Position the QR code from your medication package within the frame"
       />
@@ -488,15 +500,13 @@ export const QuickVerificationSection = () => {
   const navigate = useNavigate();
   const [showQRScanner, setShowQRScanner] = useState(false);
 
-  const handleScanResult = (serialNumber, rawData) => {
-    console.log("Scanned serial number:", serialNumber);
-    setShowQRScanner(false);
-    // Navigate to verification page with the scanned serial number
+  const handleVerificationComplete = (verificationResult) => {
+    console.log("Verification completed:", verificationResult);
+    // Navigate to verification page with the verification result
     navigate("/verify-product", { 
       state: { 
-        serialNumber, 
+        verificationResult,
         verificationMethod: 'qr',
-        autoVerify: true,
         fromLanding: true 
       } 
     });
@@ -631,7 +641,7 @@ export const QuickVerificationSection = () => {
       <QRScannerModal
         isOpen={showQRScanner}
         onClose={() => setShowQRScanner(false)}
-        onScanResult={handleScanResult}
+        onVerificationComplete={handleVerificationComplete}
         title="Scan Medication QR Code"
         description="Position the QR code from your medication package within the frame"
       />

@@ -43,7 +43,16 @@ const VerifyDrug = () => {
 
   // Handle state from landing page navigation
   useEffect(() => {
-    if (location.state?.serialNumber) {
+    if (location.state?.verificationResult) {
+      // QR scan completed, show results directly
+      setVerificationResult(location.state.verificationResult);
+      setVerificationMethod('qr');
+      setSerialNumber(location.state.verificationResult.serialNumber || '');
+      
+      // Clear the state to prevent re-triggering
+      window.history.replaceState({}, document.title);
+    } else if (location.state?.serialNumber) {
+      // Legacy: manual entry with serial number
       setSerialNumber(location.state.serialNumber);
       setVerificationMethod('manual');
       
@@ -62,12 +71,21 @@ const VerifyDrug = () => {
     checkLocationPermission();
   }, []);
 
-  // Handle QR scan result from modal
+  // Handle QR scan result from modal (legacy callback - kept for backward compatibility)
   const handleScanResult = (serialNum, rawData) => {
     console.log('Scanned serial number:', serialNum);
     setSerialNumber(serialNum);
     setVerificationMethod('qr');
     performVerification(serialNum);
+  };
+
+  // Handle verification completion from QR scanner modal
+  const handleVerificationComplete = (result) => {
+    console.log('Verification completed:', result);
+    setVerificationResult(result);
+    setVerificationMethod('qr');
+    setSerialNumber(result.serialNumber || '');
+    setShowQRModal(false);
   };
 
 
@@ -648,7 +666,12 @@ const VerifyDrug = () => {
       <QRScannerModal
         isOpen={showQRModal}
         onClose={() => setShowQRModal(false)}
-        onScanResult={handleScanResult}
+        onVerificationComplete={(result) => {
+          setVerificationResult(result);
+          setVerificationMethod('qr');
+          setSerialNumber(result.serialNumber || '');
+          setShowQRModal(false);
+        }}
         skipLocationCheck={true}
       />
 

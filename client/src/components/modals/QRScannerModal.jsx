@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle, Camera, Scan, Image, Upload } from "lucide-react";
+import { X, AlertTriangle, Camera, Scan, Image, Upload, CheckCircle, XCircle, ArrowRight, Package } from "lucide-react";
 import LocationPermissionModal from "./LocationPermissionModal";
 import { useLocationTracking } from "../../hooks/useLocationTracking";
+import { verificationAPI } from "../../services/api/verificationAPI";
+import { useNavigate } from "react-router-dom";
+import { Badge } from "../UI/Badge";
 import QrScanner from 'qr-scanner';
 
 // Mock Button component
@@ -27,11 +30,13 @@ const Button = ({ children, variant = "primary", className = "", onClick, disabl
 const QRScannerModal = ({ 
   isOpen = true, 
   onClose = () => {}, 
-  onScanResult = (serial, raw) => console.log('Scanned:', serial, raw), 
+  onScanResult = null, // Legacy callback - deprecated
+  onVerificationComplete = null, // New callback for verification results
   title = "Scan QR Code",
   description = "Position the QR code within the frame",
   skipLocationCheck = false
 }) => {
+  const navigate = useNavigate();
   // Helper function to extract serial number from QR code data
   const extractSerialFromQR = (qrData) => {
     if (!qrData || typeof qrData !== 'string') return null;
@@ -213,17 +218,7 @@ const QRScannerModal = ({
             setIsVerifying(true);
             setScannerError(null);
             
-            try {
-              await onScanResult(serialNumber, result.data);
-              onClose();
-            } catch (error) {
-              console.error('Verification failed:', error);
-              setScannerError('Failed to verify product. Please try again.');
-              setIsVerifying(false);
-              // Restart scanner
-              await qrScanner.start();
-              setIsScanning(true);
-            }
+            await performVerification(serialNumber, result.data, 'qr_scan');
           } else {
             console.warn('⚠️ No valid serial number found in QR code:', result.data);
             setScannerError('QR code does not contain a valid serial number. Please scan a valid product QR code.');
@@ -311,6 +306,79 @@ const QRScannerModal = ({
     setScannerError(null);
   };
 
+  // Perform verification directly in modal
+  const performVerification = async (serialNumber, rawData, trackingMethod = 'qr_scan') => {
+    try {
+      const result = await verificationAPI.verifyProduct(serialNumber, trackingMethod);
+      
+      const verificationData = {
+        ...result,
+        serialNumber,
+        rawData,
+        trackingMethod
+      };
+      
+      // Close modal and pass results to parent
+      onClose();
+      
+      if (onVerificationComplete) {
+        onVerificationComplete(verificationData);
+      } else if (onScanResult) {
+        // Legacy callback for backward compatibility
+        onScanResult(serialNumber, rawData);
+      }
+      
+    } catch (error) {
+      console.error('Verification failed:', error);
+      
+      let errorMessage = 'Failed to verify product.';
+      let verificationData = null;
+      
+      if (error.message?.includes('not found') || error.message?.includes('404')) {
+        verificationData = {
+          success: false,
+          isAuthentic: false,
+          message: 'Product not found in our database',
+          error: 'NOT_FOUND',
+          product: { serialNumber },
+          serialNumber,
+          rawData,
+          trackingMethod
+        };
+        
+        // Close modal and pass error result to parent
+        onClose();
+        
+        if (onVerificationComplete) {
+          onVerificationComplete(verificationData);
+        } else if (onScanResult) {
+          onScanResult(serialNumber, rawData);
+        }
+      } else {
+        if (error.message?.includes('fetch')) {
+          errorMessage = 'Network error: Please check your internet connection and try again.';
+        } else if (error.message?.includes('500')) {
+          errorMessage = 'Server error: Please try again later.';
+        } else {
+          errorMessage = error.message || 'Please check the serial number and try again.';
+        }
+        setScannerError(errorMessage);
+        
+        // Restart scanner after error
+        try {
+          if (qrScannerRef.current) {
+            await qrScannerRef.current.start();
+            setIsScanning(true);
+          }
+        } catch (restartError) {
+          console.error('Failed to restart scanner:', restartError);
+        }
+      }
+      
+      setIsVerifying(false);
+    }
+  };
+
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -341,14 +409,7 @@ const QRScannerModal = ({
         setIsVerifying(true);
         setScannerError(null);
         
-        try {
-          await onScanResult(serialNumber, result);
-          onClose();
-        } catch (error) {
-          console.error('Verification failed:', error);
-          setScannerError('Failed to verify product. Please try again.');
-          setIsVerifying(false);
-        }
+        await performVerification(serialNumber, result, 'qr_upload');
       } else {
         throw new Error('QR code does not contain a valid serial number. Please select an image with a valid product QR code.');
       }
@@ -414,14 +475,7 @@ const QRScannerModal = ({
         setIsVerifying(true);
         setScannerError(null);
         
-        try {
-          await onScanResult(serialNumber, result);
-          onClose();
-        } catch (error) {
-          console.error('Verification failed:', error);
-          setScannerError('Failed to verify product. Please try again.');
-          setIsVerifying(false);
-        }
+        await performVerification(serialNumber, result, 'qr_capture');
       } else {
         throw new Error('QR code does not contain a valid serial number. Please try capturing again or ensure the QR code is clear.');
       }
@@ -532,12 +586,22 @@ const QRScannerModal = ({
 
           {/* Verification Loading Overlay */}
           {isVerifying && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm rounded-2xl">
-              <div className="flex flex-col items-center space-y-4">
-                <div className="w-16 h-16 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-                <div className="text-center">
-                  <p className="text-lg font-semibold text-gray-900">Verifying Product</p>
-                  <p className="text-sm text-gray-600">Please wait while we verify the product...</p>
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/95 rounded-2xl">
+              <div className="flex flex-col items-center space-y-4 sm:space-y-5 p-6 sm:p-8 max-w-sm mx-auto">
+                <div className="relative">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 border-3 sm:border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                  <div className="absolute inset-1.5 sm:inset-2 w-9 h-9 sm:w-12 sm:h-12 border-2 border-blue-300 rounded-full border-b-transparent animate-spin animate-reverse"></div>
+                </div>
+                <div className="text-center space-y-2 px-2">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900">🔍 Verifying Product</h3>
+                  <p className="text-sm sm:text-base text-gray-600 max-w-xs leading-relaxed">
+                    Checking authenticity and supply chain integrity...
+                  </p>
+                  <div className="flex items-center justify-center space-x-1 mt-3">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                  </div>
                 </div>
               </div>
             </div>
