@@ -244,7 +244,48 @@ const JourneyDetails = () => {
     return diffDays;
   };
 
+  const isProductExpired = () => {
+    const days = getDaysUntilExpiry();
+    return days !== null && days <= 0;
+  };
+
+  const isProductExpiringSoon = () => {
+    const days = getDaysUntilExpiry();
+    return days !== null && days > 0 && days <= 30;
+  };
+
+  const getExpiryStatus = () => {
+    if (isProductExpired()) {
+      return {
+        status: 'expired',
+        color: 'red',
+        bgColor: 'bg-red-50',
+        textColor: 'text-red-800',
+        borderColor: 'border-red-200',
+        iconColor: 'text-red-600'
+      };
+    } else if (isProductExpiringSoon()) {
+      return {
+        status: 'expiring-soon',
+        color: 'amber',
+        bgColor: 'bg-amber-50',
+        textColor: 'text-amber-800',
+        borderColor: 'border-amber-200',
+        iconColor: 'text-amber-600'
+      };
+    }
+    return {
+      status: 'valid',
+      color: 'green',
+      bgColor: 'bg-green-50',
+      textColor: 'text-green-800',
+      borderColor: 'border-green-200',
+      iconColor: 'text-green-600'
+    };
+  };
+
   const daysUntilExpiry = getDaysUntilExpiry();
+  const expiryStatus = getExpiryStatus();
 
   const handlePrint = () => {
     window.print();
@@ -513,7 +554,7 @@ const JourneyDetails = () => {
                   <p className="text-xs text-blue-100 truncate sm:text-base">Batch: {drugData?.product?.batchNumber}</p>
                 </div>
               </div>
-              <div className="flex-shrink-0 w-full text-left sm:text-right sm:w-auto">
+              <div className="space-y-2 text-left sm:text-right flex-shrink-0 w-full sm:w-auto">
                 <div className="flex items-center mb-2 space-x-2">
                   {drugData?.product?.isAuthentic ? (
                     <>
@@ -528,9 +569,23 @@ const JourneyDetails = () => {
                   )}
                 </div>
                 {daysUntilExpiry !== null && (
-                  <p className="text-sm text-blue-100">
-                    {daysUntilExpiry > 0 ? `Expires in ${daysUntilExpiry} days` : 'Expired'}
-                  </p>
+                  <div className="flex items-center space-x-2">
+                    {isProductExpired() ? (
+                      <>
+                        <AlertTriangle className="w-4 h-4 text-red-300" />
+                        <p className="text-sm font-medium text-red-200">EXPIRED</p>
+                      </>
+                    ) : isProductExpiringSoon() ? (
+                      <>
+                        <AlertTriangle className="w-4 h-4 text-yellow-300" />
+                        <p className="text-sm text-yellow-200">Expires in {daysUntilExpiry} days</p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-blue-100">
+                        Expires in {daysUntilExpiry} days
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -542,6 +597,8 @@ const JourneyDetails = () => {
               {drugData?.product?.isAuthentic ? '✓ VERIFIED AUTHENTIC PRODUCT' : '⚠ UNVERIFIED PRODUCT'}
             </div>
           </div>
+
+
         </div>
         {/* Main Content */}
         <div className="grid min-w-0 gap-4 lg:gap-8 lg:grid-cols-3">
@@ -584,11 +641,36 @@ const JourneyDetails = () => {
                   </div>
                   <div className="print:print-info-item">
                     <p className="text-xs font-medium text-gray-500 print:print-info-label sm:text-sm">Expiry Date</p>
-                    <p className="mt-1 text-gray-900 break-words print:print-info-value">
-                      {drugData?.product?.expiryDate ? 
-                        new Date(drugData.product.expiryDate).toLocaleDateString() : 
-                        'N/A'}
-                    </p>
+                    <div className="mt-1">
+                      <div className="flex items-center space-x-2">
+                        <p className={`print:print-info-value break-words font-medium ${
+                          isProductExpired() 
+                            ? 'text-red-600' 
+                            : isProductExpiringSoon() 
+                            ? 'text-amber-600' 
+                            : 'text-gray-900'
+                        }`}>
+                          {drugData?.product?.expiryDate ? 
+                            new Date(drugData.product.expiryDate).toLocaleDateString() : 
+                            'N/A'}
+                        </p>
+                        {isProductExpired() && (
+                          <span className="px-2 py-1 text-xs font-medium text-red-700 bg-red-50 rounded print:hidden">
+                            ⚠ Expired
+                          </span>
+                        )}
+                        {isProductExpiringSoon() && (
+                          <span className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 rounded print:hidden">
+                            ⚠ {daysUntilExpiry}d left
+                          </span>
+                        )}
+                      </div>
+                      {isProductExpired() && daysUntilExpiry < 0 && (
+                        <p className="mt-1 text-xs text-red-600 print:hidden">
+                          Expired {Math.abs(daysUntilExpiry)} days ago
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {drugData?.product?.packSize && (

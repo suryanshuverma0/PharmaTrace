@@ -193,11 +193,13 @@ const VerifyDrug = () => {
 
   return (
     <motion.div
-      className="flex flex-col items-center justify-center max-w-5xl min-h-screen px-6 mx-auto sm:justify-start"
+      className="relative flex flex-col items-center justify-center max-w-5xl min-h-screen px-6 mx-auto sm:justify-start"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
+
+
       {/* Header */}
       <div className="mt-32 text-center">
         <motion.h1
@@ -345,6 +347,14 @@ const VerifyDrug = () => {
                       Verify
                     </Button>
                   </div>
+                  
+                  {/* Loading indicator when verifying */}
+                  {isVerifying && (
+                    <div className="flex items-center justify-center mt-4 space-x-3">
+                      <div className="w-5 h-5 border-2 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                      <p className="text-sm text-gray-600">Verifying product authenticity...</p>
+                    </div>
+                  )}
                 </div>
               </Card>
             </motion.div>

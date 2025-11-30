@@ -35,17 +35,33 @@ const AssignedBatches = () => {
       setLoading(true);
       // Use the same endpoint as distributor but from manufacturer's perspective
       const response = await apiClient.get('/distributer/batches');
-      // Transform the data to manufacturer's view
-      const transformedData = response.data.batches?.map(batch => ({
+      // Transform and filter the data to manufacturer's view - only show actually assigned batches
+      const transformedData = response.data.batches?.filter(batch => {
+        // Only include batches that have been actually assigned to distributors
+        // Check if batch has shipment history with valid distributor assignment
+        const hasValidAssignment = batch.shipmentHistory && 
+                                 batch.shipmentHistory.length > 0 && 
+                                 batch.shipmentHistory[0].to && 
+                                 batch.shipmentHistory[0].to !== 'Unknown Distributor' &&
+                                 batch.shipmentHistory[0].to.trim() !== '';
+        
+        // Also check if batch has been explicitly assigned (not just registered)
+        const isAssigned = batch.status && 
+                          batch.status.toLowerCase() !== 'registered' &&
+                          batch.status.toLowerCase() !== 'created' &&
+                          batch.status.toLowerCase() !== 'pending';
+                          
+        return hasValidAssignment && isAssigned;
+      }).map(batch => ({
         _id: batch.batchId,
         batchNumber: batch.batchId,
         product: batch.product,
-        quantity: batch.shipmentHistory?.[0]?.quantity || 0,
+        quantity: batch.shipmentHistory[0]?.quantity || 0,
         status: batch.status,
-        assignedAt: batch.shipmentHistory?.[0]?.timestamp || new Date().toISOString(),
+        assignedAt: batch.shipmentHistory[0]?.timestamp,
         distributor: {
-          name: batch.shipmentHistory?.[0]?.to || 'Unknown Distributor',
-          address: batch.shipmentHistory?.[0]?.toAddress || 'N/A'
+          name: batch.shipmentHistory[0]?.to,
+          address: batch.shipmentHistory[0]?.toAddress || 'N/A'
         },
         shipmentHistory: batch.shipmentHistory || [],
         serialNumber: batch.serialNumber,
@@ -354,8 +370,17 @@ const AssignedBatches = () => {
         ))}
 
         {filteredAssignments.length === 0 && (
-          <div className="p-6 text-center bg-white rounded-xl">
-            <p className="text-gray-500">No assignments found</p>
+          <div className="p-8 text-center bg-white rounded-xl">
+            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full">
+              <Package className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="mb-2 text-lg font-medium text-gray-900">No Assigned Batches Found</h3>
+            <p className="text-gray-500">
+              {searchTerm || filterStatus !== 'all' 
+                ? 'No batches match your current filters. Try adjusting your search or filter criteria.'
+                : 'You haven\'t assigned any batches to distributors yet. Batches will appear here once they are assigned to distributors.'
+              }
+            </p>
           </div>
         )}
       </div>
