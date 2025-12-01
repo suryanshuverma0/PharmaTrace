@@ -80,6 +80,7 @@ const registerUser = async (req, res, next) => {
       city,
       message,
       signature,
+      workingRegions,
       companyName,
       registrationNumber,
       website,
@@ -124,6 +125,18 @@ const registerUser = async (req, res, next) => {
       return res.status(400).json({ message: roleErrors.join(" ") });
     }
 
+    // Process working regions for business roles
+    let workingRegionsArray = [];
+    if (['manufacturer', 'distributor', 'pharmacist'].includes(role) && workingRegions) {
+      workingRegionsArray = typeof workingRegions === 'string' 
+        ? workingRegions.split(',').map(region => region.trim()).filter(Boolean)
+        : Array.isArray(workingRegions) 
+        ? workingRegions 
+        : [];
+    }
+    
+    console.log('Working regions processed:', workingRegionsArray);
+
     // Normalize address and check existing user
     const normalizedAddress = address.toLowerCase();
     const existing = await User.findOne({
@@ -148,6 +161,7 @@ const registerUser = async (req, res, next) => {
       country,
       state,
       city,
+      workingRegions: workingRegionsArray,
     });
 
     // Create role-specific document
@@ -198,6 +212,7 @@ const registerUser = async (req, res, next) => {
     if (!emailResult.success)
       console.warn("Activation email failed:", emailResult.error);
 
+    // Standardized Role Enum (must match smart contract)
     const RoleEnum = {
       None: 0,
       Superadmin: 1,
@@ -240,7 +255,7 @@ const registerUser = async (req, res, next) => {
     // Return success
     return res.status(201).json({
       message: "User registered successfully",
-      data: { name, role, address, email, phone, country, licenseDocument },
+      data: { name, role, address, email, phone, country, workingRegions: workingRegionsArray, licenseDocument },
     });
   } catch (error) {
     console.error("Registration failed:", {
@@ -305,6 +320,86 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // Verify blockchain approval status and collect blockchain data
+    let blockchainData = null;
+    
+    // Skip blockchain verification for superadmin
+    if (user.role === 'superadmin') {
+      blockchainData = {
+        approved: user.isApproved,
+        role: user.role,
+        roleEnum: '1', // Superadmin enum
+        txHash: user.txHash || null,
+        verified: true,
+        skipBlockchainCheck: true
+      };
+      console.log(`Superadmin login - skipping blockchain verification for ${user.address}`);
+    } else {
+      // Perform blockchain verification for other roles
+      try {
+        const blockchainApproval = await userRegistry.isUserApproved(user.address);
+        const blockchainRole = await userRegistry.getUserRole(user.address);
+        
+        // Role enum mapping for verification
+        const RoleEnum = {
+          0: 'none',
+          1: 'superadmin', 
+          2: 'manufacturer',
+          3: 'distributor',
+          4: 'pharmacist',
+          5: 'consumer'
+        };
+
+        const blockchainRoleName = RoleEnum[blockchainRole.toString()];
+        
+        // Store blockchain data to return in response
+        blockchainData = {
+          approved: blockchainApproval,
+          role: blockchainRoleName,
+          roleEnum: blockchainRole.toString(),
+          txHash: user.txHash || null,
+          verified: true
+        };
+        
+        console.log(`Blockchain verification for ${user.address}:`, {
+          approved: blockchainApproval,
+          role: blockchainRoleName,
+          dbRole: user.role,
+          dbApproved: user.isApproved
+        });
+
+        // Check if blockchain and database are in sync
+        if (!blockchainApproval) {
+          console.warn(`⚠️ Blockchain approval mismatch for ${user.address}: DB=${user.isApproved}, Blockchain=${blockchainApproval}`);
+          return res.status(403).json({
+            message: "Account not approved on blockchain. Please contact administrator.",
+            blockchain: blockchainData
+          });
+        }
+
+        if (blockchainRoleName !== user.role) {
+          console.warn(`⚠️ Role mismatch for ${user.address}: DB=${user.role}, Blockchain=${blockchainRoleName}`);
+          return res.status(403).json({
+            message: "Role verification failed. Please contact administrator.",
+            blockchain: blockchainData
+          });
+        }
+      } catch (blockchainError) {
+        console.error("❌ Blockchain verification failed:", blockchainError.message);
+        // Set blockchain data with error status
+        blockchainData = {
+          approved: null,
+          role: null,
+          roleEnum: null,
+          txHash: user.txHash || null,
+          verified: false,
+          error: blockchainError.message
+        };
+        // Don't block login if blockchain is temporarily unavailable, but log the issue
+        console.warn(`⚠️ Proceeding with database-only verification for ${user.address}`);
+      }
+    }
+
     // Update last login
     user.lastLogin = new Date();
     await user.save();
@@ -327,6 +422,7 @@ const loginUser = async (req, res) => {
         userId: user._id,
         role: user.role,
         name: user.name,
+        blockchain: blockchainData
       },
     });
   } catch (error) {

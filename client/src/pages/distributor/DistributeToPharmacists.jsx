@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Card } from '../../components/UI/Card';
 import { Button } from '../../components/UI/Button';
 import { Select } from '../../components/UI/Select';
+import MultiSelect from '../../components/UI/MultiSelect';
 import { Input } from '../../components/UI/Input';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -19,22 +20,96 @@ const DistributeBatches = () => {
 
   const [batches, setBatches] = useState([]);
   const [pharmacies, setPharmacies] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [selectedRegions, setSelectedRegions] = useState([]);
+  const [loadingPharmacies, setLoadingPharmacies] = useState(false);
   
   // Store form data for each batch separately
   const [batchForms, setBatchForms] = useState({});
 
-  // Fetch available batches and pharmacies
+  // Fetch districts on component mount
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDistricts = async () => {
+      try {
+        const response = await apiClient.get('/nepal/districts');
+        if (response.data.success) {
+          const districtOptions = response.data.data.map(district => ({
+            value: district,
+            label: district
+          }));
+          setDistricts(districtOptions);
+        }
+      } catch (error) {
+        console.error('Failed to fetch districts:', error);
+        setError('Failed to load districts');
+      }
+    };
+    
+    fetchDistricts();
+  }, []);
+
+  // Fetch pharmacies based on selected regions
+  useEffect(() => {
+    const fetchPharmacies = async () => {
+      if (selectedRegions.length === 0) {
+        setPharmacies([]);
+        return;
+      }
+      
+      setLoadingPharmacies(true);
+      try {
+        const params = new URLSearchParams();
+        selectedRegions.forEach(region => params.append('regions', region));
+        
+        const response = await apiClient.get(`/pharmacy?${params.toString()}`);
+        let transformedPharmacies = [];
+        if (response?.data?.success && response?.data?.data) {
+          // Transform pharmacy data to match expected format
+          transformedPharmacies = response.data.data.map(pharmacy => ({
+            id: pharmacy._id,
+            name: pharmacy.pharmacyName,
+            location: pharmacy.pharmacyLocation || pharmacy.address || 'N/A',
+            walletAddress: pharmacy.address,
+            licenseNumber: pharmacy.licenseNumber,
+            workingRegions: pharmacy.workingRegions || []
+          }));
+          setPharmacies(transformedPharmacies);
+        } else {
+          setPharmacies([]);
+        }
+        
+        // Reset selected pharmacies in forms if not in the new list
+        setBatchForms(prev => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach(batchId => {
+            if (updated[batchId].selectedPharmacy && 
+                !transformedPharmacies.some(p => p.id === updated[batchId].selectedPharmacy)) {
+              updated[batchId].selectedPharmacy = '';
+            }
+          });
+          return updated;
+        });
+        
+      } catch (err) {
+        console.error('Failed to fetch pharmacies:', err);
+        setError('Failed to load pharmacies for selected regions');
+        setPharmacies([]);
+      } finally {
+        setLoadingPharmacies(false);
+      }
+    };
+    
+    fetchPharmacies();
+  }, [selectedRegions]);
+
+  // Fetch available batches
+  useEffect(() => {
+    const fetchBatches = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Use the consistent distributor batch system
-        const [batchesRes, pharmaciesRes] = await Promise.all([
-          apiClient.get('/distributer/batches'), // Use distributor batches endpoint
-          pharmacyDistributionApi.getApprovedPharmacies()
-        ]);
+        const batchesRes = await apiClient.get('/distributer/batches');
 
         if (!batchesRes?.data?.batches) {
           console.warn('No batch data in response:', batchesRes);
@@ -56,27 +131,20 @@ const DistributeBatches = () => {
           setBatchForms(initialForms);
         }
 
-        if (!pharmaciesRes?.pharmacies) {
-          console.warn('No pharmacy data in response:', pharmaciesRes);
-          setPharmacies([]);
-        } else {
-          setPharmacies(pharmaciesRes.pharmacies);
-        }
-
       } catch (err) {
-        console.error('Error fetching data:', err);
+        console.error('Error fetching batches:', err);
         setError(
           err.response?.data?.message || 
           err.message || 
-          'Failed to load data. Please check your connection and try again.'
+          'Failed to load batches. Please check your connection and try again.'
         );
-        toast.error('Failed to load data. Please try again.');
+        toast.error('Failed to load batches. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchBatches();
   }, [user, isAuthenticated]);
 
   // Helper functions to update form data for specific batch
@@ -123,6 +191,11 @@ const DistributeBatches = () => {
 
   const handleDistribute = async (batch) => {
     const form = getBatchForm(batch.batchId);
+    
+    if (selectedRegions.length === 0) {
+      toast.error('Please select operational regions first');
+      return;
+    }
     
     if (!form.selectedPharmacy || !form.quantity || isNaN(form.quantity) || form.quantity <= 0) {
       toast.error('Please select pharmacy and enter valid quantity');
@@ -243,9 +316,41 @@ const DistributeBatches = () => {
 
   return (
     <div className="space-y-6">
-      <div className="mb-4 text-sm text-gray-500">
-        {batches.length} batches available for distribution
-      </div>
+      {batches.length > 0 && (
+        <>
+          {/* Region Selection */}
+          <Card className="p-4">
+            <div className="space-y-4">
+              <div>
+                <label className="block mb-2 text-sm font-medium">
+                  Select Operational Regions *
+                </label>
+                <MultiSelect
+                  options={districts}
+                  value={selectedRegions}
+                  onChange={setSelectedRegions}
+                  placeholder="Select regions where you want to distribute..."
+                  className="w-full"
+                />
+                {selectedRegions.length === 0 && (
+                  <p className="mt-1 text-sm text-gray-500">
+                    Please select regions to see available pharmacies
+                  </p>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          <div className="mb-4 text-sm text-gray-500">
+            {batches.length} batches available for distribution
+            {selectedRegions.length > 0 && (
+              <span className="ml-2 text-blue-600">
+                • {pharmacies.length} pharmacies available in selected regions
+              </span>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {batches.map((batch) => {
@@ -289,7 +394,13 @@ const DistributeBatches = () => {
                       }))}
                       value={form.selectedPharmacy}
                       onChange={(value) => updateBatchForm(batch.batchId, 'selectedPharmacy', value)}
-                      placeholder="Choose pharmacy..."
+                      placeholder={selectedRegions.length === 0 
+                        ? "Select regions first..." 
+                        : loadingPharmacies 
+                          ? "Loading pharmacies..." 
+                          : "Choose pharmacy..."
+                      }
+                      disabled={selectedRegions.length === 0 || loadingPharmacies}
                     />
                   </div>
                   <div>
@@ -335,7 +446,7 @@ const DistributeBatches = () => {
                   variant="primary"
                   className="w-full"
                   onClick={() => handleDistribute(batch)}
-                  disabled={distributing}
+                  disabled={distributing || selectedRegions.length === 0 || !form.selectedPharmacy || !form.quantity || parseInt(form.quantity) > batch.quantity}
                 >
                   {distributing ? (
                     <>

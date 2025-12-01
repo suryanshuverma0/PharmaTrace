@@ -81,6 +81,7 @@ const Pharmacists = () => {
         p.address,
         p.pharmacist?.pharmacyName,
         p.pharmacist?.licenseNumber,
+        ...(p.workingRegions || []),
       ]
         .filter(Boolean)
         .map((s) => String(s).toLowerCase());
@@ -143,7 +144,7 @@ const Pharmacists = () => {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name, pharmacy, license number, email, country..."
+              placeholder="Search by name, pharmacy, license number, email, country, working regions..."
               className="w-full py-3 pl-10 pr-10 transition border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
             />
             {query && (

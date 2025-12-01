@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Modal from "../UI/Modal";
 import Button from "../UI/Button";
 import Input from "../UI/Input";
 import Select from "../UI/Select";
+import MultiSelect from "../UI/MultiSelect";
 import { FaUser, FaBuilding, FaWallet } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
 import { useWalletModal } from "../../context/WalletModalContext";
 import { toast } from "react-hot-toast";
+import apiClient from "../../services/api/api";
 
 // Role-specific field configurations
 const roleFieldsConfig = {
@@ -22,8 +24,7 @@ const roleFieldsConfig = {
     { name: "companyName", label: "Company Name", type: "text", required: true },
     { name: "registrationNumber", label: "Registration Number", type: "text", required: true },
     { name: "licenseDocument", label: "License Document", type: "file", accept: "image/*", required: true },
-    { name: "warehouseAddress", label: "Warehouse Address", type: "text", required: true },
-    { name: "operationalRegions", label: "Operational Regions (comma-separated)", type: "text", required: false },
+    { name: "warehouseAddress", label: "Warehouse Address", type: "text", required: true }
   ],
   pharmacist: [
     { name: "pharmacyName", label: "Pharmacy Name", type: "text", required: true },
@@ -62,7 +63,11 @@ const RegisterWalletModal = () => {
     pharmacyName: "",
     licenseNumber: "",
     pharmacyLocation: "",
+    workingRegions: [],
   });
+  
+  const [districts, setDistricts] = useState([]);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
 
   const roles = [
     { value: "consumer", label: "Consumer" },
@@ -70,15 +75,31 @@ const RegisterWalletModal = () => {
     { value: "distributor", label: "Distributor" },
     { value: "pharmacist", label: "Pharmacist" },
   ];
-
-  // const handleInputChange = (e) => {
-  //   const { name, value, files } = e.target;
-  //   if (files) {
-  //     setFormData((prev) => ({ ...prev, [name]: files[0] })); // store file directly for FormData
-  //   } else {
-  //     setFormData((prev) => ({ ...prev, [name]: value }));
-  //   }
-  // };
+  
+  // Fetch districts on component mount
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      setLoadingDistricts(true);
+      try {
+        const response = await apiClient.get('/nepal/districts');
+        if (response.data.success) {
+          // Convert districts array to options format
+          const districtOptions = response.data.data.map(district => ({
+            value: district,
+            label: district
+          }));
+          setDistricts(districtOptions);
+        }
+      } catch (error) {
+        console.error('Failed to fetch districts:', error);
+        toast.error('Failed to load districts');
+      } finally {
+        setLoadingDistricts(false);
+      }
+    };
+    
+    fetchDistricts();
+  }, []);
 
 
   const handleInputChange = (e) => {
@@ -94,6 +115,10 @@ const RegisterWalletModal = () => {
 
   const handleSelectChange = (value) => {
     setFormData((prev) => ({ ...prev, role: value }));
+  };
+  
+  const handleDistrictsChange = (selectedDistricts) => {
+    setFormData((prev) => ({ ...prev, workingRegions: selectedDistricts }));
   };
 
   const validateForm = () => {
@@ -167,6 +192,11 @@ const RegisterWalletModal = () => {
       formPayload.append("message", message);
       formPayload.append("signature", signature);
       formPayload.append("address", window.ethereum.selectedAddress);
+      
+      // Append working regions for roles that need it
+      if (['manufacturer', 'distributor', 'pharmacist'].includes(formData.role) && formData.workingRegions.length > 0) {
+        formPayload.append("workingRegions", formData.workingRegions.join(','));
+      }
 
       // Append role-specific fields
       Object.keys(roleData).forEach((key) => {
@@ -204,6 +234,7 @@ const RegisterWalletModal = () => {
             pharmacyName: "",
             licenseNumber: "",
             pharmacyLocation: "",
+            workingRegions: [],
           });
         }, 3000);
       } else {
@@ -222,6 +253,7 @@ const RegisterWalletModal = () => {
       onClose={closeRegisterModal}
       size="lg"
       className="max-w-xl"
+      disableOutsideClick={true}
     >
       <div className="px-4 overflow-y-auto max-h-[75vh]">
         <div className="flex flex-col items-center justify-center mb-6">
@@ -244,6 +276,24 @@ const RegisterWalletModal = () => {
             <Input label="City" name="city" value={formData.city} onChange={handleInputChange} />
             <Input label="State" name="state" value={formData.state} onChange={handleInputChange} />
           </div>
+          
+          {/* Working Regions field for business roles */}
+          {['manufacturer', 'distributor', 'pharmacist'].includes(formData.role) && (
+            <div className="space-y-4">
+              <MultiSelect
+                label="Working Regions (Districts)"
+                options={districts}
+                value={formData.workingRegions}
+                onChange={handleDistrictsChange}
+                placeholder={loadingDistricts ? "Loading districts..." : "Select working districts"}
+                disabled={loadingDistricts}
+                searchable={true}
+              />
+              <p className="text-xs text-gray-500">
+                Select the districts where your {formData.role === 'manufacturer' ? 'company' : formData.role === 'distributor' ? 'distribution network' : 'pharmacy'} operates.
+              </p>
+            </div>
+          )}
 
           {selectedRoleFields.length > 0 && (
             <div className="space-y-4">

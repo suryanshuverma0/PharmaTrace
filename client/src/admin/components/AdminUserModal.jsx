@@ -175,8 +175,30 @@ const AdminUserModal = ({
                     <Field label="Country" value={user.country} />
                     <Field label="State" value={user.state} />
                     <Field label="City" value={user.city} />
-                    <Field label="Address" value={user.address} />
+                    <Field 
+                      label="Wallet Address" 
+                      value={user.address ? (
+                        <span className="font-mono text-xs break-all">{user.address}</span>
+                      ) : 'N/A'} 
+                    />
                     {userData.website && <Field label="Website" value={userData.website} />}
+                    {user.workingRegions && user.workingRegions.length > 0 && (
+                      <Field 
+                        label="Working Regions" 
+                        value={
+                          <div className="flex flex-wrap gap-1">
+                            {user.workingRegions.map((region, index) => (
+                              <span 
+                                key={index}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-800 bg-blue-100 rounded-md"
+                              >
+                                {region}
+                              </span>
+                            ))}
+                          </div>
+                        } 
+                      />
+                    )}
                     <Field
                       label="Status"
                       value={

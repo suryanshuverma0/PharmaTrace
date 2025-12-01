@@ -26,10 +26,12 @@ const getAllPharmacists = async (req, res) => {
           name: 1,
           email: 1,
           phone: 1,
+          address: 1,
           country: 1,
           state: 1,
           city: 1,
           website: 1,
+          workingRegions: 1,
           role: 1,
           isApproved: 1,
           isActive: 1,
@@ -78,22 +80,37 @@ const approvePharmacist = async (req, res) => {
     if (!user || user.role !== "pharmacist")
       return res.status(404).json({ success: false, message: "Pharmacist not found" });
 
+    // Store original values for potential rollback
+    const originalApproval = user.isApproved;
+    const originalActive = user.isActive;
+
     // Update MongoDB
     user.isApproved = isApproved;
-     user.isActive = isApproved;
+    user.isActive = isApproved;
     await user.save();
 
     // Update blockchain
-    const RoleEnum = { None: 0, Superadmin: 1, Manufacturer: 2, Distributor: 3, Pharmacist: 4 };
+    const RoleEnum = { None: 0, Superadmin: 1, Manufacturer: 2, Distributor: 3, Pharmacist: 4, Consumer: 5 };
     try {
       const tx = await userRegistry.setUser(user.address, isApproved, RoleEnum.Pharmacist);
       await tx.wait();
       console.log(`✅ UserRegistry: ${user.address} setApproval = ${isApproved}, role = Pharmacist`);
     } catch (err) {
       console.error("⚠️ Blockchain update failed:", err.message);
+      
+      // Rollback database changes
+      try {
+        user.isApproved = originalApproval;
+        user.isActive = originalActive;
+        await user.save();
+        console.log(`🔄 Database rollback completed for ${user.address}`);
+      } catch (rollbackErr) {
+        console.error("❌ Database rollback failed:", rollbackErr.message);
+      }
+      
       return res.status(500).json({
         success: false,
-        message: "MongoDB updated but blockchain transaction failed",
+        message: "Blockchain transaction failed. Database changes have been reverted.",
         error: err.message,
       });
     }

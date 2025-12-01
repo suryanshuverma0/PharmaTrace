@@ -83,7 +83,8 @@ const ConnectWalletModal = () => {
     <Modal
       isOpen={isConnectModalOpen}
       onClose={closeConnectModal}
-      className="max-w 2xl"
+      className="max-w-2xl"
+      disableOutsideClick={true}
     >
       <div className="p-6">
         <div className="flex flex-col items-center justify-center mb-6">

@@ -8,6 +8,7 @@ const Modal = ({
   children,
   size = "md",
   className = "",
+  disableOutsideClick = false,
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -35,19 +36,21 @@ const Modal = ({
     <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4 overflow-y-auto bg-black bg-opacity-60 modal-backdrop">
       <div
         className="fixed inset-0 transition-opacity "
-        onClick={onClose}
+        onClick={disableOutsideClick ? undefined : onClose}
       ></div>
 
       <div
         className={`z-50 w-full ${sizes[size]} p-6 max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-xl ${className}`}
       >
         <div className="flex items-center justify-between mb-4">
-          {title && (
+          {title ? (
             <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          ) : (
+            <div></div>
           )}
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 transition-colors hover:text-gray-600"
+            className="p-1 ml-auto text-gray-400 transition-colors hover:text-gray-600"
           >
             <X className="w-6 h-6" />
           </button>

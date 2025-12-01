@@ -960,14 +960,25 @@ const distributeBatchToPharmacy = async (req, res) => {
 
 const getApprovedDistributors = async (req, res) => {
   try {
+    const { regions } = req.query;
+    
+    // Base query for approved distributors
+    let userMatchQuery = { isApproved: true };
+    
+    // If regions are specified, filter by working regions
+    if (regions) {
+      const regionArray = Array.isArray(regions) ? regions : [regions];
+      userMatchQuery.workingRegions = { $in: regionArray };
+    }
+    
     const distributors = await Distributor.find()
       .populate({
         path: 'user',
-        match: { isApproved: true },
-        select: 'name email phone address role country state city isApproved'
+        match: userMatchQuery,
+        select: 'name email phone address role country state city workingRegions isApproved'
       });
 
-    // Filter out null users (i.e., not approved)
+    // Filter out null users (i.e., not approved or don't match region criteria)
     const approvedDistributors = distributors.filter(d => d.user !== null);
 
     res.json(approvedDistributors);

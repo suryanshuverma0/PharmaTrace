@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import apiClient from "../../services/api/api";
 import Button from "../../components/UI/Button";
 import Select from "../../components/UI/Select";
+import MultiSelect from "../../components/UI/MultiSelect";
 import Alert from "../../components/UI/Alert";
 import RecentAssignments from "../../components/manufacturer/RecentAssignments";
 import toast from "react-hot-toast";
@@ -35,11 +36,14 @@ const DUMMY_ASSIGNED_BATCHES = [
 const AssignBatch = () => {
   const [batches, setBatches] = useState([]);
   const [distributors, setDistributors] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [selectedRegions, setSelectedRegions] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState("");
   const [selectedDistributor, setSelectedDistributor] = useState("");
   const [quantity, setQuantity] = useState("");
   const [remarks, setRemarks] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingDistributors, setLoadingDistributors] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
@@ -47,20 +51,61 @@ const AssignBatch = () => {
 
   const [recentAssignments, setRecentAssignments] = useState([]);
 
+  // Fetch districts on component mount
   useEffect(() => {
-    const fetchDistributerData = async () => {
-      setLoading(true);
+    const fetchDistricts = async () => {
       try {
-        // Fetch distributors
-        const distRes = await apiClient.get("/distributer/list");
-        setDistributors(distRes?.data || []);
-      } catch (err) {
-        setError("Failed to load distributors.");
-      } finally {
-        setLoading(false);
+        const response = await apiClient.get('/nepal/districts');
+        if (response.data.success) {
+          const districtOptions = response.data.data.map(district => ({
+            value: district,
+            label: district
+          }));
+          setDistricts(districtOptions);
+        }
+      } catch (error) {
+        console.error('Failed to fetch districts:', error);
+        setError('Failed to load districts');
       }
     };
+    
+    fetchDistricts();
+  }, []);
+
+  // Fetch distributors based on selected regions
+  useEffect(() => {
+    const fetchDistributerData = async () => {
+      if (selectedRegions.length === 0) {
+        setDistributors([]);
+        return;
+      }
+      
+      setLoadingDistributors(true);
+      try {
+        const params = new URLSearchParams();
+        selectedRegions.forEach(region => params.append('regions', region));
+        
+        const distRes = await apiClient.get(`/distributer/list?${params.toString()}`);
+        setDistributors(distRes?.data || []);
+        
+        // Reset selected distributor if not in the new list
+        if (selectedDistributor && !distRes?.data?.some(d => d._id === selectedDistributor)) {
+          setSelectedDistributor("");
+        }
+      } catch (err) {
+        setError("Failed to load distributors for selected regions.");
+        setDistributors([]);
+      } finally {
+        setLoadingDistributors(false);
+      }
+    };
+    
     fetchDistributerData();
+  }, [selectedRegions]);
+
+  // Initial loading state
+  useEffect(() => {
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -333,6 +378,23 @@ const AssignBatch = () => {
           <form onSubmit={handleAssign} className="space-y-6">
             <div>
               <label className="block mb-2 font-medium text-gray-700">
+                Select Target Regions
+              </label>
+              <MultiSelect
+                options={districts}
+                value={selectedRegions}
+                onChange={setSelectedRegions}
+                placeholder="Select regions to find distributors"
+                searchable={true}
+                maxDisplayItems={3}
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Select regions where you want to distribute this batch. Only distributors operating in these regions will be shown.
+              </p>
+            </div>
+            
+            <div>
+              <label className="block mb-2 font-medium text-gray-700">
                 Select Batch
               </label>
               <Select
@@ -349,21 +411,40 @@ const AssignBatch = () => {
                 ]}
               />
             </div>
+            
             <div>
               <label className="block mb-2 font-medium text-gray-700">
                 Select Distributor
+                {selectedRegions.length === 0 && (
+                  <span className="ml-2 text-sm text-gray-500">(Select regions first)</span>
+                )}
               </label>
               <Select
                 value={selectedDistributor}
                 onChange={setSelectedDistributor}
+                disabled={selectedRegions.length === 0 || loadingDistributors}
                 options={[
-                  { value: "", label: "-- Select Distributor --" },
+                  { 
+                    value: "", 
+                    label: selectedRegions.length === 0 
+                      ? "-- Select regions first --"
+                      : loadingDistributors 
+                      ? "-- Loading distributors --"
+                      : distributors.length === 0
+                      ? "-- No distributors available in selected regions --"
+                      : "-- Select Distributor --"
+                  },
                   ...(distributors || []).map((dist) => ({
                     value: dist._id,
-                    label: `${dist.companyName} (${dist.user?.address})`,
+                    label: `${dist.companyName} - ${(dist.user?.workingRegions || []).join(', ')} (${dist.user?.address?.slice(0, 10)}...)`,
                   })),
                 ]}
               />
+              {selectedRegions.length > 0 && distributors.length > 0 && (
+                <p className="mt-1 text-sm text-green-600">
+                  Found {distributors.length} distributor{distributors.length !== 1 ? 's' : ''} in selected regions
+                </p>
+              )}
             </div>
             <div>
               <label className="block mb-2 font-medium text-gray-700">
@@ -396,7 +477,7 @@ const AssignBatch = () => {
               variant="primary"
               className="flex items-center justify-center w-full gap-2"
               disabled={
-                assigning || !selectedBatch || !selectedDistributor || !quantity
+                assigning || !selectedBatch || !selectedDistributor || !quantity || selectedRegions.length === 0 || loadingDistributors
               }
             >
               {assigning ? (

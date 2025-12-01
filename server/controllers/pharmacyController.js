@@ -722,6 +722,17 @@ const getInventory = async (req, res) => {
 
 const getAllPharmacies = async (req, res) => {
   try {
+    const { regions } = req.query;
+    
+    // Base match query for active users
+    let userMatchQuery = { 'userData.isActive': true };
+    
+    // If regions are specified, filter by working regions
+    if (regions) {
+      const regionArray = Array.isArray(regions) ? regions : [regions];
+      userMatchQuery['userData.workingRegions'] = { $in: regionArray };
+    }
+    
     // Perform aggregation to fetch pharmacies with associated user data
     const pharmacies = await Pharmacist.aggregate([
       {
@@ -739,14 +750,13 @@ const getAllPharmacies = async (req, res) => {
         }
       },
       {
-        $match: {
-          'userData.isActive': true // Only include active users
-        }
+        $match: userMatchQuery
       },
       {
         $project: {
           userId: '$userData._id',
           address: '$userData.address',
+          workingRegions: '$userData.workingRegions',
           pharmacyId: '$_id',
           pharmacyName: 1,
           pharmacyLocation: 1

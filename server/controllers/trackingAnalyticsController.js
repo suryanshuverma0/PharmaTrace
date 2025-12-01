@@ -6,7 +6,6 @@ const mongoose = require('mongoose');
 // Simple reverse geocoding function using a free API
 async function reverseGeocode(latitude, longitude) {
   try {
-    // Using a simple free reverse geocoding API
     const response = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
     );
@@ -16,19 +15,25 @@ async function reverseGeocode(latitude, longitude) {
     }
     
     const data = await response.json();
-    
+
+    // Extract district from administrative array
+    const districtObj = data.localityInfo?.administrative?.find(adm => adm.adminLevel === 6);
+    const district = districtObj ? districtObj.name : null;
+
     return {
       country: data.countryName || null,
-      city: data.city || data.locality || data.principalSubdivision || null,
-      region: data.principalSubdivision || null,
+      province: data.principalSubdivision || null,
+      district: district,       // <-- added district
+      city: data.city || data.locality || null,
       countryCode: data.countryCode || null
     };
   } catch (error) {
     console.log('Reverse geocoding failed:', error.message);
     return {
       country: null,
+      province: null,
+      district: null,
       city: null,
-      region: null,
       countryCode: null
     };
   }
@@ -401,6 +406,7 @@ exports.getLocationDetails = async (req, res) => {
             country: geocodeData.country,
             city: geocodeData.city,
             region: geocodeData.region,
+            district: geocodeData.district,
             countryCode: geocodeData.countryCode
           },
           stats: {

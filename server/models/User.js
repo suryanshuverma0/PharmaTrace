@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
   country: { type: String, required: true },
   state: { type: String },
   city: { type: String },
+  workingRegions: { type: [String], default: [] }, // Array of district names for manufacturers, distributors, pharmacists
   website: String,
   isApproved: { type: Boolean, default: false },
   isActive: { type: Boolean, default: false },

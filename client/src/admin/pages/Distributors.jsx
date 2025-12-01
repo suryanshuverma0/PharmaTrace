@@ -83,6 +83,7 @@ const Distributors = () => {
         d.address,
         d.distributor?.companyName,
         d.distributor?.registrationNumber,
+        ...(d.workingRegions || []),
       ]
         .filter(Boolean)
         .map((s) => String(s).toLowerCase());
@@ -145,7 +146,7 @@ const Distributors = () => {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name, company, reg. number, email, country, phone..."
+              placeholder="Search by name, company, reg. number, email, country, phone, working regions..."
               className="w-full py-3 pl-10 pr-10 transition border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
             />
             {query && (

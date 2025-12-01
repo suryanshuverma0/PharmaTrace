@@ -45,7 +45,14 @@ const App = () => {
       <AppRoutes />
       {/* <VerifyProductButton /> */}
       <Modals />
-      <Toaster position="top-center" reverseOrder={false} toastOptions={{ duration: 5000 }} />
+      <Toaster 
+        position="top-center" 
+        reverseOrder={false} 
+        toastOptions={{ duration: 5000 }}
+        containerStyle={{
+          zIndex: 20000,
+        }}
+      />
 
     </>
   );
