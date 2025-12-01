@@ -12,7 +12,9 @@ import {
   MapPin,
   AlertCircle,
   Boxes,
-  Printer
+  Printer,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Input } from '../../components/UI/Input';
@@ -28,6 +30,7 @@ const ProductsList = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [collapsedBatches, setCollapsedBatches] = useState(new Set());
 
   // Options for the Select component
   const statusOptions = [
@@ -88,6 +91,11 @@ const ProductsList = () => {
         })
       }));
       setProducts(normalizedBatches);
+      
+      // Set all batches as collapsed by default
+      const batchIds = new Set(normalizedBatches.map(batch => batch._id));
+      setCollapsedBatches(batchIds);
+      
       setLoading(false);
     } catch (err) {
       setError(err.message);
@@ -161,6 +169,18 @@ const ProductsList = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const toggleBatchCollapse = (batchId) => {
+    setCollapsedBatches(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(batchId)) {
+        newSet.delete(batchId);
+      } else {
+        newSet.add(batchId);
+      }
+      return newSet;
+    });
   };
 
   if (loading) {
@@ -294,7 +314,10 @@ const ProductsList = () => {
               className="overflow-hidden bg-white border shadow-lg rounded-2xl border-gray-200/50"
             >
               {/* Batch Header */}
-              <div className="p-6 border-b border-gray-100">
+              <div 
+                className="p-6 transition-colors border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                onClick={() => toggleBatchCollapse(batch._id)}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
                   <div className="flex items-start flex-1 gap-4">
                     <div className="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl">
@@ -322,54 +345,76 @@ const ProductsList = () => {
                       </div>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(batch.status)}`}>
-                    {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(batch.status)}`}>
+                      {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
+                    </span>
+                    {collapsedBatches.has(batch._id) ? (
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Products Grid */}
-              <div className="p-6 bg-gray-50">
-                <div className="grid grid-cols-1 gap-4">
-                  {batch.products.map((product) => (
-                    <div
-                      key={product._id}
-                      className="p-4 transition-all duration-200 bg-white border rounded-xl border-gray-200/50 hover:border-blue-200 hover:shadow-md"
-                    >
-                      <div className="flex justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 truncate">
-                            {product.productName}
-                          </h4>
-                          <p className="mt-1 text-sm text-gray-500">
-                            SN: {product.serialNumber}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => handleProductClick(product, batch)}
-                            className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
-                          >
-                            <MoreVertical className="w-5 h-5" />
-                          </button>
-                          <button 
-                            onClick={() => handleQRCodeClick(product)}
-                            className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
-                          >
-                            <QrCode className="w-5 h-5" />
-                          </button>
-                          <Link
-                            to={`/manufacturer/track/${product.serialNumber}`}
-                            className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
-                          >
-                            <Route className="w-5 h-5" />
-                          </Link>
+              {/* Products Grid - Collapsible */}
+              {!collapsedBatches.has(batch._id) && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="p-6 bg-gray-50"
+                >
+                  <div className="grid grid-cols-1 gap-4">
+                    {batch.products.map((product) => (
+                      <div
+                        key={product._id}
+                        className="p-4 transition-all duration-200 bg-white border rounded-xl border-gray-200/50 hover:border-blue-200 hover:shadow-md"
+                      >
+                        <div className="flex justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 truncate">
+                              {product.productName}
+                            </h4>
+                            <p className="mt-1 text-sm text-gray-500">
+                              SN: {product.serialNumber}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleProductClick(product, batch);
+                              }}
+                              className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                            >
+                              <MoreVertical className="w-5 h-5" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQRCodeClick(product);
+                              }}
+                              className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                            >
+                              <QrCode className="w-5 h-5" />
+                            </button>
+                            <Link
+                              to={`/manufacturer/track/${product.serialNumber}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                            >
+                              <Route className="w-5 h-5" />
+                            </Link>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           ))
         )}

@@ -16,6 +16,8 @@ contract BatchRegistry {
         uint256 registrationTimestamp;
         bool isActive;
         string digitalFingerprint;
+        bool distributorVerified;
+        bool pharmacistVerified;
     }
 
     struct ShipmentEntry {
@@ -112,7 +114,9 @@ contract BatchRegistry {
             manufacturerAddress: msg.sender,
             registrationTimestamp: block.timestamp,
             isActive: true,
-            digitalFingerprint: digitalFingerprint
+            digitalFingerprint: digitalFingerprint,
+            distributorVerified: false,
+            pharmacistVerified: false
         });
 
         // Store in fingerprint mapping
@@ -243,5 +247,35 @@ contract BatchRegistry {
     function getBatchShipmentHistoryLength(string memory batchNumber) public view returns (uint256) {
         require(batches[batchNumber].manufacturerAddress != address(0), "Batch does not exist");
         return batchShipmentHistory[batchNumber].length;
+    }
+
+    // Verify batch by distributor
+    function verifyByDistributor(string memory batchNumber) public {
+        require(batches[batchNumber].manufacturerAddress != address(0), "Batch does not exist");
+        require(!batches[batchNumber].distributorVerified, "Already verified by distributor");
+        
+        batches[batchNumber].distributorVerified = true;
+        batchesByFingerprint[batchToFingerprint[batchNumber]].distributorVerified = true;
+    }
+
+    // Verify batch by pharmacist
+    function verifyByPharmacist(string memory batchNumber) public {
+        require(batches[batchNumber].manufacturerAddress != address(0), "Batch does not exist");
+        require(!batches[batchNumber].pharmacistVerified, "Already verified by pharmacist");
+        
+        batches[batchNumber].pharmacistVerified = true;
+        batchesByFingerprint[batchToFingerprint[batchNumber]].pharmacistVerified = true;
+    }
+
+    // Get verification status
+    function getVerificationStatus(string memory batchNumber) public view returns (
+        bool distributorVerified,
+        bool pharmacistVerified
+    ) {
+        require(batches[batchNumber].manufacturerAddress != address(0), "Batch does not exist");
+        return (
+            batches[batchNumber].distributorVerified,
+            batches[batchNumber].pharmacistVerified
+        );
     }
 }

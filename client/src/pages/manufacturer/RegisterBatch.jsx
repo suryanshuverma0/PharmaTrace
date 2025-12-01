@@ -27,7 +27,9 @@ const RegisterBatch = () => {
     strength: "",
     storageConditions: "",
     productionLocation: "",
-    approvalCertId: ""
+    approvalCertId: "",
+    productName: "",
+    autoGenerateProducts: true // Keep for backend processing, hide from UI
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alert, setAlert] = useState(null);
@@ -112,6 +114,9 @@ const RegisterBatch = () => {
     if (!formData.productionLocation) {
       errors.push("Production location is required.");
     }
+    if (!formData.productName) {
+      errors.push("Product name is required.");
+    }
     if (formData.manufactureDate && formData.expiryDate) {
       if (new Date(formData.expiryDate) <= new Date(formData.manufactureDate)) {
         errors.push("Expiry date must be after manufacture date.");
@@ -147,15 +152,20 @@ const RegisterBatch = () => {
         storageConditions: formData.storageConditions,
         productionLocation: formData.productionLocation,
         approvalCertId: formData.approvalCertId,
+        productName: formData.productName,
       });
 
       if (response.status === 201) {
+        const message = formData.autoGenerateProducts 
+          ? `Batch ${formData.batchNumber} registered successfully! Products will be auto-generated in the background.`
+          : `Batch ${formData.batchNumber} registered successfully!`;
+          
         setAlert({
           type: "success",
           title: "Batch Registered",
-          message: `Batch ${formData.batchNumber} registered successfully!`,
+          message: message,
         });
-        toast.success(`Batch ${formData.batchNumber} registered successfully!`);
+        toast.success(message);
         navigate("/manufacturer/registered-batches");
         setFormData({
           batchNumber: "",
@@ -166,7 +176,9 @@ const RegisterBatch = () => {
           strength: "",
           storageConditions: "",
           productionLocation: "",
-          approvalCertId: ""
+          approvalCertId: "",
+          productName: "",
+          autoGenerateProducts: true
         });
         // Refresh batches
         const batchesResponse = await apiClient.get("/batches");
@@ -351,6 +363,14 @@ const RegisterBatch = () => {
                 <h3>Batch Information</h3>
               </div>
               <div className="grid gap-6 md:grid-cols-2">
+                <Input
+                  label="Product Name"
+                  name="productName"
+                  value={formData.productName}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., Paracetamol"
+                />
                 <Input
                   label="Batch Number"
                   name="batchNumber"

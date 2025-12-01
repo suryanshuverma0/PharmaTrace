@@ -8,17 +8,36 @@ module.exports = {
     compilers: [
       {
         version: "0.8.28",
-        version: "0.8.28",
         settings: {
-          optimizer: { enabled: true, runs: 200 },
-          viaIR: false,
+          optimizer: { 
+            enabled: true, 
+            runs: 1,
+            details: {
+              yul: true,
+              yulDetails: {
+                stackAllocation: true,
+                optimizerSteps: "dhfoDgvulfnTUtnIf"
+              }
+            }
+          },
+          viaIR: true,
         },
       },
       {
         version: "0.8.20",
-        version: "0.8.20",
         settings: {
-          optimizer: { enabled: true, runs: 200 },
+          optimizer: { 
+            enabled: true, 
+            runs: 1,
+            details: {
+              yul: true,
+              yulDetails: {
+                stackAllocation: true,
+                optimizerSteps: "dhfoDgvulfnTUtnIf"
+              }
+            }
+          },
+          viaIR: true,
         },
       },
     ],

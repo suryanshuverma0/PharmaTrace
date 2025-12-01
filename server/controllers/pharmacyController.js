@@ -386,6 +386,10 @@ const confirmReceipt = async (req, res) => {
       digitalSignature: `PH_${pharmacist.licenseNumber}_${Date.now()}`
     };
 
+    // Set pharmacist verification
+    batch.pharmacistVerified = true;
+    batch.verificationTimestamps.pharmacistVerifiedAt = new Date();
+    
     // Save the batch with new shipment history
     await batch.save();
 
@@ -421,6 +425,35 @@ const confirmReceipt = async (req, res) => {
       console.log('Blockchain confirmation transaction hash:', receipt.transactionHash);
       console.log('Block number:', receipt.blockNumber);
       console.log('=== PHARMACY RECEIPT STORED IN BLOCKCHAIN ===');
+      
+      // Update pharmacist verification on blockchain
+      try {
+        // Check if the verifyByPharmacist function exists before calling it
+        if (typeof batchContract.verifyByPharmacist === 'function') {
+          console.log("📦 Updating pharmacist verification on blockchain for batch:", batch.batchNumber);
+          
+          // First check if batch exists on blockchain
+          try {
+            const batchExists = await batchContract.batches(batch.batchNumber);
+            if (!batchExists || !batchExists.manufacturerAddress || batchExists.manufacturerAddress === '0x0000000000000000000000000000000000000000') {
+              console.log("⚠️ Batch not found on blockchain, skipping pharmacist verification");
+            } else {
+              const verificationTx = await batchContract.verifyByPharmacist(batch.batchNumber);
+              const verificationReceipt = await verificationTx.wait();
+              
+              if (verificationReceipt.status === 1) {
+                console.log("✅ Pharmacist verification confirmed on blockchain:", verificationReceipt.hash);
+              }
+            }
+          } catch (batchCheckError) {
+            console.log("⚠️ Could not verify batch existence on blockchain:", batchCheckError.message);
+          }
+        } else {
+          console.log("⚠️ verifyByPharmacist function not available on contract");
+        }
+      } catch (verificationError) {
+        console.error("❌ Blockchain pharmacist verification failed:", verificationError);
+      }
       
     } catch (blockchainError) {
       console.error('Failed to store pharmacy receipt in blockchain:', blockchainError);

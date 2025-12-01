@@ -583,6 +583,11 @@ const receiveProduct = async (req, res) => {
       
       batch.shipmentHistory.push(newShipmentEntry);
       batch.shipmentStatus = 'Delivered';
+      
+      // Set distributor verification
+      batch.distributorVerified = true;
+      batch.verificationTimestamps.distributorVerifiedAt = new Date();
+      
       await batch.save();
 
       // Store shipment entry in blockchain as well
@@ -626,6 +631,24 @@ const receiveProduct = async (req, res) => {
         await batch.save();
 
         console.log("✅ Shipment entry with blockchain transaction details saved to MongoDB");
+
+        // Update distributor verification on blockchain
+        try {
+          // Check if the verifyByDistributor function exists before calling it
+          if (typeof batchContract.verifyByDistributor === 'function') {
+            console.log("📦 Updating distributor verification on blockchain for batch:", batch.batchNumber);
+            const verificationTx = await batchContract.verifyByDistributor(batch.batchNumber);
+            const verificationReceipt = await verificationTx.wait();
+            
+            if (verificationReceipt.status === 1) {
+              console.log("✅ Distributor verification confirmed on blockchain:", verificationReceipt.hash);
+            }
+          } else {
+            console.log("⚠️ verifyByDistributor function not available on contract");
+          }
+        } catch (verificationError) {
+          console.error("❌ Blockchain distributor verification failed:", verificationError);
+        }
 
       } catch (blockchainError) {
         console.error("❌ Blockchain receive acknowledgment failed:", blockchainError);

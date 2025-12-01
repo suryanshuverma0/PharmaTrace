@@ -7,6 +7,22 @@ const Pharmacist = require('../models/Pharmacist');
 const ProductTracking = require('../models/ProductTracking');
 const { contract: productContract, batchContract } = require('../utils/blockchain');
 
+// Helper function to convert BigInt values to strings for JSON serialization
+function convertBigIntsToStrings(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'bigint') return obj.toString();
+  if (obj instanceof Date) return obj.toISOString(); // Handle Date objects properly
+  if (Array.isArray(obj)) return obj.map(convertBigIntsToStrings);
+  if (typeof obj === 'object') {
+    const converted = {};
+    for (const [key, value] of Object.entries(obj)) {
+      converted[key] = convertBigIntsToStrings(value);
+    }
+    return converted;
+  }
+  return obj;
+}
+
 // Helper function to track product verification
 async function trackProductVerification(req, trackingData) {
   try {
@@ -23,8 +39,10 @@ async function trackProductVerification(req, trackingData) {
     const screenWidth = req.query?.screenWidth ? parseInt(req.query.screenWidth) : null;
     const screenHeight = req.query?.screenHeight ? parseInt(req.query.screenHeight) : null;
 
-    // Get tracking type
-    const trackingType = req.query?.trackingType || trackingData.trackingType || 'manual_verification';
+    // Get tracking type with validation
+    const rawTrackingType = req.query?.trackingType || trackingData.trackingType || 'manual_verification';
+    const validTrackingTypes = ['manual_verification', 'qr_scan', 'batch_verification', 'distributor_scan', 'pharmacy_scan'];
+    const trackingType = validTrackingTypes.includes(rawTrackingType) ? rawTrackingType : 'manual_verification';
 
     // Determine scan method based on tracking type
     let scanMethod = 'manual_entry';
@@ -162,11 +180,12 @@ const verifyProductBlockchainFirst = async (req, res) => {
     let blockchainBatch;
     let batchFingerprint;
     try {
-      // Try direct batch lookup first
+      // Try direct batch lookup using getBatch function
       console.log("🔍 Attempting direct batch lookup for:", blockchainProduct.batchNumber);
-      blockchainBatch = await batchContract.batches(blockchainProduct.batchNumber);
+      const batchData = await batchContract.getBatch(blockchainProduct.batchNumber);
       
-      if (blockchainBatch && blockchainBatch.batchNumber === blockchainProduct.batchNumber) {
+      if (batchData && batchData.batchNumber === blockchainProduct.batchNumber) {
+        blockchainBatch = batchData;
         console.log("✅ Found batch directly on blockchain:", blockchainBatch.batchNumber);
         
         // Try to get batch fingerprint
@@ -537,10 +556,11 @@ const verifyProductBlockchain = async (req, res) => {
     // Step 2: Get batch data from blockchain
     let blockchainBatch;
     try {
-      blockchainBatch = await batchContract.batches(blockchainProduct.batchNumber);
+      blockchainBatch = await batchContract.getBatch(blockchainProduct.batchNumber);
       if (!blockchainBatch || blockchainBatch.batchNumber !== blockchainProduct.batchNumber) {
         throw new Error("Batch not found");
       }
+      
       console.log("✅ Batch found on blockchain:", blockchainBatch.batchNumber);
     } catch (batchError) {
       console.error("❌ Batch not found on blockchain:", batchError.message);
@@ -568,6 +588,68 @@ const verifyProductBlockchain = async (req, res) => {
       manufacturer = await Manufacturer.findOne({ user: dbBatch.manufacturerId._id }).populate('user').lean();
     }
 
+    // Step 4.1: Get verification status from blockchain
+    let verificationStatus = {
+      manufacturerVerified: true,
+      distributorVerified: false,
+      pharmacistVerified: false,
+      manufacturerVerifiedAt: "0",
+      distributorVerifiedAt: "0", 
+      pharmacistVerifiedAt: "0"
+    };
+
+    try {
+      // Check if getVerificationStatus function exists
+      if (typeof batchContract.getVerificationStatus === 'function') {
+        // First check if the batch exists in the blockchain
+        const batchExists = await batchContract.batches(blockchainProduct.batchNumber);
+        if (batchExists.manufacturerAddress === "0x0000000000000000000000000000000000000000") {
+          throw new Error("Batch not registered in blockchain");
+        }
+
+        const blockchainVerificationStatus = await batchContract.getVerificationStatus(blockchainProduct.batchNumber);
+        verificationStatus = {
+          manufacturerVerified: true, // Always true for registered batches
+          distributorVerified: blockchainVerificationStatus[0], // First return value
+          pharmacistVerified: blockchainVerificationStatus[1], // Second return value
+          manufacturerVerifiedAt: blockchainBatch?.registrationTimestamp || "0",
+          distributorVerifiedAt: blockchainVerificationStatus[0] ? "verified" : "0",
+          pharmacistVerifiedAt: blockchainVerificationStatus[1] ? "verified" : "0"
+        };
+        console.log("✅ Blockchain verification status:", verificationStatus);
+      } else {
+        console.log("⚠️ getVerificationStatus function not available - using batch data");
+        verificationStatus = {
+          manufacturerVerified: true,
+          distributorVerified: blockchainBatch?.distributorVerified || false,
+          pharmacistVerified: blockchainBatch?.pharmacistVerified || false,
+          manufacturerVerifiedAt: blockchainBatch?.registrationTimestamp || "0",
+          distributorVerifiedAt: blockchainBatch?.distributorVerified ? "verified" : "0",
+          pharmacistVerifiedAt: blockchainBatch?.pharmacistVerified ? "verified" : "0"
+        };
+      }
+    } catch (verificationError) {
+      console.log("⚠️ Could not get verification status from blockchain:", verificationError.message);
+      
+      // Try to get from database Batch model as fallback
+      try {
+        const dbBatch = await Batch.findOne({ batchNumber: blockchainProduct.batchNumber }).lean();
+        if (dbBatch) {
+          verificationStatus = {
+            manufacturerVerified: true,
+            distributorVerified: dbBatch.distributorVerified || false,
+            pharmacistVerified: dbBatch.pharmacistVerified || false,
+            manufacturerVerifiedAt: dbBatch.verificationTimestamps?.manufacturerVerifiedAt || dbBatch.createdAt || "0",
+            distributorVerifiedAt: dbBatch.verificationTimestamps?.distributorVerifiedAt || (dbBatch.distributorVerified ? "verified" : "0"),
+            pharmacistVerifiedAt: dbBatch.verificationTimestamps?.pharmacistVerifiedAt || (dbBatch.pharmacistVerified ? "verified" : "0")
+          };
+          console.log("📋 Using database batch data for verification status:", verificationStatus);
+        }
+      } catch (dbError) {
+        console.error("⚠️ Could not get verification status from database:", dbError.message);
+      }
+    }
+
     // Step 5: Process dates and expiry
     const currentDate = new Date();
     const expiryDate = new Date(parseInt(blockchainProduct.expiryDate) * 1000);
@@ -577,13 +659,13 @@ const verifyProductBlockchain = async (req, res) => {
     // Step 6: Determine current location from shipment history
     let currentLocation = 'Manufacturing Facility';
     let currentActor = blockchainProduct.manufacturerName;
-    let lastUpdated = new Date(parseInt(blockchainProduct.registrationTimestamp) * 1000);
+    let lastUpdated = new Date(parseInt(blockchainProduct.registrationTimestamp.toString()) * 1000);
 
     if (shipmentHistory && shipmentHistory.length > 0) {
       const latestShipment = shipmentHistory[shipmentHistory.length - 1];
       currentLocation = latestShipment.to;
       currentActor = latestShipment.to;
-      lastUpdated = new Date(parseInt(latestShipment.timestamp) * 1000);
+      lastUpdated = new Date(parseInt(latestShipment.timestamp.toString()) * 1000);
     }
 
     // Step 7: Calculate authenticity
@@ -625,12 +707,12 @@ const verifyProductBlockchain = async (req, res) => {
         productName: blockchainProduct.name,
         serialNumber: blockchainProduct.serialNumber,
         batchNumber: blockchainProduct.batchNumber,
-        manufactureDate: new Date(parseInt(blockchainProduct.manufactureDate) * 1000),
+        manufactureDate: new Date(parseInt(blockchainProduct.manufactureDate.toString()) * 1000),
         expiryDate: expiryDate,
         dosageForm: blockchainProduct.dosageForm,
         strength: blockchainProduct.strength,
         drugCode: dbProduct?.drugCode || blockchainProduct.drugCode,
-        storageCondition: blockchainBatch.storageConditions || dbBatch?.storageConditions,
+        storageCondition: dbBatch?.storageConditions || "Store below 25°C",
         price: dbProduct?.price
       },
       manufacturer: {
@@ -657,11 +739,17 @@ const verifyProductBlockchain = async (req, res) => {
       verification: {
         verifiedAt: new Date(),
         verificationStatus: isAuthentic ? 'verified' : 'suspicious',
-        fingerprint: dbProduct?.fingerprint || 'N/A'
+        fingerprint: dbProduct?.fingerprint || 'N/A',
+        manufacturerVerified: verificationStatus.manufacturerVerified,
+        distributorVerified: verificationStatus.distributorVerified,
+        pharmacistVerified: verificationStatus.pharmacistVerified,
+        manufacturerVerifiedAt: verificationStatus.manufacturerVerifiedAt,
+        distributorVerifiedAt: verificationStatus.distributorVerifiedAt,
+        pharmacistVerifiedAt: verificationStatus.pharmacistVerifiedAt
       }
     };
 
-    return res.json(response);
+    return res.json(convertBigIntsToStrings(response));
 
   } catch (error) {
     console.error('❌ Blockchain verification error:', error);
@@ -724,14 +812,26 @@ const getProductJourneyBlockchain = async (req, res) => {
     // Step 2: Get batch from blockchain
     let blockchainBatch;
     try {
-      blockchainBatch = await batchContract.batches(blockchainProduct.batchNumber);
-      if (!blockchainBatch || blockchainBatch.batchNumber !== blockchainProduct.batchNumber) {
-        throw new Error("Batch not found");
+      console.log("🔍 Looking for batch:", blockchainProduct.batchNumber);
+      const batchData = await batchContract.getBatch(blockchainProduct.batchNumber);
+      console.log("📦 Batch data from contract:", batchData);
+      
+      if (!batchData || !batchData.batchNumber || batchData.manufacturerAddress === '0x0000000000000000000000000000000000000000') {
+        throw new Error("Batch not found or inactive");
       }
+      
+      console.log("✅ Batch found on blockchain:", batchData.batchNumber);
+      blockchainBatch = batchData; // Use batch data directly like in verification function
     } catch (error) {
+      console.error("❌ Batch lookup failed:", error.message);
+      console.log("🔍 Batch number being searched:", blockchainProduct.batchNumber);
       return res.status(404).json({
         success: false,
-        message: 'Batch information not found'
+        message: 'Batch information not found',
+        debug: {
+          batchNumber: blockchainProduct.batchNumber,
+          error: error.message
+        }
       });
     }
 
@@ -773,6 +873,55 @@ const getProductJourneyBlockchain = async (req, res) => {
       manufacturer = await Manufacturer.findOne({ user: dbBatch.manufacturerId._id }).populate('user').lean();
     }
 
+    // Step 4.1: Get verification status from blockchain
+    let verificationStatus = {
+      manufacturerVerified: true,
+      distributorVerified: false,
+      pharmacistVerified: false,
+      manufacturerVerifiedAt: "0",
+      distributorVerifiedAt: "0", 
+      pharmacistVerifiedAt: "0"
+    };
+
+    try {
+      // First check if the batch exists in the blockchain
+      const batchExists = await batchContract.batches(blockchainProduct.batchNumber);
+      if (batchExists.manufacturerAddress === "0x0000000000000000000000000000000000000000") {
+        throw new Error("Batch not registered in blockchain");
+      }
+
+      const blockchainVerificationStatus = await batchContract.getVerificationStatus(blockchainProduct.batchNumber);
+      verificationStatus = {
+        manufacturerVerified: true, // Always true for registered batches
+        distributorVerified: blockchainVerificationStatus[0], // First return value
+        pharmacistVerified: blockchainVerificationStatus[1], // Second return value
+        manufacturerVerifiedAt: blockchainBatch?.registrationTimestamp || "0",
+        distributorVerifiedAt: blockchainVerificationStatus[0] ? "verified" : "0",
+        pharmacistVerifiedAt: blockchainVerificationStatus[1] ? "verified" : "0"
+      };
+      console.log("✅ Blockchain verification status for journey:", verificationStatus);
+    } catch (verificationError) {
+      console.log("⚠️ Could not get verification status from blockchain:", verificationError.message);
+      
+      // Try to get from database Batch model as fallback
+      try {
+        const dbBatch = await Batch.findOne({ batchNumber: blockchainProduct.batchNumber }).lean();
+        if (dbBatch) {
+          verificationStatus = {
+            manufacturerVerified: true,
+            distributorVerified: dbBatch.distributorVerified || false,
+            pharmacistVerified: dbBatch.pharmacistVerified || false,
+            manufacturerVerifiedAt: dbBatch.verificationTimestamps?.manufacturerVerifiedAt || dbBatch.createdAt || "0",
+            distributorVerifiedAt: dbBatch.verificationTimestamps?.distributorVerifiedAt || (dbBatch.distributorVerified ? "verified" : "0"),
+            pharmacistVerifiedAt: dbBatch.verificationTimestamps?.pharmacistVerifiedAt || (dbBatch.pharmacistVerified ? "verified" : "0")
+          };
+          console.log("📋 Using database batch data for verification status (journey):", verificationStatus);
+        }
+      } catch (dbError) {
+        console.error("⚠️ Could not get verification status from database:", dbError.message);
+      }
+    }
+
     // Step 5: Build journey steps
     const journeySteps = [];
 
@@ -790,7 +939,7 @@ const getProductJourneyBlockchain = async (req, res) => {
       icon: 'Building2',
       verified: true,
       status: 'completed',
-      temperature: blockchainBatch.storageConditions || '20-25°C',
+      temperature: '20-25°C',
       humidity: '45-65%',
       blockchain: {
         verified: true,
@@ -861,10 +1010,18 @@ const getProductJourneyBlockchain = async (req, res) => {
         txHash: dbBatch?.txHash,
         blockNumber: dbBatch?.blockNumber,
         lastSync: new Date()
+      },
+      verification: {
+        manufacturerVerified: verificationStatus.manufacturerVerified,
+        distributorVerified: verificationStatus.distributorVerified,
+        pharmacistVerified: verificationStatus.pharmacistVerified,
+        manufacturerVerifiedAt: verificationStatus.manufacturerVerifiedAt,
+        distributorVerifiedAt: verificationStatus.distributorVerifiedAt,
+        pharmacistVerifiedAt: verificationStatus.pharmacistVerifiedAt
       }
     };
 
-    return res.json(response);
+    return res.json(convertBigIntsToStrings(response));
 
   } catch (error) {
     console.error('❌ Blockchain journey error:', error);

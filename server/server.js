@@ -152,6 +152,12 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
+// Initialize auto product generation service
+const { initProductAutoGeneration } = require('./services/productAutoGeneration');
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Start auto product generation service
+  initProductAutoGeneration();
 });

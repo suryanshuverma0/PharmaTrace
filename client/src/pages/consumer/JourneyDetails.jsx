@@ -232,11 +232,11 @@ const JourneyDetails = () => {
                   
                   <h2 className="mb-4 text-2xl font-bold text-gray-900">⚠️ Product Not Verified</h2>
                   
-                  <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-800 text-center">
+                  <div className="p-4 mb-6 border border-red-200 rounded-lg bg-red-50">
+                    <p className="text-center text-red-800">
                       Product with serial number <span className="font-mono font-medium">{serialNumber}</span> is not registered in our blockchain system.
                     </p>
-                    <p className="mt-2 text-sm text-red-600 text-center">
+                    <p className="mt-2 text-sm text-center text-red-600">
                       This product may be counterfeit or unauthorized.
                     </p>
                   </div>
@@ -244,15 +244,15 @@ const JourneyDetails = () => {
                   <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
                     <button
                       onClick={() => navigate('/verify-product')}
-                      className="w-full sm:w-auto px-4 sm:px-6 py-3 text-sm sm:text-base text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                      className="w-full px-4 py-3 text-sm text-white transition-colors bg-blue-600 rounded-lg sm:w-auto sm:px-6 sm:text-base hover:bg-blue-700"
                     >
                       Verify Another Product
                     </button>
                     <button
                       onClick={() => navigate('/report-counterfeit')}
-                      className="w-full sm:w-auto px-4 sm:px-6 py-3 text-sm sm:text-base text-red-600 bg-red-100 border border-red-200 rounded-lg hover:bg-red-200 transition-colors"
+                      className="w-full px-4 py-3 text-sm text-red-600 transition-colors bg-red-100 border border-red-200 rounded-lg sm:w-auto sm:px-6 sm:text-base hover:bg-red-200"
                     >
-                      <AlertTriangle className="w-4 h-4 mr-2 inline" />
+                      <AlertTriangle className="inline w-4 h-4 mr-2" />
                       Report Suspicious Product
                     </button>
                   </div>
@@ -269,7 +269,7 @@ const JourneyDetails = () => {
                   
                   <button
                     onClick={() => navigate('/verify-product')}
-                    className="px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-6 py-3 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
                   >
                     Back to Verification
                   </button>
@@ -622,7 +622,7 @@ const JourneyDetails = () => {
                   <p className="text-xs text-blue-100 truncate sm:text-base">Batch: {drugData?.product?.batchNumber}</p>
                 </div>
               </div>
-              <div className="space-y-2 text-left sm:text-right flex-shrink-0 w-full sm:w-auto">
+              <div className="flex-shrink-0 w-full space-y-2 text-left sm:text-right sm:w-auto">
                 <div className="flex items-center mb-2 space-x-2">
                   {drugData?.product?.isAuthentic ? (
                     <>
@@ -665,6 +665,7 @@ const JourneyDetails = () => {
               {drugData?.product?.isAuthentic ? '✓ VERIFIED AUTHENTIC PRODUCT' : '⚠ UNVERIFIED PRODUCT'}
             </div>
           </div>
+
 
 
         </div>
@@ -723,12 +724,12 @@ const JourneyDetails = () => {
                             'N/A'}
                         </p>
                         {isProductExpired() && (
-                          <span className="px-2 py-1 text-xs font-medium text-red-700 bg-red-50 rounded print:hidden">
+                          <span className="px-2 py-1 text-xs font-medium text-red-700 rounded bg-red-50 print:hidden">
                             ⚠ Expired
                           </span>
                         )}
                         {isProductExpiringSoon() && (
-                          <span className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 rounded print:hidden">
+                          <span className="px-2 py-1 text-xs font-medium rounded text-amber-700 bg-amber-50 print:hidden">
                             ⚠ {daysUntilExpiry}d left
                           </span>
                         )}
@@ -753,8 +754,71 @@ const JourneyDetails = () => {
                     <p className="mt-1 text-gray-900 break-words print:print-info-value">{drugData.product.regulatoryInfo}</p>
                   </div>
                 )}
+                
+
               </div>
             </div>
+
+            {/* Supply Chain Verification Status */}
+            {drugData?.verification && (
+              <div className="overflow-hidden bg-white rounded-lg shadow print:shadow-none print:border print:border-gray-300">
+                <div className="px-3 py-2 border-b border-gray-100 bg-gray-50 print:bg-white">
+                  <h3 className="flex items-center text-xs font-medium text-gray-700 print:text-black">
+                    <Shield className="w-3 h-3 mr-1.5 text-blue-500 print:hidden" />
+                    Verification Status
+                  </h3>
+                </div>
+                <div className="p-3 space-y-1.5">
+                  {/* Verification Items */}
+                  <div className="flex items-center justify-between py-1">
+                    <div className="flex items-center space-x-1.5">
+                      <CheckCircle className="w-3 h-3 text-green-500 print:hidden" />
+                      <span className="text-xs text-gray-600 print:text-black">Manufacturer</span>
+                    </div>
+                    <span className="text-xs font-medium text-green-600">✓</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-1">
+                    <div className="flex items-center space-x-1.5">
+                      {drugData.verification.distributorVerified ? (
+                        <CheckCircle className="w-3 h-3 text-green-500 print:hidden" />
+                      ) : (
+                        <AlertTriangle className="w-3 h-3 text-amber-500 print:hidden" />
+                      )}
+                      <span className="text-xs text-gray-600 print:text-black">Distributor</span>
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      drugData.verification.distributorVerified ? 'text-green-600' : 'text-amber-600'
+                    }`}>
+                      {drugData.verification.distributorVerified ? '✓' : '⚠'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1">
+                    <div className="flex items-center space-x-1.5">
+                      {drugData.verification.pharmacistVerified ? (
+                        <CheckCircle className="w-3 h-3 text-green-500 print:hidden" />
+                      ) : (
+                        <AlertTriangle className="w-3 h-3 text-amber-500 print:hidden" />
+                      )}
+                      <span className="text-xs text-gray-600 print:text-black">Pharmacist</span>
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      drugData.verification.pharmacistVerified ? 'text-green-600' : 'text-amber-600'
+                    }`}>
+                      {drugData.verification.pharmacistVerified ? '✓' : '⚠'}
+                    </span>
+                  </div>
+
+                  {/* Status Message */}
+                  {(!drugData.verification.distributorVerified || !drugData.verification.pharmacistVerified) && (
+                    <div className="pt-1.5 mt-1.5 border-t border-gray-100">
+                      <span className="text-xs font-medium text-red-600">⚠ Incomplete chain</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Blockchain Verification */}
             {drugData?.blockchain?.verified && (

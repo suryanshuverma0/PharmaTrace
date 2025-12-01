@@ -55,6 +55,13 @@ const batchSchema = new mongoose.Schema({
     description: 'Quantity remaining for batch assignment to distributors'
   },
 
+  productName: {
+    type: String,
+    required: true,
+    trim: true,
+    description: 'Name of the pharmaceutical product (e.g., Paracetamol 500mg Tablets)'
+  },
+
   dosageForm: {
     type: String,
     required: true,
@@ -174,6 +181,48 @@ const batchSchema = new mongoose.Schema({
   lastBlockchainSync: {
     type: Date,
     default: Date.now,
+  },
+
+  // Auto product generation
+  autoGenerateProducts: {
+    type: Boolean,
+    default: true
+  },
+  maxAutoGenerateQuantity: {
+    type: Number,
+    default: 6,
+    min: 1,
+    max: 50
+  },
+  productGenerationStatus: {
+    type: String,
+    enum: ['pending', 'processing', 'completed'],
+    default: 'pending'
+  },
+
+  // Verification flags for supply chain actors
+  manufacturerVerified: {
+    type: Boolean,
+    default: true, // Auto-verified when manufacturer registers batch
+    description: 'Verification status by manufacturer'
+  },
+  distributorVerified: {
+    type: Boolean,
+    default: false,
+    description: 'Verification status by distributor when acknowledging shipment'
+  },
+  pharmacistVerified: {
+    type: Boolean,
+    default: false,
+    description: 'Verification status by pharmacist when confirming receipt'
+  },
+  verificationTimestamps: {
+    manufacturerVerifiedAt: {
+      type: Date,
+      default: Date.now // Set when batch is created
+    },
+    distributorVerifiedAt: Date,
+    pharmacistVerifiedAt: Date
   },
 
   createdAt: {
