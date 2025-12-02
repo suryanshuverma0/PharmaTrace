@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from '../../context/AuthContext';
-import Button from '../UI/Button';
+import Button from "../../components/UI/Button";
 
 const Sidebar = ({ isCollapsed, onToggle }) => {
   const location = useLocation();

@@ -8,14 +8,25 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  QrCode,
+  Route,
+  MoreVertical,
+  Boxes,
+  Download,
+  Printer
 } from "lucide-react";
 import apiClient from "../../services/api/api";
+import ModalWrapper from "../../components/common/ModalWrapper";
+import { Button } from "../../components/UI/Button";
 
 const AssignedBatches = () => {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedBatches, setExpandedBatches] = useState(new Set());
+  const [expandedProducts, setExpandedProducts] = useState(new Set());
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     fetchAssignedBatches();
@@ -26,6 +37,7 @@ const AssignedBatches = () => {
       setLoading(true);
       const res = await apiClient.get("/distributer/batches");
       const formattedBatches = (res.data.batches || []).map((batch) => {
+        console.log('Batch data received:', batch); // Debug log
         // Get the latest shipment history entry
         const latestHistory =
           batch.shipmentHistory.length > 0
@@ -69,9 +81,12 @@ const AssignedBatches = () => {
             : null,
           remarks: latestHistory?.remarks || "",
           shipmentHistory: batch.shipmentHistory,
+          // Add products array from the API response
+          products: batch.products || []
         };
       });
 
+      console.log('Formatted batches:', formattedBatches); // Debug log
       setBatches(formattedBatches);
 
       // Expand the first batch by default
@@ -104,6 +119,36 @@ const AssignedBatches = () => {
 
   const isBatchExpanded = (batchId) => {
     return expandedBatches.has(batchId);
+  };
+
+  const toggleProductsExpansion = (batchId) => {
+    setExpandedProducts((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(batchId)) {
+        newSet.delete(batchId);
+      } else {
+        newSet.add(batchId);
+      }
+      return newSet;
+    });
+  };
+
+  const isProductsExpanded = (batchId) => {
+    return expandedProducts.has(batchId);
+  };
+
+  const handleQRCodeClick = (product) => {
+    setSelectedProduct(product);
+    setShowQRModal(true);
+  };
+
+  const downloadQRCode = (qrCodeUrl, fileName) => {
+    const link = document.createElement('a');
+    link.href = qrCodeUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getStatusColor = (status) => {
@@ -261,7 +306,7 @@ const AssignedBatches = () => {
                   <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
                     <div className="flex items-start flex-1 gap-4">
                       <div className="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl">
-                        <Package className="w-6 h-6 text-blue-600" />
+                        <Boxes className="w-6 h-6 text-blue-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-semibold text-gray-900">
@@ -279,8 +324,14 @@ const AssignedBatches = () => {
                               </span>
                               <span className="flex items-center gap-1">
                                 <Building2 className="w-3 h-3" />
-                                {batch.manufacturer}
+                                {batch.manufacturerName || batch.manufacturer}
                               </span>
+                              {batch.products && batch.products.length > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <Boxes className="w-3 h-3" />
+                                  Products: {batch.products.length}
+                                </span>
+                              )}
                               {batch.expiryDate && (
                                 <span className="flex items-center gap-1">
                                   <Calendar className="w-3 h-3" />
@@ -316,7 +367,7 @@ const AssignedBatches = () => {
                               )}
                               <div className="flex items-center gap-1">
                                 <Building2 className="w-4 h-4" />
-                                <span>From: {batch.manufacturer}</span>
+                                <span>From: {batch.manufacturerName || batch.manufacturer}</span>
                               </div>
                             </div>
                           )}
@@ -407,6 +458,78 @@ const AssignedBatches = () => {
                           </div>
                         )}
                       </div>
+
+                      {/* Products in Batch */}
+                      {console.log('Products for batch:', batch.batchNumber, batch.products)} {/* Debug log */}
+                      {batch.products && batch.products.length > 0 && (
+                        <div className="mt-6">
+                          <h4 className="mb-4 text-lg font-medium text-gray-900">
+                            Products in Batch ({batch.products.length})
+                          </h4>
+                          <div className="grid grid-cols-1 gap-4">
+                            {batch.products.map((product) => (
+                              <div
+                                key={product._id}
+                                className="p-4 transition-all duration-200 bg-white border rounded-xl border-gray-200/50 hover:border-blue-200 hover:shadow-md"
+                              >
+                                <div className="flex justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <h5 className="font-medium text-gray-900 truncate">
+                                      {product.productName}
+                                    </h5>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                      SN: {product.serialNumber}
+                                    </p>
+                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                      <span className="flex items-center gap-1">
+                                        <Package className="w-3 h-3" />
+                                        Status: {product.status}
+                                      </span>
+                                      {product.fingerprint && (
+                                        <span className="font-mono truncate max-w-32">
+                                          FP: {product.fingerprint.substring(0, 10)}...
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {product.qrCodeUrl && (
+                                      <button
+                                        className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                                        title="View QR Code"
+                                      >
+                                        <QrCode className="w-5 h-5" />
+                                      </button>
+                                    )}
+                                    <button
+                                      className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                                      title="Track Product"
+                                    >
+                                      <Route className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                      className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                                      title="More Options"
+                                    >
+                                      <MoreVertical className="w-5 h-5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Show debug info when no products */}
+                      {(!batch.products || batch.products.length === 0) && (
+                        <div className="p-4 mt-6 border border-yellow-200 rounded-lg bg-yellow-50">
+                          <p className="text-yellow-800">
+                            No products found in this batch. 
+                            {!batch.products ? ' Products array is missing.' : ' Products array is empty.'}
+                          </p>
+                        </div>
+                      )}
 
                       {/* Shipment History Timeline */}
                       <div className="mt-6">

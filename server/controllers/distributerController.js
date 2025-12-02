@@ -94,7 +94,7 @@ const getDistributorBatches = async (req, res) => {
     
     // Map to frontend format
     const formatted = await Promise.all(batches.map(async b => {
-      const product = await Product.findOne({ batchId: b._id });
+      const products = await Product.find({ batchId: b._id }); // Get ALL products in this batch
 
       // Get manufacturer company name from Manufacturer model
       let manufacturerName = 'Unknown Manufacturer';
@@ -154,7 +154,7 @@ const getDistributorBatches = async (req, res) => {
         strength: b.strength,
         productionLocation: b.productionLocation,
         approvalCertId: b.approvalCertId,
-        product: product ? product.productName : (b.dosageForm + ' ' + b.strength),
+        product: products.length > 0 ? products[0].productName : (b.dosageForm + ' ' + b.strength),
         // quantity now reflects what this distributor still holds
         quantity: distributorAvailable,
         totalAssignedToDistributor: assignedToDistributor,
@@ -163,8 +163,20 @@ const getDistributorBatches = async (req, res) => {
         manufacturer: b.manufacturerId ? b.manufacturerId._id.toString() : '',
         manufacturerName: manufacturerName,
         manufacturerAddress: b.manufacturerId ? b.manufacturerId.address : '',
-        serialNumber: product ? product.serialNumber : '',
-        shipmentHistory: b.shipmentHistory || []
+        serialNumber: products.length > 0 ? products[0].serialNumber : '',
+        shipmentHistory: b.shipmentHistory || [],
+        // Add products array to include all products in this batch
+        products: products.map(p => ({
+          _id: p._id,
+          serialNumber: p.serialNumber,
+          productName: p.productName,
+          status: p.status,
+          qrCodeUrl: p.qrCodeUrl,
+          fingerprint: p.fingerprint,
+          manufactureDate: b.manufactureDate,
+          expiryDate: b.expiryDate,
+          batchNumber: b.batchNumber
+        }))
       };
     }));
     res.json({ batches: formatted });

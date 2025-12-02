@@ -77,7 +77,7 @@ const DashboardLayout = () => {
         </AnimatePresence>
 
         {/* Main Content */}
-        <main className={`flex-1 p-4 mt-20 md:p-6 min-h-screen transition-all duration-300 ${
+        <main className={`flex-1 p-4 mt-14 md:p-6 min-h-screen transition-all duration-300 ${
           !isMobileView && !isSidebarCollapsed ? 'md:ml-0' : 'md:ml-0'
         }`}>
           {/* Mobile Menu Button */}
