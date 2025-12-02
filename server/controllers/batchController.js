@@ -294,7 +294,7 @@ const getBatches = async (req, res) => {
   try {
     const batches = await Batch.find({ manufacturerId: req.user.userId }).select(
       "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable quantityAssigned approvalCertId storageConditions productionLocation shipmentStatus"
-    );
+    ).sort({ createdAt: -1 });
 
     // Add calculated fields
     const batchesWithCalculatedFields = batches.map(batch => ({
@@ -324,7 +324,7 @@ const getAvailableBatches = async (req, res) => {
       }
     }).select(
       "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable quantityAssigned approvalCertId storageConditions productionLocation shipmentStatus"
-    );
+    ).sort({ createdAt: -1 });
 
     // Add calculated fields
     const batchesWithCalculatedFields = batches.map(batch => ({
@@ -349,7 +349,7 @@ const getAvailableBatchesForProducts = async (req, res) => {
       quantityAvailable: { $gt: 0 }
     }).select(
       "batchNumber dosageForm strength manufactureDate expiryDate quantityProduced quantityAvailable quantityAssigned approvalCertId storageConditions productionLocation shipmentStatus"
-    );
+    ).sort({ createdAt: -1 });
 
     // Add calculated fields
     const batchesWithCalculatedFields = batches.map(batch => ({

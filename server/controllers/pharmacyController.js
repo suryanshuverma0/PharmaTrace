@@ -426,7 +426,7 @@ const confirmReceipt = async (req, res) => {
       console.log('Block number:', receipt.blockNumber);
       console.log('=== PHARMACY RECEIPT STORED IN BLOCKCHAIN ===');
       
-      // Update pharmacist verification on blockchain
+      // Update pharmacist verification on blockchain with retry mechanism
       try {
         // Check if the verifyByPharmacist function exists before calling it
         if (typeof batchContract.verifyByPharmacist === 'function') {
@@ -438,7 +438,18 @@ const confirmReceipt = async (req, res) => {
             if (!batchExists || !batchExists.manufacturerAddress || batchExists.manufacturerAddress === '0x0000000000000000000000000000000000000000') {
               console.log("⚠️ Batch not found on blockchain, skipping pharmacist verification");
             } else {
-              const verificationTx = await batchContract.verifyByPharmacist(batch.batchNumber);
+              // Add a small delay to avoid nonce conflicts
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              // Get current nonce and add buffer for concurrent transactions
+              const currentNonce = await signer.getNonce('latest');
+              console.log("🔢 Current nonce for pharmacist verification tx:", currentNonce);
+              
+              const verificationTx = await batchContract.verifyByPharmacist(batch.batchNumber, {
+                nonce: currentNonce
+              });
+              
+              console.log("📦 Pharmacist verification transaction sent with nonce:", currentNonce);
               const verificationReceipt = await verificationTx.wait();
               
               if (verificationReceipt.status === 1) {
@@ -452,7 +463,28 @@ const confirmReceipt = async (req, res) => {
           console.log("⚠️ verifyByPharmacist function not available on contract");
         }
       } catch (verificationError) {
-        console.error("❌ Blockchain pharmacist verification failed:", verificationError);
+        // Check if it's a nonce error and retry once
+        if (verificationError.code === 'NONCE_EXPIRED' || verificationError.message.includes('nonce')) {
+          console.log("🔄 Retrying pharmacist verification transaction with fresh nonce...");
+          try {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait longer
+            const freshNonce = await signer.getNonce('latest');
+            console.log("🔢 Retry pharmacist verification with fresh nonce:", freshNonce);
+            
+            const retryTx = await batchContract.verifyByPharmacist(batch.batchNumber, {
+              nonce: freshNonce
+            });
+            const retryReceipt = await retryTx.wait();
+            
+            if (retryReceipt.status === 1) {
+              console.log("✅ Pharmacist verification confirmed on retry:", retryReceipt.hash);
+            }
+          } catch (retryError) {
+            console.error("❌ Blockchain pharmacist verification retry failed:", retryError.message);
+          }
+        } else {
+          console.error("❌ Blockchain pharmacist verification failed:", verificationError.message);
+        }
       }
       
     } catch (blockchainError) {

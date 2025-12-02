@@ -129,6 +129,14 @@ const MultiSelect = ({
                 placeholder="Search districts..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && filteredOptions.length > 0) {
+                    e.preventDefault();
+                    const firstOption = filteredOptions[0];
+                    toggleOption(firstOption.value);
+                    setSearchTerm('');
+                  }
+                }}
                 autoFocus
               />
             </div>
@@ -137,15 +145,6 @@ const MultiSelect = ({
           <div className="py-1 overflow-auto max-h-60">
             {filteredOptions.length > 0 ? (
               <>
-                {value.length > 0 && (
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2 text-sm text-left text-red-600 border-b border-gray-100 hover:bg-red-50 focus:bg-red-50 focus:outline-none"
-                    onClick={() => onChange([])}
-                  >
-                    Clear all selections
-                  </button>
-                )}
                 {filteredOptions.map((option) => {
                   const isSelected = value.includes(option.value);
                   return (

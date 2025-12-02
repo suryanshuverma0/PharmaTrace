@@ -73,24 +73,18 @@ const ManufacturerDashboard = () => {
     { 
       label: 'Total Products',
       value: dashboardData.totalProducts.toLocaleString(),
-      change: dashboardData.totalProducts > 0 ? '+12.5%' : '0%',
-      trend: dashboardData.totalProducts > 0 ? 'up' : 'neutral',
       icon: <Boxes className="w-6 h-6" />,
       color: 'blue'
     },
     { 
       label: 'Total Batches',
       value: dashboardData.totalBatches.toLocaleString(),
-      change: dashboardData.totalBatches > 0 ? '+5.8%' : '0%',
-      trend: dashboardData.totalBatches > 0 ? 'up' : 'neutral',
       icon: <Box className="w-6 h-6" />,
       color: 'purple'
     },
     { 
       label: 'Delivered',
       value: dashboardData.totalDelivered.toLocaleString(),
-      change: dashboardData.totalDelivered > 0 ? '+8.1%' : '0%',
-      trend: dashboardData.totalDelivered > 0 ? 'up' : 'neutral',
       icon: <CheckCircle className="w-6 h-6" />,
       color: 'emerald'
     },
@@ -145,11 +139,11 @@ const ManufacturerDashboard = () => {
           </div>
           <div className="mt-4 sm:mt-0">
             <Link
-              to="/manufacturer/register"
+              to="/manufacturer/register/batch"
               className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               <Plus className="w-5 h-5 mr-2" />
-              Register New Product
+              Register New Batch
             </Link>
           </div>
         </div>
@@ -295,10 +289,13 @@ const ManufacturerDashboard = () => {
                 className="p-4 bg-white border shadow-lg rounded-2xl border-gray-200/50"
               >
                 <div className="flex items-center justify-between">
+
                   <div className={`p-2 rounded-xl bg-${stat.color}-100`}>
                     <div className={`text-${stat.color}-600`}>{stat.icon}</div>
                   </div>
-                  <span className={`px-2.5 py-1 text-sm rounded-full ${
+
+                  {stat.change && (
+                    <span className={`px-2.5 py-1 text-sm rounded-full ${
                     stat.trend === 'up' 
                       ? 'bg-emerald-100 text-emerald-800' 
                       : stat.trend === 'warning'
@@ -309,6 +306,8 @@ const ManufacturerDashboard = () => {
                   }`}>
                     {stat.change}
                   </span>
+                  )}
+                  
                 </div>
                 <div className="mt-4">
                   <h3 className="text-3xl font-bold text-gray-900">{stat.value}</h3>
@@ -319,7 +318,7 @@ const ManufacturerDashboard = () => {
           </div>
 
           {/* Additional Stats Row */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -354,25 +353,6 @@ const ManufacturerDashboard = () => {
                     {dashboardData.verifiedProducts.toLocaleString()}
                   </p>
                   <p className="text-sm text-gray-600">Verified Products</p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="p-4 border border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {((dashboardData.totalDelivered / Math.max(dashboardData.totalBatches, 1)) * 100).toFixed(1)}%
-                  </p>
-                  <p className="text-sm text-gray-600">Success Rate</p>
                 </div>
               </div>
             </motion.div>
@@ -453,7 +433,7 @@ const ManufacturerDashboard = () => {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Recent Batches</h3>
                 <Link
-                  to="/manufacturer/products"
+                  to="/manufacturer/assigned-batches"
                   className="text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
                 >
                   View All
@@ -508,7 +488,7 @@ const ManufacturerDashboard = () => {
                           {batch.shipmentStatus}
                         </span>
                         <Link
-                          to={`/manufacturer/batches/${batch._id}`}
+                          to={`/manufacturer/assigned-batches/`}
                           className="p-2 text-gray-400 transition-colors rounded-lg hover:text-gray-600 hover:bg-gray-100"
                         >
                           <Route className="w-5 h-5" />

@@ -300,16 +300,37 @@ b        // Get shipment history length first
       }
     });
 
-    // Add shipment history steps
+    // Add shipment history steps with dynamic actor type detection
     if (shipmentHistory && shipmentHistory.length > 0) {
-      shipmentHistory.forEach((shipment, index) => {
+      // Get business type mapping for all actors
+      const allBusinessNames = [...new Set(shipmentHistory.map(s => s.to))];
+      const businessTypeMapping = {};
+      
+      try {
+        const [distributors, pharmacists, manufacturers] = await Promise.all([
+          Distributor.find({ companyName: { $in: allBusinessNames } }).populate('user').lean(),
+          Pharmacist.find({ pharmacyName: { $in: allBusinessNames } }).populate('user').lean(),
+          Manufacturer.find({ companyName: { $in: allBusinessNames } }).populate('user').lean()
+        ]);
+        
+        distributors.forEach(d => businessTypeMapping[d.companyName] = 'distributor');
+        pharmacists.forEach(p => businessTypeMapping[p.pharmacyName] = 'pharmacist');
+        manufacturers.forEach(m => businessTypeMapping[m.companyName] = 'manufacturer');
+      } catch (error) {
+        console.error('Error mapping business types:', error);
+      }
+      
+      for (let index = 0; index < shipmentHistory.length; index++) {
+        const shipment = shipmentHistory[index];
+        const actorType = businessTypeMapping[shipment.to] || 'unknown';
+        
         journeySteps.push({
           step: index + 2,
           timestamp: new Date(parseInt(shipment.timestamp) * 1000),
           location: shipment.to,
           actor: {
             name: shipment.to,
-            type: getActorType(shipment.to),
+            type: actorType.charAt(0).toUpperCase() + actorType.slice(1),
             address: shipment.toAddress
           },
           status: shipment.status,
@@ -327,7 +348,7 @@ b        // Get shipment history length first
             notes: 'Chain of custody maintained'
           }
         });
-      });
+      }
     }
 
     // Calculate authenticity score based on blockchain data
@@ -480,16 +501,44 @@ b        // Get shipment history length first
   }
 };
 
-// Helper functions
-function getActorType(actorName) {
-  if (actorName.toLowerCase().includes('distribution') || actorName.toLowerCase().includes('distributor')) {
-    return 'Distributor';
-  } else if (actorName.toLowerCase().includes('pharmacy') || actorName.toLowerCase().includes('pharmacist')) {
-    return 'Pharmacist';
-  } else if (actorName.toLowerCase().includes('manufacturer') || actorName.toLowerCase().includes('manufacturing')) {
-    return 'Manufacturer';
+// Helper function to get actor type from database
+async function getActorType(actorName) {
+  if (!actorName) return 'Unknown';
+  
+  try {
+    // Check in all three collections
+    const [distributor, pharmacist, manufacturer] = await Promise.all([
+      Distributor.findOne({ 
+        $or: [
+          { companyName: actorName },
+          { 'user.address': actorName }
+        ]
+      }).populate('user').lean(),
+      
+      Pharmacist.findOne({ 
+        $or: [
+          { pharmacyName: actorName },
+          { 'user.address': actorName }
+        ]
+      }).populate('user').lean(),
+      
+      Manufacturer.findOne({ 
+        $or: [
+          { companyName: actorName },
+          { 'user.address': actorName }
+        ]
+      }).populate('user').lean()
+    ]);
+    
+    if (distributor) return 'Distributor';
+    if (pharmacist) return 'Pharmacist'; 
+    if (manufacturer) return 'Manufacturer';
+    
+    return 'Unknown';
+  } catch (error) {
+    console.error('Error getting actor type:', error);
+    return 'Unknown';
   }
-  return 'Unknown';
 }
 
 function getStepIcon(status) {
@@ -608,15 +657,47 @@ const verifyProductBlockchain = async (req, res) => {
         }
 
         const blockchainVerificationStatus = await batchContract.getVerificationStatus(blockchainProduct.batchNumber);
+        console.log("🔍 Raw blockchain verification status:", blockchainVerificationStatus);
+        
+        // Get verification timestamps from blockchain if available
+        let distributorVerifiedAt = "0";
+        let pharmacistVerifiedAt = "0";
+        
+        try {
+          // Try to get actual verification timestamps from blockchain events or batch data
+          if (blockchainVerificationStatus[0]) {
+            // Check if there are verification timestamp functions available
+            if (typeof batchContract.getDistributorVerificationTimestamp === 'function') {
+              const timestamp = await batchContract.getDistributorVerificationTimestamp(blockchainProduct.batchNumber);
+              distributorVerifiedAt = timestamp ? timestamp.toString() : "verified";
+            } else {
+              distributorVerifiedAt = "verified"; // Fallback when timestamp not available
+            }
+          }
+          
+          if (blockchainVerificationStatus[1]) {
+            if (typeof batchContract.getPharmacistVerificationTimestamp === 'function') {
+              const timestamp = await batchContract.getPharmacistVerificationTimestamp(blockchainProduct.batchNumber);
+              pharmacistVerifiedAt = timestamp ? timestamp.toString() : "verified";
+            } else {
+              pharmacistVerifiedAt = "verified"; // Fallback when timestamp not available
+            }
+          }
+        } catch (timestampError) {
+          console.log("⚠️ Could not get verification timestamps from blockchain:", timestampError.message);
+          distributorVerifiedAt = blockchainVerificationStatus[0] ? "verified" : "0";
+          pharmacistVerifiedAt = blockchainVerificationStatus[1] ? "verified" : "0";
+        }
+        
         verificationStatus = {
           manufacturerVerified: true, // Always true for registered batches
           distributorVerified: blockchainVerificationStatus[0], // First return value
           pharmacistVerified: blockchainVerificationStatus[1], // Second return value
-          manufacturerVerifiedAt: blockchainBatch?.registrationTimestamp || "0",
-          distributorVerifiedAt: blockchainVerificationStatus[0] ? "verified" : "0",
-          pharmacistVerifiedAt: blockchainVerificationStatus[1] ? "verified" : "0"
+          manufacturerVerifiedAt: blockchainBatch?.registrationTimestamp ? blockchainBatch.registrationTimestamp.toString() : "0",
+          distributorVerifiedAt,
+          pharmacistVerifiedAt
         };
-        console.log("✅ Blockchain verification status:", verificationStatus);
+        console.log("✅ Blockchain verification status (processed):", verificationStatus);
       } else {
         console.log("⚠️ getVerificationStatus function not available - using batch data");
         verificationStatus = {
@@ -630,24 +711,18 @@ const verifyProductBlockchain = async (req, res) => {
       }
     } catch (verificationError) {
       console.log("⚠️ Could not get verification status from blockchain:", verificationError.message);
+      console.log("🔍 Using default verification status (manufacturer verified only)");
       
-      // Try to get from database Batch model as fallback
-      try {
-        const dbBatch = await Batch.findOne({ batchNumber: blockchainProduct.batchNumber }).lean();
-        if (dbBatch) {
-          verificationStatus = {
-            manufacturerVerified: true,
-            distributorVerified: dbBatch.distributorVerified || false,
-            pharmacistVerified: dbBatch.pharmacistVerified || false,
-            manufacturerVerifiedAt: dbBatch.verificationTimestamps?.manufacturerVerifiedAt || dbBatch.createdAt || "0",
-            distributorVerifiedAt: dbBatch.verificationTimestamps?.distributorVerifiedAt || (dbBatch.distributorVerified ? "verified" : "0"),
-            pharmacistVerifiedAt: dbBatch.verificationTimestamps?.pharmacistVerifiedAt || (dbBatch.pharmacistVerified ? "verified" : "0")
-          };
-          console.log("📋 Using database batch data for verification status:", verificationStatus);
-        }
-      } catch (dbError) {
-        console.error("⚠️ Could not get verification status from database:", dbError.message);
-      }
+      // Keep default verification status - no database fallback for pure blockchain approach
+      verificationStatus = {
+        manufacturerVerified: true,
+        distributorVerified: false,
+        pharmacistVerified: false,
+        manufacturerVerifiedAt: blockchainBatch?.registrationTimestamp ? blockchainBatch.registrationTimestamp.toString() : "0",
+        distributorVerifiedAt: "0",
+        pharmacistVerifiedAt: "0"
+      };
+      console.log("⚠️ Blockchain verification status (fallback):", verificationStatus);
     }
 
     // Step 5: Process dates and expiry
@@ -656,16 +731,97 @@ const verifyProductBlockchain = async (req, res) => {
     const isExpired = currentDate > expiryDate;
     const daysUntilExpiry = Math.ceil((expiryDate - currentDate) / (1000 * 60 * 60 * 24));
 
-    // Step 6: Determine current location from shipment history
+    // Step 6: Determine current location based on verification status
     let currentLocation = 'Manufacturing Facility';
     let currentActor = blockchainProduct.manufacturerName;
     let lastUpdated = new Date(parseInt(blockchainProduct.registrationTimestamp.toString()) * 1000);
 
+    // Check verification status to determine actual current location
     if (shipmentHistory && shipmentHistory.length > 0) {
       const latestShipment = shipmentHistory[shipmentHistory.length - 1];
-      currentLocation = latestShipment.to;
-      currentActor = latestShipment.to;
-      lastUpdated = new Date(parseInt(latestShipment.timestamp.toString()) * 1000);
+      
+      // Get business type mapping from database to properly identify actor types
+      const businessTypeMapping = {};
+      
+      // Collect all unique business names from shipment history
+      const allBusinessNames = [...new Set(shipmentHistory.map(s => s.to))];
+      
+      // Query database to get actual business types
+      try {
+        const [distributors, pharmacists, manufacturers] = await Promise.all([
+          Distributor.find({ companyName: { $in: allBusinessNames } }).populate('user').lean(),
+          Pharmacist.find({ pharmacyName: { $in: allBusinessNames } }).populate('user').lean(),
+          Manufacturer.find({ companyName: { $in: allBusinessNames } }).populate('user').lean()
+        ]);
+        
+        // Map business names to their actual types
+        distributors.forEach(d => {
+          businessTypeMapping[d.companyName] = 'distributor';
+          if (d.user?.address) businessTypeMapping[d.user.address] = 'distributor';
+        });
+        
+        pharmacists.forEach(p => {
+          businessTypeMapping[p.pharmacyName] = 'pharmacist';
+          if (p.user?.address) businessTypeMapping[p.user.address] = 'pharmacist';
+        });
+        
+        manufacturers.forEach(m => {
+          businessTypeMapping[m.companyName] = 'manufacturer';
+          if (m.user?.address) businessTypeMapping[m.user.address] = 'manufacturer';
+        });
+        
+        console.log('📊 Business type mapping:', businessTypeMapping);
+      } catch (mappingError) {
+        console.error('⚠️ Failed to create business type mapping:', mappingError);
+      }
+      
+      // Helper function to get business type
+      const getBusinessType = (businessName) => {
+        return businessTypeMapping[businessName] || 'unknown';
+      };
+      
+      // Check if pharmacist has verified (most recent verification state)
+      if (verificationStatus.pharmacistVerified) {
+        // Find the latest pharmacy shipment
+        const pharmacyShipment = Array.from(shipmentHistory).slice().reverse().find(s => 
+          getBusinessType(s.to) === 'pharmacist' ||
+          getBusinessType(s.toAddress) === 'pharmacist'
+        );
+        if (pharmacyShipment) {
+          currentLocation = pharmacyShipment.to;
+          currentActor = pharmacyShipment.to;
+          lastUpdated = new Date(parseInt(pharmacyShipment.timestamp.toString()) * 1000);
+        }
+      } else if (verificationStatus.distributorVerified) {
+        // Check if there's a pharmacy shipment after distributor verification
+        const pharmacyShipment = Array.from(shipmentHistory).slice().reverse().find(s => 
+          getBusinessType(s.to) === 'pharmacist' ||
+          getBusinessType(s.toAddress) === 'pharmacist'
+        );
+        
+        if (pharmacyShipment) {
+          // Product assigned to pharmacy but not yet verified - in transit
+          currentLocation = `In Transit to ${pharmacyShipment.to}`;
+          currentActor = `En route to ${pharmacyShipment.to}`;
+          lastUpdated = new Date(parseInt(pharmacyShipment.timestamp.toString()) * 1000);
+        } else {
+          // Product is still at distributor - find distributor shipment
+          const distributorShipment = Array.from(shipmentHistory).slice().reverse().find(s => 
+            getBusinessType(s.to) === 'distributor' ||
+            getBusinessType(s.toAddress) === 'distributor'
+          );
+          if (distributorShipment) {
+            currentLocation = distributorShipment.to;
+            currentActor = distributorShipment.to;
+            lastUpdated = new Date(parseInt(distributorShipment.timestamp.toString()) * 1000);
+          }
+        }
+      } else {
+        // Distributor hasn't verified yet - product in transit to distributor
+        currentLocation = `In Transit to ${latestShipment.to}`;
+        currentActor = `En route to ${latestShipment.to}`;
+        lastUpdated = new Date(parseInt(latestShipment.timestamp.toString()) * 1000);
+      }
     }
 
     // Step 7: Calculate authenticity
@@ -903,23 +1059,8 @@ const getProductJourneyBlockchain = async (req, res) => {
     } catch (verificationError) {
       console.log("⚠️ Could not get verification status from blockchain:", verificationError.message);
       
-      // Try to get from database Batch model as fallback
-      try {
-        const dbBatch = await Batch.findOne({ batchNumber: blockchainProduct.batchNumber }).lean();
-        if (dbBatch) {
-          verificationStatus = {
-            manufacturerVerified: true,
-            distributorVerified: dbBatch.distributorVerified || false,
-            pharmacistVerified: dbBatch.pharmacistVerified || false,
-            manufacturerVerifiedAt: dbBatch.verificationTimestamps?.manufacturerVerifiedAt || dbBatch.createdAt || "0",
-            distributorVerifiedAt: dbBatch.verificationTimestamps?.distributorVerifiedAt || (dbBatch.distributorVerified ? "verified" : "0"),
-            pharmacistVerifiedAt: dbBatch.verificationTimestamps?.pharmacistVerifiedAt || (dbBatch.pharmacistVerified ? "verified" : "0")
-          };
-          console.log("📋 Using database batch data for verification status (journey):", verificationStatus);
-        }
-      } catch (dbError) {
-        console.error("⚠️ Could not get verification status from database:", dbError.message);
-      }
+      // No database fallback - continue with default verification status
+      console.log("📋 Using default verification status (journey) - no database fallback:", verificationStatus);
     }
 
     // Step 5: Build journey steps
@@ -927,13 +1068,13 @@ const getProductJourneyBlockchain = async (req, res) => {
 
     // Add manufacturing step
     journeySteps.push({
-      step: 'Manufacturing',
+      step: 'Manufactured',
       date: new Date(parseInt(blockchainProduct.registrationTimestamp) * 1000),
       time: new Date(parseInt(blockchainProduct.registrationTimestamp) * 1000).toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit'
       }),
-      location: blockchainProduct.productionLocation || manufacturer?.user?.address || 'Manufacturing Facility',
+      location: blockchainProduct.productionLocation || 'Manufacturing Facility',
       actor: blockchainProduct.manufacturerName,
       details: `Product manufactured under batch ${blockchainProduct.batchNumber}. Quality parameters verified and recorded.`,
       icon: 'Building2',
@@ -950,15 +1091,44 @@ const getProductJourneyBlockchain = async (req, res) => {
 
     // Add shipment history steps
     if (shipmentHistory && shipmentHistory.length > 0) {
-      const sortedHistory = [...shipmentHistory].sort(
+      const sortedHistory = Array.from(shipmentHistory).sort(
         (a, b) => parseInt(a.timestamp) - parseInt(b.timestamp)
       );
 
+      // Get business type mapping for journey steps
+      const allBusinessNames = [...new Set(sortedHistory.map(s => s.to))];
+      const businessTypeMapping = {};
+      
+      try {
+        const [distributors, pharmacists, manufacturers] = await Promise.all([
+          Distributor.find({ companyName: { $in: allBusinessNames } }).populate('user').lean(),
+          Pharmacist.find({ pharmacyName: { $in: allBusinessNames } }).populate('user').lean(),
+          Manufacturer.find({ companyName: { $in: allBusinessNames } }).populate('user').lean()
+        ]);
+        
+        distributors.forEach(d => businessTypeMapping[d.companyName] = 'distributor');
+        pharmacists.forEach(p => businessTypeMapping[p.pharmacyName] = 'pharmacist');
+        manufacturers.forEach(m => businessTypeMapping[m.companyName] = 'manufacturer');
+      } catch (error) {
+        console.error('Error mapping business types for journey:', error);
+      }
+
       for (const [index, shipment] of sortedHistory.entries()) {
-        const stepName = getJourneyStepName(shipment.to, shipment.status, index);
-        const isCompleted = index < sortedHistory.length - 1 || 
-                           shipment.status === 'Delivered' || 
-                           shipment.status === 'Distributed';
+        const stepName = getJourneyStepName(shipment.to, shipment.status, businessTypeMapping);
+        const businessType = businessTypeMapping[shipment.to] || 'unknown';
+        
+        // Determine completion status based on business type and verification status
+        let isCompleted = false;
+        if (businessType === 'distributor') {
+          isCompleted = verificationStatus.distributorVerified;
+        } else if (businessType === 'pharmacist') {
+          isCompleted = verificationStatus.pharmacistVerified;
+        } else {
+          // For other types, use the old logic
+          isCompleted = index < sortedHistory.length - 1 || 
+                       shipment.status === 'Delivered' || 
+                       shipment.status === 'Distributed';
+        }
 
         const stepDate = new Date(parseInt(shipment.timestamp) * 1000);
         
@@ -999,7 +1169,7 @@ const getProductJourneyBlockchain = async (req, res) => {
         expiryDate: new Date(parseInt(blockchainProduct.expiryDate) * 1000),
         dosageForm: blockchainProduct.dosageForm,
         strength: blockchainProduct.strength,
-        packSize: dbProduct?.packSize,
+        packSize: null,
         regulatoryInfo: blockchainProduct.approvalCertificateId ? 
           `Blockchain Approved - ${blockchainProduct.approvalCertificateId}` : 
           `Batch: ${blockchainProduct.batchNumber}`
@@ -1054,24 +1224,36 @@ const getProductJourneyBlockchain = async (req, res) => {
 };
 
 // Helper functions for journey
-function getJourneyStepName(actorName, status, index) {
-  // Check actor name for distributor-related terms
-  if (actorName && (actorName.toLowerCase().includes('distributor') || 
-                   actorName.toLowerCase().includes('distribution') ||
-                   actorName.toLowerCase().includes('pharmacorp'))) {
-    return status === 'Distributed' ? 'Distribution' : 'Distribution Center';
-  }
-  // Check for pharmacy-related terms
-  if (actorName && (actorName.toLowerCase().includes('pharmacist') || 
-                   actorName.toLowerCase().includes('pharmacy'))) {
-    return 'Pharmacy Received';
-  }
-  // Check status for transit
+// Dynamic journey step name based on actual business type from database
+function getJourneyStepName(actorName, status, businessTypeMapping) {
+  if (!actorName) return 'Unknown Step';
+  
+  // Get business type from mapping (passed from parent function)
+  const businessType = businessTypeMapping[actorName] || 'unknown';
+  
+  // Check status for transit first
   if (status === 'In Transit') {
     return 'In Transit';
   }
-  // Default fallback
-  return 'Distribution Center';
+  
+  // Determine step name based on actual business type
+  switch (businessType) {
+    case 'manufacturer':
+      return 'Manufacturing';
+      
+    case 'distributor':
+      return status === 'Distributed' ? 'Distribution' : 'Distribution Center';
+      
+    case 'pharmacist':
+      return status === 'Received' || status === 'Delivered' ? 'Pharmacy Received' : 'Pharmacy Processing';
+      
+    default:
+      // For unknown types, try to infer from status
+      if (status === 'Received' || status === 'Delivered') {
+        return 'Received';
+      }
+      return 'Processing';
+  }
 }
 
 function getJourneyStepIcon(stepName) {

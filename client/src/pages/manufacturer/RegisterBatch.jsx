@@ -240,118 +240,7 @@ const RegisterBatch = () => {
         transition={{ delay: 0.2 }}
         className="max-w-4xl mx-auto space-y-8"
       >
-        {/* Registered Batches Table */}
-        {batches.length > 0 && (
-          <Card className="overflow-hidden">
-            <div className="p-6">
-              <div className="flex items-center justify-between gap-2 mb-6 text-lg font-semibold text-gray-900">
-                <div className="flex items-center gap-2">
-                  <Table2 className="w-5 h-5 text-primary-600" />
-                  <h3>Recent Batches</h3>
-                </div>
-                <Link
-                  to="/manufacturer/registered-batches"
-                  className="text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
-                >
-                  View All ({batches.length})
-                </Link>
-              </div>
-              
-              <QuantityExplanation />
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3">Batch Number</th>
-                      <th className="px-6 py-3">Dosage Form</th>
-                      <th className="px-6 py-3">Strength</th>
-                      <th className="px-6 py-3">Manufacture Date</th>
-                      <th className="px-6 py-3">Expiry Date</th>
-                      <th className="px-6 py-3">Produced</th>
-                      <th className="px-6 py-3">Products Reg.</th>
-                      <th className="px-6 py-3">Assigned</th>
-                      <th className="px-6 py-3">Remaining</th>
-                      <th className="px-6 py-3">Approval Cert.</th>
-                      <th className="px-6 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {batches.slice(0, 5).map((batch) => (
-                      <tr
-                        key={batch._id}
-                        className="bg-white border-b hover:bg-gray-50"
-                      >
-                        <td className="px-6 py-4 font-medium text-gray-900">
-                          {batch.batchNumber}
-                        </td>
-                        <td className="px-6 py-4">{batch.dosageForm || "-"}</td>
-                        <td className="px-6 py-4">{batch.strength || "-"}</td>
-                        <td className="px-6 py-4">
-                          {new Date(batch.manufactureDate).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          {new Date(batch.expiryDate).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 font-medium">
-                          {batch.quantityProduced}
-                        </td>
-                        <td className="px-6 py-4 text-blue-600">
-                          {batch.totalProductsRegistered || (batch.quantityProduced - batch.quantityAvailable)}
-                        </td>
-                        <td className="px-6 py-4 text-orange-600">
-                          {batch.quantityAssigned || 0}
-                        </td>
-                        <td className="px-6 py-4 font-medium text-green-600">
-                          {batch.quantityRemainingForAssignment || (batch.quantityProduced - (batch.quantityAssigned || 0))}
-                        </td>
-                        <td className="px-6 py-4">
-                          {batch.approvalCertId || "-"}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold
-                            ${batch.shipmentStatus === 'Produced' ? 'bg-blue-100 text-blue-800' :
-                              batch.shipmentStatus === 'In Transit' ? 'bg-amber-100 text-amber-800' :
-                                batch.shipmentStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-800' :
-                                  batch.shipmentStatus === 'Returned' ? 'bg-red-100 text-red-800' :
-                                    batch.shipmentStatus === 'Recalled' ? 'bg-gray-200 text-gray-800' :
-                                      'bg-gray-100 text-gray-800'}`}
-                          >
-                            <span className="inline-block w-2 h-2 rounded-full"
-                              style={{
-                                backgroundColor:
-                                  batch.shipmentStatus === 'Produced' ? '#2563eb' :
-                                    batch.shipmentStatus === 'In Transit' ? '#f59e42' :
-                                      batch.shipmentStatus === 'Delivered' ? '#059669' :
-                                        batch.shipmentStatus === 'Returned' ? '#dc2626' :
-                                          batch.shipmentStatus === 'Recalled' ? '#6b7280' :
-                                            '#a3a3a3'
-                              }}
-                            />
-                            {batch.shipmentStatus || 'Produced'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {batches.length > 5 && (
-                  <div className="p-4 text-center border-t bg-gray-50">
-                    <p className="text-sm text-gray-600">
-                      Showing {Math.min(5, batches.length)} of {batches.length} batches. 
-                      <Link 
-                        to="/manufacturer/registered-batches"
-                        className="ml-1 font-medium text-blue-600 hover:text-blue-700"
-                      >
-                        View all batches
-                      </Link>
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        )}
+       
 
         {/* Batch Registration Form */}
         <Card className="overflow-hidden">
@@ -498,6 +387,118 @@ const RegisterBatch = () => {
             </div>
           </form>
         </Card>
+         {/* Registered Batches Table */}
+        {batches.length > 0 && (
+          <Card className="overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center justify-between gap-2 mb-6 text-lg font-semibold text-gray-900">
+                <div className="flex items-center gap-2">
+                  <Table2 className="w-5 h-5 text-primary-600" />
+                  <h3>Recent Batches</h3>
+                </div>
+                <Link
+                  to="/manufacturer/registered-batches"
+                  className="text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
+                >
+                  View All ({batches.length})
+                </Link>
+              </div>
+              
+              <QuantityExplanation />
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-500">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3">Batch Number</th>
+                      <th className="px-6 py-3">Dosage Form</th>
+                      <th className="px-6 py-3">Strength</th>
+                      <th className="px-6 py-3">Manufacture Date</th>
+                      <th className="px-6 py-3">Expiry Date</th>
+                      <th className="px-6 py-3">Produced</th>
+                      <th className="px-6 py-3">Products Reg.</th>
+                      <th className="px-6 py-3">Assigned</th>
+                      <th className="px-6 py-3">Remaining</th>
+                      <th className="px-6 py-3">Approval Cert.</th>
+                      <th className="px-6 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batches.slice(0, 5).map((batch) => (
+                      <tr
+                        key={batch._id}
+                        className="bg-white border-b hover:bg-gray-50"
+                      >
+                        <td className="px-6 py-4 font-medium text-gray-900">
+                          {batch.batchNumber}
+                        </td>
+                        <td className="px-6 py-4">{batch.dosageForm || "-"}</td>
+                        <td className="px-6 py-4">{batch.strength || "-"}</td>
+                        <td className="px-6 py-4">
+                          {new Date(batch.manufactureDate).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          {new Date(batch.expiryDate).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 font-medium">
+                          {batch.quantityProduced}
+                        </td>
+                        <td className="px-6 py-4 text-blue-600">
+                          {batch.totalProductsRegistered || (batch.quantityProduced - batch.quantityAvailable)}
+                        </td>
+                        <td className="px-6 py-4 text-orange-600">
+                          {batch.quantityAssigned || 0}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-green-600">
+                          {batch.quantityRemainingForAssignment || (batch.quantityProduced - (batch.quantityAssigned || 0))}
+                        </td>
+                        <td className="px-6 py-4">
+                          {batch.approvalCertId || "-"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold
+                            ${batch.shipmentStatus === 'Produced' ? 'bg-blue-100 text-blue-800' :
+                              batch.shipmentStatus === 'In Transit' ? 'bg-amber-100 text-amber-800' :
+                                batch.shipmentStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-800' :
+                                  batch.shipmentStatus === 'Returned' ? 'bg-red-100 text-red-800' :
+                                    batch.shipmentStatus === 'Recalled' ? 'bg-gray-200 text-gray-800' :
+                                      'bg-gray-100 text-gray-800'}`}
+                          >
+                            <span className="inline-block w-2 h-2 rounded-full"
+                              style={{
+                                backgroundColor:
+                                  batch.shipmentStatus === 'Produced' ? '#2563eb' :
+                                    batch.shipmentStatus === 'In Transit' ? '#f59e42' :
+                                      batch.shipmentStatus === 'Delivered' ? '#059669' :
+                                        batch.shipmentStatus === 'Returned' ? '#dc2626' :
+                                          batch.shipmentStatus === 'Recalled' ? '#6b7280' :
+                                            '#a3a3a3'
+                              }}
+                            />
+                            {batch.shipmentStatus || 'Produced'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {batches.length > 5 && (
+                  <div className="p-4 text-center border-t bg-gray-50">
+                    <p className="text-sm text-gray-600">
+                      Showing {Math.min(5, batches.length)} of {batches.length} batches. 
+                      <Link 
+                        to="/manufacturer/registered-batches"
+                        className="ml-1 font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        View all batches
+                      </Link>
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
       </motion.div>
     </div>
   );

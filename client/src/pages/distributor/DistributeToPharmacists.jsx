@@ -117,11 +117,46 @@ const DistributeBatches = () => {
         } else {
           // Filter only batches with remaining quantity > 0
           const availableBatches = batchesRes.data.batches.filter(batch => batch.quantity > 0);
-          setBatches(availableBatches);
+          
+          // Sort batches by most recently assigned first
+          const sortedBatches = availableBatches.sort((a, b) => {
+            // Get the latest assignment timestamp for each batch (when manufacturer assigned to distributor)
+            const getLatestAssignmentTime = (batch) => {
+              if (!batch.shipmentHistory || batch.shipmentHistory.length === 0) {
+                return new Date(0); // Very old date for batches with no history
+              }
+              
+              // Find the most recent assignment from manufacturer to distributor
+              const assignments = batch.shipmentHistory.filter(entry => 
+                entry.status && !['produced', 'delivered'].includes(entry.status.toLowerCase())
+              );
+              
+              if (assignments.length === 0) {
+                return new Date(0);
+              }
+              
+              // Get the most recent assignment timestamp
+              const latestAssignment = assignments.reduce((latest, current) => {
+                const currentTime = new Date(current.timestamp);
+                const latestTime = new Date(latest.timestamp);
+                return currentTime > latestTime ? current : latest;
+              });
+              
+              return new Date(latestAssignment.timestamp);
+            };
+            
+            const aTime = getLatestAssignmentTime(a);
+            const bTime = getLatestAssignmentTime(b);
+            
+            // Sort in descending order (most recent first)
+            return bTime - aTime;
+          });
+          
+          setBatches(sortedBatches);
           
           // Initialize form state for each batch
           const initialForms = {};
-          availableBatches.forEach(batch => {
+          sortedBatches.forEach(batch => {
             initialForms[batch.batchId] = {
               selectedPharmacy: '',
               quantity: '',

@@ -562,7 +562,7 @@ const receiveProduct = async (req, res) => {
         toAddress: req.user ? req.user.address : null,
         status: 'Delivered',
         quantity: lastInTransit ? (lastInTransit.quantity || '1') : '1',
-        remarks: 'Acknowledged by distributor',
+        remarks: 'Product received, acknowledged and verification completed by distributor',
         actor: {
           name: distributorName,
           type: 'Distributor',
@@ -632,12 +632,24 @@ const receiveProduct = async (req, res) => {
 
         console.log("✅ Shipment entry with blockchain transaction details saved to MongoDB");
 
-        // Update distributor verification on blockchain
+        // Update distributor verification on blockchain with retry mechanism
         try {
           // Check if the verifyByDistributor function exists before calling it
           if (typeof batchContract.verifyByDistributor === 'function') {
             console.log("📦 Updating distributor verification on blockchain for batch:", batch.batchNumber);
-            const verificationTx = await batchContract.verifyByDistributor(batch.batchNumber);
+            
+            // Add a small delay to avoid nonce conflicts
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Get current nonce and add buffer for concurrent transactions
+            const currentNonce = await signer.getNonce('latest');
+            console.log("🔢 Current nonce for verification tx:", currentNonce);
+            
+            const verificationTx = await batchContract.verifyByDistributor(batch.batchNumber, {
+              nonce: currentNonce
+            });
+            
+            console.log("📦 Verification transaction sent with nonce:", currentNonce);
             const verificationReceipt = await verificationTx.wait();
             
             if (verificationReceipt.status === 1) {
@@ -647,7 +659,28 @@ const receiveProduct = async (req, res) => {
             console.log("⚠️ verifyByDistributor function not available on contract");
           }
         } catch (verificationError) {
-          console.error("❌ Blockchain distributor verification failed:", verificationError);
+          // Check if it's a nonce error and retry once
+          if (verificationError.code === 'NONCE_EXPIRED' || verificationError.message.includes('nonce')) {
+            console.log("🔄 Retrying verification transaction with fresh nonce...");
+            try {
+              await new Promise(resolve => setTimeout(resolve, 2000)); // Wait longer
+              const freshNonce = await signer.getNonce('latest');
+              console.log("🔢 Retry with fresh nonce:", freshNonce);
+              
+              const retryTx = await batchContract.verifyByDistributor(batch.batchNumber, {
+                nonce: freshNonce
+              });
+              const retryReceipt = await retryTx.wait();
+              
+              if (retryReceipt.status === 1) {
+                console.log("✅ Distributor verification confirmed on retry:", retryReceipt.hash);
+              }
+            } catch (retryError) {
+              console.error("❌ Blockchain distributor verification retry failed:", retryError.message);
+            }
+          } else {
+            console.error("❌ Blockchain distributor verification failed:", verificationError.message);
+          }
         }
 
       } catch (blockchainError) {

@@ -22,6 +22,24 @@ import {
   Package
 } from 'lucide-react';
 import { verificationAPI } from '../../services/api/verificationAPI';
+import Badge from '../../components/UI/Badge';
+
+// Helper function to determine badge variant based on step type
+const getActorBadgeVariant = (stepName) => {
+  const step = stepName?.toLowerCase() || '';
+  
+  if (step.includes('manufactured') || step.includes('manufacturing')) {
+    return 'primary';
+  } else if (step.includes('distribution') || step.includes('distributor')) {
+    return 'warning';
+  } else if (step.includes('pharmacy') || step.includes('pharmacist')) {
+    return 'success';
+  } else if (step.includes('transit') || step.includes('transport')) {
+    return 'default';
+  } else {
+    return 'default';
+  }
+};
 
 const JourneyDetails = () => {
   const { serialNumber } = useParams();
@@ -869,7 +887,13 @@ const JourneyDetails = () => {
                     <div className="absolute left-6 top-0 w-0.5 h-full bg-gray-200 print:hidden sm:left-8"></div>
                     
                     <div className="space-y-6 print:space-y-4 sm:space-y-8">
-                      {drugData.journey.map((step, index) => {
+                      {drugData.journey.filter((step, index) => {
+                        // Show all steps except "In Transit", unless "In Transit" is the last step
+                        if (step.step === 'In Transit' || step.step === 'in transit' || step.step === 'in_transit') {
+                          return index === drugData.journey.length - 1;
+                        }
+                        return true;
+                      }).map((step, index) => {
                         const IconComponent = getIconComponent(step.icon);
                         const isActive = index === activeStep;
                         const isCompleted = step.status === 'completed';
@@ -915,51 +939,17 @@ const JourneyDetails = () => {
                               </div>
 
                               <div className="mb-3 print:mb-2 sm:mb-4">
-                                <p className="mb-1 text-xs font-medium text-gray-700 print:text-xs print:mb-0 sm:text-sm">Handled by</p>
-                                <p className="text-sm text-gray-600 break-words print:text-xs print:text-black sm:text-base">{step.actor}</p>
+                                <p className="mb-1 ml-1.5 text-xs font-medium text-gray-700 print:text-xs print:mb-0 sm:text-sm">Actor</p>
+                                <Badge 
+                                  variant={getActorBadgeVariant(step.step)} 
+                                  size="md"
+                                  className="break-words print:text-xs print:text-black rounded-xl"
+                                >
+                                  {step.actor}
+                                </Badge>
                               </div>
 
                               <p className="mb-3 text-sm leading-relaxed text-gray-700 print:print-step-details print:mb-2 sm:mb-4 sm:text-base">{step.details}</p>
-
-                              {/* Additional Details */}
-                              {/* <div className="grid min-w-0 gap-3 p-3 rounded-lg bg-gray-50 sm:gap-4 sm:p-4 sm:grid-cols-2 md:grid-cols-3 print:print-step-extras print:grid-cols-2 print:gap-2 print:p-2">
-                                {step.temperature && (
-                                  <div className="flex items-center space-x-2 text-sm print:text-xs">
-                                    <AlertTriangle className="w-4 h-4 text-blue-500 print:hidden" />
-                                    <span className="text-gray-600 print:text-gray-700">🌡️ Temp: {step.temperature}</span>
-                                  </div>
-                                )}
-                                {step.humidity && (
-                                  <div className="flex items-center space-x-2 text-sm print:text-xs">
-                                    <Clock className="w-4 h-4 text-blue-500 print:hidden" />
-                                    <span className="text-gray-600 print:text-gray-700">💧 Humidity: {step.humidity}</span>
-                                  </div>
-                                )}
-                                {step.quantity && (
-                                  <div className="flex items-center space-x-2 text-sm print:text-xs">
-                                    <Package className="w-4 h-4 text-blue-500 print:hidden" />
-                                    <span className="text-gray-600 print:text-gray-700">📦 Qty: {step.quantity}</span>
-                                  </div>
-                                )}
-                                {step.verified && (
-                                  <div className="flex items-center space-x-2 text-sm print:text-xs">
-                                    <CheckCircle className="w-4 h-4 text-green-500 print:hidden" />
-                                    <span className="text-green-600 print:text-green-700">✅ Verified</span>
-                                  </div>
-                                )}
-                                {step.license && (
-                                  <div className="flex items-center space-x-2 text-sm print:text-xs">
-                                    <Shield className="w-4 h-4 text-blue-500 print:hidden" />
-                                    <span className="text-gray-600 print:text-gray-700">🏛️ License: {step.license}</span>
-                                  </div>
-                                )}
-                                {step.qualityCheck && (
-                                  <div className="flex items-center space-x-2 text-sm print:text-xs">
-                                    <Clipboard className="w-4 h-4 text-green-500 print:hidden" />
-                                    <span className="text-green-600 print:text-green-700">🔍 QC: {step.qualityCheck.result}</span>
-                                  </div>
-                                )}
-                              </div> */}
                             </div>
                           </div>
                         );

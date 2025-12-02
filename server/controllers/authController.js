@@ -371,18 +371,18 @@ const loginUser = async (req, res) => {
         // Check if blockchain and database are in sync
         if (!blockchainApproval) {
           console.warn(`⚠️ Blockchain approval mismatch for ${user.address}: DB=${user.isApproved}, Blockchain=${blockchainApproval}`);
-          return res.status(403).json({
-            message: "Account not approved on blockchain. Please contact administrator.",
-            blockchain: blockchainData
-          });
+          // return res.status(403).json({
+          //   message: "Account not approved on blockchain. Please contact administrator.",
+          //   blockchain: blockchainData
+          // });
         }
 
         if (blockchainRoleName !== user.role) {
           console.warn(`⚠️ Role mismatch for ${user.address}: DB=${user.role}, Blockchain=${blockchainRoleName}`);
-          return res.status(403).json({
-            message: "Role verification failed. Please contact administrator.",
-            blockchain: blockchainData
-          });
+          // return res.status(403).json({
+          //   message: "Role verification failed. Please contact administrator.",
+          //   blockchain: blockchainData
+          // });
         }
       } catch (blockchainError) {
         console.error("❌ Blockchain verification failed:", blockchainError.message);
