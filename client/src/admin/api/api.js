@@ -54,6 +54,31 @@ export const getAllPharmacists = async () => {
   }
 };
 
+// Fetch user map data - dedicated endpoint for map visualization
+export const getUserMapData = async () => {
+  try {
+    const res = await apiClient.get("/admin/user-map");
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching user map data:", err);
+    return {
+      data: {
+        manufacturers: [],
+        distributors: [],
+        pharmacists: []
+      },
+      stats: {
+        totalUsers: 0,
+        totalManufacturers: 0,
+        totalDistributors: 0,
+        totalPharmacists: 0,
+        totalRegions: 0,
+        activeRegions: 0
+      }
+    };
+  }
+};
+
 /**
  * Approve / disapprove a pharmacist
  * PUT /api/admin/pharmacists/:id/approve

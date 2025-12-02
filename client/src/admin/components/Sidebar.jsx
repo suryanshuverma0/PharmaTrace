@@ -1,59 +1,189 @@
-import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Truck, Package } from "lucide-react";
-import { useState } from "react";
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  LayoutDashboard, 
+  Factory, 
+  Truck, 
+  Package, 
+  MapPin,
+  LogOut,
+  User,
+  Menu,
+  X
+} from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from '../../context/AuthContext';
+import Button from '../UI/Button';
 
-const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
-
-  const links = [
-    { name: "Dashboard", icon: <LayoutDashboard />, path: "/admin" },
-    { name: "Manufacturers", icon: <Factory />, path: "/admin/manufacturers" },
-    { name: "Distributors", icon: <Truck />, path: "/admin/distributors" },
-    { name: "Pharmacists", icon: <Package />, path: "/admin/pharmacists" },
-  ];
-
+const Sidebar = ({ isCollapsed, onToggle }) => {
   const location = useLocation();
-  
+  const { user, disconnectWallet } = useAuth();
 
-  const isActive = (path) => {
-    return location.pathname === path;
+  const sidebarVariants = {
+    expanded: {
+      width: "256px",
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 30
+      }
+    },
+    collapsed: {
+      width: "80px",
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 30
+      }
+    }
   };
 
+  const sidebarLinks = [
+    { 
+      icon: <LayoutDashboard size={20} />, 
+      label: 'Dashboard', 
+      path: '/admin' 
+    },
+    { 
+      icon: <Factory size={20} />, 
+      label: 'Manufacturers', 
+      path: '/admin/manufacturers' 
+    },
+    { 
+      icon: <Truck size={20} />, 
+      label: 'Distributors', 
+      path: '/admin/distributors' 
+    },
+    { 
+      icon: <Package size={20} />, 
+      label: 'Pharmacists', 
+      path: '/admin/pharmacists' 
+    },
+    { 
+      icon: <MapPin size={20} />, 
+      label: 'User Map', 
+      path: '/admin/user-map' 
+    },
+  ];
+
   return (
-    <aside
-      className={`${
-        collapsed ? "w-20" : "w-64"
-      } bg-white shadow-xl p-5 flex flex-col justify-between transition-width duration-300`}
+    <motion.div 
+      className="relative flex flex-col h-full bg-white border-r border-gray-200 shadow-xl"
+      initial="expanded"
+      animate={isCollapsed ? "collapsed" : "expanded"}
+      variants={sidebarVariants}
     >
-      <div>
-        <h1
-          className={`text-2xl font-semibold text-blue-600 mb-10 ${
-            collapsed ? "opacity-0" : "opacity-100"
-          } transition-opacity duration-300`}
+      {/* Toggle Buttons */}
+      <div className="absolute -right-3 top-6">
+        {/* Mobile Toggle */}
+        <Button
+          variant="ghost"
+          onClick={onToggle}
+          className="inline-flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-md hover:bg-gray-50 md:hidden group"
         >
-          Admin Panel
-        </h1>
-        <nav className="space-y-2">
-          {links.map((link) => (
-            <NavLink
-              key={link.name}
-              to={link.path}
-              className={() =>
-                `flex items-center gap-3 p-3 rounded-lg transition-all ${
-                  isActive(link.path)
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`
-              }
-            >
-              {link.icon}
-              <span className={`${collapsed ? "hidden" : "block"}`}>{link.name}</span>
-            </NavLink>
-          ))}
-        </nav>
+          <motion.div
+            animate={{ rotate: isCollapsed ? 0 : 180 }}
+            transition={{ duration: 0.2 }}
+            className="group-hover:text-primary-600"
+          >
+            {isCollapsed ? <Menu size={14} /> : <X size={14} />}
+          </motion.div>
+        </Button>
+        {/* Desktop Toggle */}
+        <Button
+          variant="ghost"
+          onClick={onToggle}
+          className="items-center justify-center hidden w-6 h-6 bg-white rounded-full shadow-md focus:outline-none hover:bg-gray-50 md:inline-flex group"
+        >
+          <motion.div
+            animate={{ rotate: isCollapsed ? 0 : 180 }}
+            transition={{ duration: 0.2 }}
+            className="group-hover:text-primary-600"
+          >
+            {isCollapsed ? <Menu size={14} /> : <X size={14} />}
+          </motion.div>
+        </Button>
       </div>
-      <div className="text-sm text-gray-400">© 2025 Counterfeit Chain</div>
-    </aside>
+
+      {/* User Profile Section */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-full bg-primary-100">
+            <User size={20} className="text-primary-600" />
+          </div>
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <h3 className="font-semibold text-gray-900">{user?.name || "Admin"}</h3>
+                <p className="text-sm text-gray-500 capitalize">{user?.role || "Administrator"}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Navigation Links */}
+      <nav className="flex-1 p-4">
+        <div className="space-y-2">
+          {sidebarLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                location.pathname === link.path
+                  ? 'bg-primary-50 text-primary-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex-shrink-0">{link.icon}</div>
+              <AnimatePresence>
+                {!isCollapsed && (
+                  <motion.span
+                    className="font-medium whitespace-nowrap"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {link.label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </Link>
+          ))}
+        </div>
+      </nav>
+
+      {/* Bottom Section */}
+      <div className="p-4 border-t border-gray-200">
+        <button 
+          onClick={disconnectWallet}
+          className="flex items-center w-full px-4 py-3 space-x-3 text-red-600 transition-all duration-200 rounded-lg hover:bg-red-50"
+        >
+          <div className="flex-shrink-0">
+            <LogOut size={20} />
+          </div>
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.span
+                className="font-medium"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                Logout
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+      </div>
+    </motion.div>
   );
 };
 

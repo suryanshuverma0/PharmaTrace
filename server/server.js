@@ -44,6 +44,7 @@ app.use(
 );
 app.use("/api/admin/distributors", require("./admin/routes/distributorRoute"));
 app.use("/api/admin/pharmacists", require("./admin/routes/pharmacistRoute"));
+app.use("/api/admin/user-map", require("./routes/userMapRoutes"));
 
 // Admin analytics routes
 app.use("/api/admin", require("./routes/adminAnalyticsRoutes"));
