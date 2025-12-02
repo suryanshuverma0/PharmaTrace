@@ -9,8 +9,6 @@ import {
   ChevronDown,
   ChevronUp,
   QrCode,
-  Route,
-  MoreVertical,
   Boxes,
   Download,
   Printer
@@ -24,7 +22,7 @@ const AssignedBatches = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedBatches, setExpandedBatches] = useState(new Set());
-  const [expandedProducts, setExpandedProducts] = useState(new Set());
+  const [collapsedProducts, setCollapsedProducts] = useState(new Set()); // Collapsed by default
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -94,6 +92,10 @@ const AssignedBatches = () => {
         setExpandedBatches(new Set([formattedBatches[0]._id]));
       }
 
+      // Set all batches' products as collapsed by default
+      const allBatchIds = new Set(formattedBatches.map(batch => batch._id));
+      setCollapsedProducts(allBatchIds);
+
       setError(null);
     } catch (error) {
       setError(
@@ -122,7 +124,7 @@ const AssignedBatches = () => {
   };
 
   const toggleProductsExpansion = (batchId) => {
-    setExpandedProducts((prev) => {
+    setCollapsedProducts((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(batchId)) {
         newSet.delete(batchId);
@@ -133,8 +135,8 @@ const AssignedBatches = () => {
     });
   };
 
-  const isProductsExpanded = (batchId) => {
-    return expandedProducts.has(batchId);
+  const isProductsCollapsed = (batchId) => {
+    return collapsedProducts.has(batchId);
   };
 
   const handleQRCodeClick = (product) => {
@@ -150,6 +152,8 @@ const AssignedBatches = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -459,65 +463,79 @@ const AssignedBatches = () => {
                         )}
                       </div>
 
-                      {/* Products in Batch */}
+                      {/* Products in Batch - Collapsible */}
                       {console.log('Products for batch:', batch.batchNumber, batch.products)} {/* Debug log */}
                       {batch.products && batch.products.length > 0 && (
                         <div className="mt-6">
-                          <h4 className="mb-4 text-lg font-medium text-gray-900">
-                            Products in Batch ({batch.products.length})
-                          </h4>
-                          <div className="grid grid-cols-1 gap-4">
-                            {batch.products.map((product) => (
-                              <div
-                                key={product._id}
-                                className="p-4 transition-all duration-200 bg-white border rounded-xl border-gray-200/50 hover:border-blue-200 hover:shadow-md"
-                              >
-                                <div className="flex justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <h5 className="font-medium text-gray-900 truncate">
-                                      {product.productName}
-                                    </h5>
-                                    <p className="mt-1 text-sm text-gray-500">
-                                      SN: {product.serialNumber}
-                                    </p>
-                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                      <span className="flex items-center gap-1">
-                                        <Package className="w-3 h-3" />
-                                        Status: {product.status}
-                                      </span>
-                                      {product.fingerprint && (
-                                        <span className="font-mono truncate max-w-32">
-                                          FP: {product.fingerprint.substring(0, 10)}...
+                          <div 
+                            className="flex items-center justify-between mb-4 cursor-pointer"
+                            onClick={() => toggleProductsExpansion(batch._id)}
+                          >
+                            <h4 className="text-lg font-medium text-gray-900">
+                              Products in Batch ({batch.products.length})
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              {isProductsCollapsed(batch._id) ? (
+                                <ChevronDown className="w-5 h-5 text-gray-400" />
+                              ) : (
+                                <ChevronUp className="w-5 h-5 text-gray-400" />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Products List - Collapsible */}
+                          {!isProductsCollapsed(batch._id) && (
+                            <motion.div 
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="grid grid-cols-1 gap-4"
+                            >
+                              {batch.products.map((product) => (
+                                <div
+                                  key={product._id}
+                                  className="p-4 transition-all duration-200 bg-white border rounded-xl border-gray-200/50 hover:border-blue-200 hover:shadow-md"
+                                >
+                                  <div className="flex justify-between">
+                                    <div className="flex-1 min-w-0">
+                                      <h5 className="font-medium text-gray-900 truncate">
+                                        {product.productName}
+                                      </h5>
+                                      <p className="mt-1 text-sm text-gray-500">
+                                        SN: {product.serialNumber}
+                                      </p>
+                                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                        <span className="flex items-center gap-1">
+                                          <Package className="w-3 h-3" />
+                                          Status: {product.status}
                                         </span>
+                                        {product.fingerprint && (
+                                          <span className="font-mono truncate max-w-32">
+                                            FP: {product.fingerprint.substring(0, 10)}...
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {product.qrCodeUrl && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleQRCodeClick(product);
+                                          }}
+                                          className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                                          title="View QR Code"
+                                        >
+                                          <QrCode className="w-5 h-5" />
+                                        </button>
                                       )}
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    {product.qrCodeUrl && (
-                                      <button
-                                        className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
-                                        title="View QR Code"
-                                      >
-                                        <QrCode className="w-5 h-5" />
-                                      </button>
-                                    )}
-                                    <button
-                                      className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
-                                      title="Track Product"
-                                    >
-                                      <Route className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                      className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
-                                      title="More Options"
-                                    >
-                                      <MoreVertical className="w-5 h-5" />
-                                    </button>
-                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </motion.div>
+                          )}
                         </div>
                       )}
 
@@ -596,6 +614,80 @@ const AssignedBatches = () => {
           })
         )}
       </div>
+
+      {/* QR Code Modal */}
+      <ModalWrapper
+        isOpen={showQRModal && selectedProduct}
+        onClose={() => setShowQRModal(false)}
+        size="md"
+        title="Product QR Code"
+      >
+        {selectedProduct && (
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 mb-4 text-green-500">
+              <QrCode className="w-full h-full" />
+            </div>
+
+            <div className="w-full p-4 mb-4 rounded-lg bg-gray-50">
+              <div className="mb-2">
+                <p className="text-sm text-gray-600">Product Name</p>
+                <p className="font-medium">{selectedProduct.productName}</p>
+              </div>
+              <div className="mb-2">
+                <p className="text-sm text-gray-600">Serial Number</p>
+                <p className="font-mono text-sm break-all">{selectedProduct.serialNumber}</p>
+              </div>
+              {selectedProduct.fingerprint && (
+                <div>
+                  <p className="text-sm text-gray-600">Digital Fingerprint</p>
+                  <p className="font-mono text-sm break-all">{selectedProduct.fingerprint}</p>
+                </div>
+              )}
+            </div>
+
+            {selectedProduct.qrCodeUrl && (
+              <div className="p-4 mb-6 bg-white border rounded-lg">
+                <img
+                  src={selectedProduct.qrCodeUrl}
+                  alt="Product QR Code"
+                  className="w-48 h-48 mx-auto"
+                />
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-center gap-4">
+              {selectedProduct.qrCodeUrl && (
+                <>
+                  <Button
+                    variant="secondary"
+                    className="flex items-center gap-2"
+                    onClick={() => downloadQRCode(selectedProduct.qrCodeUrl, `QR-${selectedProduct.serialNumber}.png`)}
+                  >
+                    <Download className="w-5 h-5" />
+                    Download QR
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex items-center gap-2"
+                    onClick={() => window.print()}
+                  >
+                    <Printer className="w-5 h-5" />
+                    Print QR
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <Button
+              variant="primary"
+              className="w-full mt-6"
+              onClick={() => setShowQRModal(false)}
+            >
+              Close
+            </Button>
+          </div>
+        )}
+      </ModalWrapper>
     </div>
   );
 };
