@@ -33,46 +33,19 @@ const AssignedBatches = () => {
   const fetchAssignedBatches = async () => {
     try {
       setLoading(true);
-      // Use the same endpoint as distributor but from manufacturer's perspective
-      const response = await apiClient.get('/distributer/batches');
-      // Transform and filter the data to manufacturer's view - only show actually assigned batches
-      const transformedData = response.data.batches?.filter(batch => {
-        // Only include batches that have been actually assigned to distributors
-        // Check if batch has shipment history with valid distributor assignment
-        const hasValidAssignment = batch.shipmentHistory && 
-                                 batch.shipmentHistory.length > 0 && 
-                                 batch.shipmentHistory[0].to && 
-                                 batch.shipmentHistory[0].to !== 'Unknown Distributor' &&
-                                 batch.shipmentHistory[0].to.trim() !== '';
-        
-        // Also check if batch has been explicitly assigned (not just registered)
-        const isAssigned = batch.status && 
-                          batch.status.toLowerCase() !== 'registered' &&
-                          batch.status.toLowerCase() !== 'created' &&
-                          batch.status.toLowerCase() !== 'pending';
-                          
-        return hasValidAssignment && isAssigned;
-      }).map(batch => ({
-        _id: batch.batchId,
-        batchNumber: batch.batchId,
-        product: batch.product,
-        quantity: batch.shipmentHistory[0]?.quantity || 0,
-        status: batch.status,
-        assignedAt: batch.shipmentHistory[0]?.timestamp,
-        distributor: {
-          name: batch.shipmentHistory[0]?.to,
-          address: batch.shipmentHistory[0]?.toAddress || 'N/A'
-        },
-        shipmentHistory: batch.shipmentHistory || [],
-        serialNumber: batch.serialNumber,
-        manufacturerName: batch.manufacturerName,
-        storageConditions: batch.storageConditions,
-        manufactureDate: batch.manufactureDate,
-        expiryDate: batch.expiryDate
-      })) || [];
-      setAssignments(transformedData);
+      // Use manufacturer-specific endpoint to get batches assigned by this manufacturer
+      const response = await apiClient.get('/manufacturer/assigned-batches');
+      
+      // Use the API response structure
+      if (response.data.success) {
+        setAssignments(response.data.assignments || []);
+      } else {
+        setAssignments(response.data || []);
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch assignments');
+      console.error('Error fetching assigned batches:', err);
+      setError(err.response?.data?.message || 'Failed to fetch assigned batches');
+      setAssignments([]);
     } finally {
       setLoading(false);
     }

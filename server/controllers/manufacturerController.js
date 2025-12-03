@@ -208,4 +208,76 @@ const getManufacturerDashboard = async (req, res) => {
   }
 };
 
-module.exports = { getManufacturerDashboard, getManufacturerProfile };
+const getAssignedBatches = async (req, res) => {
+  try {
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    // Get manufacturer profile
+    const manufacturer = await Manufacturer.findOne({ user: req.user.userId });
+    if (!manufacturer) {
+      return res.status(404).json({ message: "Manufacturer not found" });
+    }
+
+    // Get batches that this manufacturer has assigned to distributors
+    // Look for batches where manufacturer's company name appears in "from" field
+    const assignedBatches = await Batch.find({
+      manufacturerId: req.user.userId,
+      shipmentHistory: { 
+        $elemMatch: { 
+          from: manufacturer.companyName, // Look for shipments FROM this manufacturer
+          to: { $ne: manufacturer.companyName } // TO someone else (not self)
+        } 
+      }
+    })
+    .select('batchNumber productName manufactureDate expiryDate storageConditions shipmentHistory shipmentStatus quantityAssigned quantityProduced')
+    .sort({ 'shipmentHistory.timestamp': -1 });
+
+    // Transform the data to match frontend expectations
+    const transformedAssignments = assignedBatches.map(batch => {
+      // Get the latest shipment entry made by manufacturer (from manufacturer company name)
+      const manufacturerShipments = batch.shipmentHistory.filter(
+        entry => entry.from === manufacturer.companyName && entry.to !== manufacturer.companyName
+      );
+      const latestShipment = manufacturerShipments[manufacturerShipments.length - 1];
+      
+      return {
+        _id: batch._id,
+        batchNumber: batch.batchNumber,
+        product: batch.productName || 'Unknown Product',
+        quantity: parseInt(latestShipment?.quantity) || batch.quantityAssigned || 0,
+        status: latestShipment?.status || batch.shipmentStatus || 'Assigned',
+        assignedAt: latestShipment?.timestamp || batch.createdAt,
+        distributor: {
+          name: latestShipment?.to || 'Unknown Distributor',
+          address: latestShipment?.toAddress || 'N/A'
+        },
+        shipmentHistory: batch.shipmentHistory || [],
+        serialNumber: 'N/A',
+        manufacturerName: manufacturer.companyName || manufacturer.name,
+        storageConditions: batch.storageConditions,
+        manufactureDate: batch.manufactureDate,
+        expiryDate: batch.expiryDate,
+        remarks: latestShipment?.remarks || '',
+        fromAddress: latestShipment?.fromAddress || 'N/A'
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      assignments: transformedAssignments,
+      total: transformedAssignments.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching assigned batches:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch assigned batches',
+      error: error.message
+    });
+  }
+};
+
+module.exports = { getManufacturerDashboard, getManufacturerProfile, getAssignedBatches };

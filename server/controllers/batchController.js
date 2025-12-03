@@ -416,7 +416,7 @@ const assignBatchToDistributor = async (req, res) => {
       const shipmentEntry = {
         timestamp: new Date(),
         from: manufacturer.companyName,
-        fromAddress: manufacturer.user?.address || '',
+        fromAddress: manufacturer.user?.address || req.user.address || '',
         to: distributor.companyName,
         toAddress: distributorUser.address,
         status,
@@ -449,7 +449,7 @@ const assignBatchToDistributor = async (req, res) => {
       // Update batch shipment history on blockchain first
       try {
         // Get manufacturer's blockchain address
-        const manufacturerAddress = manufacturer.user?.address || await signer.getAddress() || '';
+        const manufacturerAddress = manufacturer.user?.address || req.user.address || await signer.getAddress() || '';
         
         // Ensure we have valid addresses for blockchain
         const fromAddress = manufacturerAddress;

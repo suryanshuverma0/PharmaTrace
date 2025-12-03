@@ -108,9 +108,7 @@ const RegisterBatch = () => {
     }
     if (!formData.storageConditions) {
       errors.push("Storage conditions are required.");
-    } else if (!/(\d+)°?\s*c/i.test(formData.storageConditions)) {
-      errors.push("Storage conditions should include temperature (e.g., 'Store below 25°C').");
-    }
+    } 
     if (!formData.productionLocation) {
       errors.push("Production location is required.");
     }
