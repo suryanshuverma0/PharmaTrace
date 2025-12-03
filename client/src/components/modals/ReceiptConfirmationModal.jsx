@@ -64,7 +64,7 @@ const ReceiptConfirmationModal = ({
   if (!isOpen || !batch) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
       <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
         {/* Header */}
@@ -86,7 +86,7 @@ const ReceiptConfirmationModal = ({
         </div>
 
         {/* Batch Information */}
-        <div className="p-4 mb-6 bg-gray-50 rounded-lg">
+        <div className="p-4 mb-6 rounded-lg bg-gray-50">
           <h3 className="mb-2 font-semibold text-gray-900">Batch Information</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -133,7 +133,7 @@ const ReceiptConfirmationModal = ({
               required
             />
             {verificationData.receivedQuantity !== batch.quantity && verificationData.receivedQuantity !== '' && (
-              <div className="flex items-center p-2 mt-2 text-yellow-800 bg-yellow-50 rounded">
+              <div className="flex items-center p-2 mt-2 text-yellow-800 rounded bg-yellow-50">
                 <FaExclamationTriangle className="w-4 h-4 mr-2" />
                 <span className="text-sm">
                   Quantity discrepancy: Expected {batch.quantity}, entering {verificationData.receivedQuantity}
@@ -172,54 +172,6 @@ const ReceiptConfirmationModal = ({
                   <option value="Intact">Intact</option>
                   <option value="Broken">Broken</option>
                   <option value="Missing">Missing</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Environmental Conditions */}
-          <div>
-            <h3 className="mb-3 font-semibold text-gray-900 flex items-center">
-              <FaThermometerHalf className="w-4 h-4 mr-2" />
-              Environmental Conditions
-            </h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700">
-                  Temperature
-                </label>
-                <input
-                  type="text"
-                  value={verificationData.environmentalConditions.temperature}
-                  onChange={(e) => handleInputChange('environmentalConditions.temperature', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="22°C"
-                />
-              </div>
-              <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700">
-                  Humidity
-                </label>
-                <input
-                  type="text"
-                  value={verificationData.environmentalConditions.humidity}
-                  onChange={(e) => handleInputChange('environmentalConditions.humidity', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="60%"
-                />
-              </div>
-              <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700">
-                  Status
-                </label>
-                <select
-                  value={verificationData.environmentalConditions.status}
-                  onChange={(e) => handleInputChange('environmentalConditions.status', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Normal">Normal</option>
-                  <option value="Warning">Warning</option>
-                  <option value="Critical">Critical</option>
                 </select>
               </div>
             </div>
@@ -266,7 +218,7 @@ const ReceiptConfirmationModal = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-4 pt-6 border-t">
+          <div className="flex justify-end pt-6 space-x-4 border-t">
             <Button
               type="button"
               variant="outline"

@@ -3,7 +3,9 @@ const Batch = require('../models/Batch');
 const Product = require('../models/Product');
 const Pharmacist = require('../models/Pharmacist');
 const User = require('../models/User');
+const Distributor = require('../models/Distributor');
 const { signer, batchContract, provider } = require("../utils/blockchain");
+const { sendEmail, emailTemplates } = require('../utils/sendEmail');
 
 // Get pharmacy dashboard data
 const getPharmacyDashboard = async (req, res) => {
@@ -334,7 +336,7 @@ const confirmReceipt = async (req, res) => {
     batch.shipmentHistory[shipmentIndex].status = 'Received';
     batch.shipmentHistory[shipmentIndex].quantity = actualReceivedQty.toString();
     batch.shipmentHistory[shipmentIndex].lastUpdated = new Date();
-    batch.shipmentHistory[shipmentIndex].remarks = `Receipt confirmed by pharmacy. ${quantityDiscrepancy ? `Quantity discrepancy: Expected ${expectedQuantity}, Received ${actualReceivedQty}. ` : ''}${damageReported ? `Damage reported: ${damageDetails}. ` : ''}${qualityCheckNotes || 'Standard verification completed.'}`;
+    batch.shipmentHistory[shipmentIndex].remarks = `Receipt confirmed by pharmacy. ${quantityDiscrepancy ? `Quantity discrepancy: Expected ${expectedQuantity}, Received ${actualReceivedQty}. ` : ''}${damageReported ? 'Quality issues reported separately. ' : ''}${qualityCheckNotes || 'Standard verification completed.'}`;
     
     // Add detailed verification data to the existing entry
     batch.shipmentHistory[shipmentIndex].actor = {
@@ -404,7 +406,7 @@ const confirmReceipt = async (req, res) => {
         toAddress: pharmacyAddress,
         status: 'Received',
         quantity: actualReceivedQty.toString(),
-        remarks: `Receipt confirmed by ${pharmacist.pharmacyName}. ${qualityResult === 'Pass' ? 'Quality check passed.' : 'Quality issues reported.'} ${quantityDiscrepancy ? `Quantity discrepancy: Expected ${expectedQuantity}, Received ${actualReceivedQty}.` : ''} ${damageReported ? `Damage reported: ${damageDetails}` : ''} Verified by: ${pharmacist.user?.name || 'Pharmacy Staff'}`
+        remarks: `Receipt confirmed by ${pharmacist.pharmacyName}. ${qualityResult === 'Pass' ? 'Quality check passed.' : 'Quality issues reported.'} ${quantityDiscrepancy ? `Quantity discrepancy: Expected ${expectedQuantity}, Received ${actualReceivedQty}.` : ''} Verified by: ${pharmacist.user?.name || 'Pharmacy Staff'}`
       };
 
       console.log('=== STORING PHARMACY RECEIPT IN BLOCKCHAIN ===');
@@ -503,7 +505,7 @@ const confirmReceipt = async (req, res) => {
     console.log(`Verified By: ${pharmacist.user?.name || pharmacist.pharmacyName}`);
     console.log('==========================================');
 
-    res.json({
+    const responseData = {
       success: true,
       message: 'Receipt confirmed successfully',
       data: {
@@ -519,7 +521,173 @@ const confirmReceipt = async (req, res) => {
         damageReported,
         verification: batch.shipmentHistory[shipmentIndex].verification
       }
-    });
+    };
+
+    res.json(responseData);
+
+    // Send email notification if damage is reported (asynchronous)
+    if (damageReported && damageDetails) {
+      console.log('=== DAMAGE REPORTED - SENDING ISSUE EMAIL ===');
+      console.log('Pharmacy:', pharmacist.pharmacyName);
+      console.log('Batch:', batch.batchNumber);
+      console.log('Damage Details:', damageDetails);
+      
+      // Find the distributor who sent this batch to send them the issue report
+      try {
+        // Get the shipment entry that brought this batch to the pharmacy (the one we just confirmed)
+        const incomingShipment = batch.shipmentHistory[shipmentIndex];
+
+        console.log('Found incoming shipment:', incomingShipment ? {
+          from: incomingShipment.from,
+          fromAddress: incomingShipment.fromAddress,
+          status: incomingShipment.status
+        } : 'None');
+
+        if (incomingShipment) {
+          // Find distributor by company name or address
+          console.log('Looking for distributor with:', {
+            companyName: incomingShipment.from,
+            fromAddress: incomingShipment.fromAddress
+          });
+          
+          const distributor = await Distributor.findOne({
+            $or: [
+              { companyName: incomingShipment.from },
+              { address: incomingShipment.fromAddress },
+              { companyName: { $regex: new RegExp(incomingShipment.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') } }
+            ]
+          }).populate('user', 'email name');
+          
+          console.log('Distributor search result:', distributor ? {
+            id: distributor._id,
+            companyName: distributor.companyName,
+            address: distributor.address,
+            hasUser: !!distributor.user,
+            userEmail: distributor.user?.email
+          } : 'Not found');
+
+          console.log('Found distributor:', distributor ? {
+            companyName: distributor.companyName,
+            email: distributor.user?.email,
+            name: distributor.user?.name
+          } : 'None');
+
+          if (distributor && distributor.user && distributor.user.email) {
+            const emailTemplate = emailTemplates.pharmacyIssueReport(
+              pharmacist.pharmacyName,
+              batch.batchNumber,
+              batch.productName || 'Unknown Product',
+              damageDetails
+            );
+
+            console.log('Sending issue report email to:', distributor.user.email);
+            
+            const emailResult = await sendEmail(
+              distributor.user.email,
+              emailTemplate.subject,
+              emailTemplate.text,
+              emailTemplate.html
+            );
+
+            if (emailResult.success) {
+              console.log(`✅ Issue report email sent to distributor: ${distributor.user.email}`);
+            } else {
+              console.error(`❌ Failed to send issue report email to distributor: ${emailResult.message}`);
+              console.error('Email error details:', emailResult.error);
+            }
+          } else {
+            console.log(`⚠️ Distributor email not found for ${incomingShipment.from}`);
+          }
+        } else {
+          console.log('⚠️ No incoming shipment found for this pharmacy');
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending issue report email:', emailError);
+        // Don't fail the main response, just log the error
+      }
+      console.log('============================================');
+    }
+
+    // Also send a receipt confirmation email to distributor (asynchronous)
+    if (!damageReported) {
+      console.log('=== SENDING RECEIPT CONFIRMATION EMAIL ===');
+      console.log('Pharmacy:', pharmacist.pharmacyName);
+      console.log('Batch:', batch.batchNumber);
+      console.log('Received Quantity:', actualReceivedQty);
+      
+      try {
+        // Get the shipment entry that brought this batch to the pharmacy (the one we just confirmed)
+        const incomingShipment = batch.shipmentHistory[shipmentIndex];
+
+        console.log('Found incoming shipment:', incomingShipment ? {
+          from: incomingShipment.from,
+          fromAddress: incomingShipment.fromAddress,
+          status: incomingShipment.status
+        } : 'None');
+
+        if (incomingShipment) {
+          // Find distributor by company name or address
+          console.log('Looking for distributor with:', {
+            companyName: incomingShipment.from,
+            fromAddress: incomingShipment.fromAddress
+          });
+          
+          const distributor = await Distributor.findOne({
+            $or: [
+              { companyName: incomingShipment.from },
+              { address: incomingShipment.fromAddress },
+              { companyName: { $regex: new RegExp(incomingShipment.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') } }
+            ]
+          }).populate('user', 'email name');
+          
+          console.log('Distributor search result:', distributor ? {
+            id: distributor._id,
+            companyName: distributor.companyName,
+            address: distributor.address,
+            hasUser: !!distributor.user,
+            userEmail: distributor.user?.email
+          } : 'Not found');
+
+          console.log('Found distributor:', distributor ? {
+            companyName: distributor.companyName,
+            email: distributor.user?.email,
+            name: distributor.user?.name
+          } : 'None');
+
+          if (distributor && distributor.user && distributor.user.email) {
+            const emailTemplate = emailTemplates.receiptConfirmation(
+              pharmacist.pharmacyName,
+              batch.batchNumber,
+              batch.productName || 'Unknown Product',
+              actualReceivedQty
+            );
+
+            console.log('Sending confirmation email to:', distributor.user.email);
+
+            const emailResult = await sendEmail(
+              distributor.user.email,
+              emailTemplate.subject,
+              emailTemplate.text,
+              emailTemplate.html
+            );
+
+            if (emailResult.success) {
+              console.log(`✅ Receipt confirmation email sent to distributor: ${distributor.user.email}`);
+            } else {
+              console.error(`❌ Failed to send confirmation email to distributor: ${emailResult.message}`);
+              console.error('Email error details:', emailResult.error);
+            }
+          } else {
+            console.log(`⚠️ Distributor email not found for ${incomingShipment.from}`);
+          }
+        } else {
+          console.log('⚠️ No incoming shipment found for this pharmacy');
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending confirmation email:', emailError);
+      }
+      console.log('==========================================');
+    }
 
   } catch (error) {
     console.error('Error confirming receipt:', error);
@@ -727,7 +895,8 @@ const getInventory = async (req, res) => {
     const formattedInventory = [];
 
     for (const batch of batches) {
-      const product = await Product.findOne({ batchId: batch._id }).lean();
+      // Get ALL products in this batch (not just one)
+      const products = await Product.find({ batchId: batch._id }).lean();
       
       // Find delivered shipments to this pharmacy
       const deliveredShipments = (batch.shipmentHistory || []).filter(entry => 
@@ -735,20 +904,20 @@ const getInventory = async (req, res) => {
         ['delivered', 'received', 'Delivered', 'Received'].includes(entry.status)
       );
 
-      console.log(`Batch ${batch.batchNumber}: found ${deliveredShipments.length} delivered shipments`);
+      console.log(`Batch ${batch.batchNumber}: found ${deliveredShipments.length} delivered shipments, ${products.length} products`);
       if (deliveredShipments.length > 0) {
         console.log('Sample shipment:', deliveredShipments[0]);
       }
 
       for (const shipment of deliveredShipments) {
         const today = new Date();
-        const expiryDate = product?.expiryDate || batch.expiryDate;
+        const expiryDate = products[0]?.expiryDate || batch.expiryDate;
         const daysUntilExpiry = expiryDate ? Math.ceil((new Date(expiryDate) - today) / (1000 * 60 * 60 * 24)) : null;
         
         formattedInventory.push({
           distributionId: `${batch._id}_${shipment.timestamp}`,
           batchId: batch.batchNumber,
-          product: product?.productName || `${batch.dosageForm || ''} ${batch.strength || ''}`.trim(),
+          product: products[0]?.productName || `${batch.dosageForm || ''} ${batch.strength || ''}`.trim(),
           quantity: Number(shipment.quantity) || 0,
           expiryDate: expiryDate,
           daysUntilExpiry,
@@ -757,7 +926,28 @@ const getInventory = async (req, res) => {
           receivedAt: shipment.timestamp,
           status: !daysUntilExpiry ? 'unknown' : 
                   daysUntilExpiry <= 0 ? 'expired' : 
-                  daysUntilExpiry <= 30 ? 'expiring' : 'good'
+                  daysUntilExpiry <= 30 ? 'expiring' : 'good',
+          // Add products array with QR codes and details like distributor page
+          products: products.map(p => ({
+            _id: p._id,
+            serialNumber: p.serialNumber,
+            productName: p.productName,
+            status: p.status,
+            qrCodeUrl: p.qrCodeUrl,
+            fingerprint: p.fingerprint,
+            manufactureDate: batch.manufactureDate,
+            expiryDate: p.expiryDate || batch.expiryDate,
+            batchNumber: batch.batchNumber
+          })),
+          // Add batch-level details
+          storageConditions: batch.storageConditions,
+          manufactureDate: batch.manufactureDate,
+          dosageForm: batch.dosageForm,
+          strength: batch.strength,
+          productionLocation: batch.productionLocation,
+          approvalCertId: batch.approvalCertId,
+          shipmentHistory: batch.shipmentHistory || [],
+          manufacturerName: batch.manufacturerId?.name || 'Unknown'
         });
       }
     }

@@ -35,6 +35,7 @@ app.use("/api/distribution", require("./routes/distributionRoutes"));
 app.use("/api/verification", verificationRoutes);
 app.use("/api/blockchain", require("./routes/blockchainVerificationRoutes"));
 app.use("/api/nepal", require("./routes/districtsRoutes"));
+app.use("/api/email", require("./routes/emailRoutes"));
 
 
 // Admin routes

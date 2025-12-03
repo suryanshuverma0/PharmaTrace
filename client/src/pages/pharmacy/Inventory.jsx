@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { Card } from '../../components/UI/Card';
 import { Button } from '../../components/UI/Button';
 import { FaWarehouse, FaSearch, FaArrowLeft, FaBox, FaCalendarAlt, FaFilter, FaTimes, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
+import { ChevronDown, ChevronUp, QrCode, Download, Printer, Package, Boxes } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { pharmacyAPI } from '../../services/api/pharmacyAPI';
+import ModalWrapper from '../../components/common/ModalWrapper';
 
 const Inventory = () => {
   const [inventory, setInventory] = useState([]);
@@ -22,6 +24,10 @@ const Inventory = () => {
     dateRange: 'all', // all, week, month, quarter, year
   });
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [expandedBatches, setExpandedBatches] = useState(new Set());
+  const [collapsedProducts, setCollapsedProducts] = useState(new Set());
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -164,6 +170,52 @@ const Inventory = () => {
     });
     setSortBy('receivedAt');
     setSortOrder('desc');
+  };
+
+  const toggleBatchExpansion = (distributionId) => {
+    setExpandedBatches((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(distributionId)) {
+        newSet.delete(distributionId);
+      } else {
+        newSet.add(distributionId);
+      }
+      return newSet;
+    });
+  };
+
+  const isBatchExpanded = (distributionId) => {
+    return expandedBatches.has(distributionId);
+  };
+
+  const toggleProductsExpansion = (distributionId) => {
+    setCollapsedProducts((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(distributionId)) {
+        newSet.delete(distributionId);
+      } else {
+        newSet.add(distributionId);
+      }
+      return newSet;
+    });
+  };
+
+  const isProductsCollapsed = (distributionId) => {
+    return collapsedProducts.has(distributionId);
+  };
+
+  const handleQRCodeClick = (product) => {
+    setSelectedProduct(product);
+    setShowQRModal(true);
+  };
+
+  const downloadQRCode = (qrCodeUrl, fileName) => {
+    const link = document.createElement('a');
+    link.href = qrCodeUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleFilterChange = (key, value) => {
@@ -550,72 +602,300 @@ const Inventory = () => {
           <div className="space-y-4">
             {filteredAndSortedInventory.map((item) => {
               const expiryStatus = getExpiryStatus(item.expiryDate);
+              const isExpanded = isBatchExpanded(item.distributionId);
               return (
-                <div 
-                  key={item.distributionId} 
-                  className={`p-4 border rounded-lg ${expiryStatus.bgColor}`}
+                <motion.div
+                  key={item.distributionId}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`overflow-hidden bg-white border shadow-sm rounded-xl transition-all duration-300 ${
+                    isExpanded ? "shadow-lg" : "shadow-md hover:shadow-lg"
+                  }`}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        <FaBox className="w-5 h-5 text-gray-600" />
+                  {/* Batch Header */}
+                  <div className="p-6 border-b border-gray-100">
+                    <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
+                      <div className="flex items-start flex-1 gap-4">
+                        <div className="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl">
+                          <Boxes className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {item.product}
+                          </h3>
+                          <div className="mt-1 space-y-1">
+                            <p className="text-sm text-gray-600">
+                              Batch: {item.batchId}
+                            </p>
+                            {!isExpanded && (
+                              <div className="flex items-center gap-4 text-xs text-gray-500">
+                                <span className="flex items-center gap-1">
+                                  <Package className="w-3 h-3" />
+                                  Qty: {item.quantity}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <FaCalendarAlt className="w-3 h-3" />
+                                  Exp: {new Date(item.expiryDate).toLocaleDateString()}
+                                </span>
+                                {item.products && item.products.length > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <Boxes className="w-3 h-3" />
+                                    Products: {item.products.length}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{item.product}</h3>
-                        <p className="text-sm text-gray-600">Batch: {item.batchId}</p>
+                      <div className="flex flex-row items-start gap-2">
+                        <div className="space-y-1.5">
+                          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                            expiryStatus.status === 'critical' 
+                              ? 'bg-red-100 text-red-800' 
+                              : expiryStatus.status === 'warning'
+                              ? 'bg-yellow-100 text-yellow-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {expiryStatus.status.toUpperCase()}
+                          </span>
+                          <p className="text-sm text-gray-500">
+                            Received: {new Date(item.receivedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => toggleBatchExpansion(item.distributionId)}
+                          className="flex items-center justify-center w-8 h-8 text-gray-400 transition-colors duration-200 rounded-lg hover:text-gray-600 hover:bg-gray-100"
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="w-5 h-5" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5" />
+                          )}
+                        </button>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                        expiryStatus.status === 'critical' 
-                          ? 'bg-red-100 text-red-800' 
-                          : expiryStatus.status === 'warning'
-                          ? 'bg-yellow-100 text-yellow-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {expiryStatus.status.toUpperCase()}
-                      </span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
-                    <div>
-                      <span className="font-medium text-gray-600">Quantity:</span>
-                      <p className="font-semibold text-gray-900">{item.quantity} units</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">Expiry Date:</span>
-                      <p className={expiryStatus.color}>
-                        {new Date(item.expiryDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">Received:</span>
-                      <p className="text-gray-900">
-                        {new Date(item.receivedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">Days Left:</span>
-                      <p className={expiryStatus.color}>
-                        {Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24))} days
-                      </p>
-                    </div>
-                  </div>
+                  {/* Collapsible Batch Details */}
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-6 bg-gray-50">
+                        {/* Batch Stats */}
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                          <div className="p-4 bg-white rounded-xl">
+                            <div className="flex items-center gap-2 mb-2 text-gray-600">
+                              <Package className="w-5 h-5" />
+                              <span className="font-medium">Quantity</span>
+                            </div>
+                            <p className="text-2xl font-semibold">{item.quantity}</p>
+                            <p className="mt-1 text-sm text-gray-500">units received</p>
+                          </div>
+                          
+                          <div className="p-4 bg-white rounded-xl">
+                            <div className="flex items-center gap-2 mb-2 text-gray-600">
+                              <FaCalendarAlt className="w-5 h-5" />
+                              <span className="font-medium">Expiry Status</span>
+                            </div>
+                            <p className={`text-lg font-semibold ${expiryStatus.color}`}>
+                              {Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24))} days
+                            </p>
+                            <p className="text-sm text-gray-500">until expiry</p>
+                          </div>
 
-                  {item.distributor && (
-                    <div className="pt-3 mt-3 border-t border-gray-200">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Distributor:</span> {item.distributor}
-                      </p>
-                    </div>
+                          {item.manufacturerName && (
+                            <div className="p-4 bg-white rounded-xl">
+                              <div className="flex items-center gap-2 mb-2 text-gray-600">
+                                <FaBox className="w-5 h-5" />
+                                <span className="font-medium">Manufacturer</span>
+                              </div>
+                              <p className="text-sm font-semibold text-gray-900">{item.manufacturerName}</p>
+                            </div>
+                          )}
+
+                          {item.distributor && (
+                            <div className="p-4 bg-white rounded-xl">
+                              <div className="flex items-center gap-2 mb-2 text-gray-600">
+                                <FaWarehouse className="w-5 h-5" />
+                                <span className="font-medium">Distributor</span>
+                              </div>
+                              <p className="text-sm font-semibold text-gray-900">{item.distributor}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Products in Batch - Collapsible */}
+                        {item.products && item.products.length > 0 && (
+                          <div className="mt-6">
+                            <div 
+                              className="flex items-center justify-between mb-4 cursor-pointer"
+                              onClick={() => toggleProductsExpansion(item.distributionId)}
+                            >
+                              <h4 className="text-lg font-medium text-gray-900">
+                                Products in Batch ({item.products.length})
+                              </h4>
+                              <div className="flex items-center gap-2">
+                                {isProductsCollapsed(item.distributionId) ? (
+                                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                                ) : (
+                                  <ChevronUp className="w-5 h-5 text-gray-400" />
+                                )}
+                              </div>
+                            </div>
+
+                            {!isProductsCollapsed(item.distributionId) && (
+                              <motion.div 
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="grid grid-cols-1 gap-4"
+                              >
+                                {item.products.map((product) => (
+                                  <div
+                                    key={product._id}
+                                    className="p-4 transition-all duration-200 bg-white border rounded-xl border-gray-200/50 hover:border-blue-200 hover:shadow-md"
+                                  >
+                                    <div className="flex justify-between">
+                                      <div className="flex-1 min-w-0">
+                                        <h5 className="font-medium text-gray-900 truncate">
+                                          {product.productName}
+                                        </h5>
+                                        <p className="mt-1 text-sm text-gray-500">
+                                          SN: {product.serialNumber}
+                                        </p>
+                                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                          <span className="flex items-center gap-1">
+                                            <Package className="w-3 h-3" />
+                                            Status: {product.status}
+                                          </span>
+                                          {product.fingerprint && (
+                                            <span className="font-mono truncate max-w-32">
+                                              FP: {product.fingerprint.substring(0, 10)}...
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {product.qrCodeUrl && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleQRCodeClick(product);
+                                            }}
+                                            className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                                            title="View QR Code"
+                                          >
+                                            <QrCode className="w-5 h-5" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </motion.div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Show message when no products */}
+                        {(!item.products || item.products.length === 0) && (
+                          <div className="p-4 mt-6 border border-yellow-200 rounded-lg bg-yellow-50">
+                            <p className="text-yellow-800">
+                              No individual products found in this batch inventory.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
                   )}
-                </div>
+                </motion.div>
               );
             })}
           </div>
         )}
       </motion.div>
+
+      {/* QR Code Modal */}
+      <ModalWrapper
+        isOpen={showQRModal && selectedProduct}
+        onClose={() => setShowQRModal(false)}
+        size="md"
+        title="Product QR Code"
+      >
+          {selectedProduct && (
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 mb-4 text-green-500">
+                <QrCode className="w-full h-full" />
+              </div>
+
+              <div className="w-full p-4 mb-4 rounded-lg bg-gray-50">
+                <div className="mb-2">
+                  <p className="text-sm text-gray-600">Product Name</p>
+                  <p className="font-medium">{selectedProduct.productName}</p>
+                </div>
+                <div className="mb-2">
+                  <p className="text-sm text-gray-600">Serial Number</p>
+                  <p className="font-mono text-sm break-all">{selectedProduct.serialNumber}</p>
+                </div>
+                {selectedProduct.fingerprint && (
+                  <div>
+                    <p className="text-sm text-gray-600">Digital Fingerprint</p>
+                    <p className="font-mono text-sm break-all">{selectedProduct.fingerprint}</p>
+                  </div>
+                )}
+              </div>
+
+              {selectedProduct.qrCodeUrl && (
+                <div className="p-4 mb-6 bg-white border rounded-lg">
+                  <img
+                    src={selectedProduct.qrCodeUrl}
+                    alt="Product QR Code"
+                    className="w-48 h-48 mx-auto"
+                  />
+                </div>
+              )}
+
+              <div className="flex flex-wrap justify-center gap-4">
+                {selectedProduct.qrCodeUrl && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      className="flex items-center gap-2"
+                      onClick={() => downloadQRCode(selectedProduct.qrCodeUrl, `QR-${selectedProduct.serialNumber}.png`)}
+                    >
+                      <Download className="w-5 h-5" />
+                      Download QR
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="flex items-center gap-2"
+                      onClick={() => window.print()}
+                    >
+                      <Printer className="w-5 h-5" />
+                      Print QR
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              <Button
+                variant="primary"
+                className="w-full mt-6"
+                onClick={() => setShowQRModal(false)}
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </ModalWrapper>
     </div>
   );
 };

@@ -76,13 +76,13 @@ const ModalWrapper = ({
           >
             {/* Modal Content */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
               className={`
                 relative w-full ${sizeClasses[size]} p-6 bg-white rounded-2xl shadow-2xl modal-content
-                max-h-[90vh] overflow-auto
+                max-h-[90vh] overflow-auto m-4
                 ${className}
               `}
               style={{ zIndex: Z_INDEX.MODAL }}
