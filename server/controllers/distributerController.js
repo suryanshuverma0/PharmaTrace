@@ -179,7 +179,33 @@ const getDistributorBatches = async (req, res) => {
         }))
       };
     }));
-    res.json({ batches: formatted });
+    
+    // Sort formatted batches by assignment timestamp (most recent first)
+    const sortedBatches = formatted.sort((a, b) => {
+      // Find the assignment timestamp for each batch (when manufacturer assigned to this distributor)
+      const getAssignmentTimestamp = (batch) => {
+        const assignmentEntry = (batch.shipmentHistory || []).find(entry => {
+          const isToDistributor = entry.to === distributorAddress || 
+                                 entry.toAddress === distributorAddress || 
+                                 entry.to === distributorCompanyName;
+          const isFromManufacturer = entry.from !== distributorAddress && 
+                                    entry.from !== distributorCompanyName &&
+                                    entry.fromAddress !== distributorAddress;
+          
+          return isToDistributor && isFromManufacturer && 
+                 entry.status && !['produced', 'delivered'].includes(entry.status.toLowerCase());
+        });
+        
+        return assignmentEntry ? new Date(assignmentEntry.timestamp) : new Date(0);
+      };
+      
+      const timestampA = getAssignmentTimestamp(a);
+      const timestampB = getAssignmentTimestamp(b);
+      
+      return timestampB - timestampA; // Most recent first
+    });
+    
+    res.json({ batches: sortedBatches });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch batches', error: error.message });
   }
@@ -320,7 +346,36 @@ const getDistributorInventory = async (req, res) => {
     // Filter out items that were never assigned to this distributor
     const validInventory = inventory.filter(item => item.totalAssignedToDistributor > 0);
 
-    res.json({ inventory: validInventory });
+    // Sort inventory by assignment timestamp (most recent first)
+    const sortedInventory = validInventory.sort((a, b) => {
+      // Find the assignment timestamp for each inventory item (when manufacturer assigned to this distributor)
+      const getAssignmentTimestamp = (item) => {
+        // Find the corresponding batch
+        const batch = batches.find(b => b.batchNumber === item.batchId);
+        if (!batch) return new Date(0);
+        
+        const assignmentEntry = (batch.shipmentHistory || []).find(entry => {
+          const isToDistributor = entry.to === distributorAddress || 
+                                 entry.toAddress === distributorAddress || 
+                                 entry.to === distributorCompanyName;
+          const isFromManufacturer = entry.from !== distributorAddress && 
+                                    entry.from !== distributorCompanyName &&
+                                    entry.fromAddress !== distributorAddress;
+          
+          return isToDistributor && isFromManufacturer && 
+                 entry.status && !['produced', 'delivered'].includes(entry.status.toLowerCase());
+        });
+        
+        return assignmentEntry ? new Date(assignmentEntry.timestamp) : new Date(0);
+      };
+      
+      const timestampA = getAssignmentTimestamp(a);
+      const timestampB = getAssignmentTimestamp(b);
+      
+      return timestampB - timestampA; // Most recent first
+    });
+
+    res.json({ inventory: sortedInventory });
   } catch (error) {
     console.error('Error in getDistributorInventory:', error);
     res.status(500).json({ 

@@ -254,7 +254,6 @@ const getAssignedBatches = async (req, res) => {
           address: latestShipment?.toAddress || 'N/A'
         },
         shipmentHistory: batch.shipmentHistory || [],
-        serialNumber: 'N/A',
         manufacturerName: manufacturer.companyName || manufacturer.name,
         storageConditions: batch.storageConditions,
         manufactureDate: batch.manufactureDate,

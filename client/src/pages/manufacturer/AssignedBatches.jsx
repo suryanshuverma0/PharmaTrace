@@ -285,9 +285,6 @@ const AssignedBatches = () => {
                         <div className="mt-1 space-y-1">
                           <p className="font-medium text-gray-900">{assignment.product}</p>
                           <p className="text-sm text-gray-500">Batch: {assignment.batchNumber}</p>
-                          {assignment.serialNumber && (
-                            <p className="text-sm text-gray-500">Serial: {assignment.serialNumber}</p>
-                          )}
                         </div>
                       </div>
                       <div className="p-4 rounded-lg bg-gray-50">

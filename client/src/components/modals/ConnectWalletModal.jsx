@@ -133,9 +133,9 @@ const ConnectWalletModal = () => {
               </div>
             </div>
 
-            {checkAccountLoading ? (
+            {checkAccountLoading || isLoading ? (
               <span className="text-xs transition-opacity duration-200 opacity-100 sm:text-base text-primary-600 group-hover:opacity-100">
-                Loading...
+                Connecting...
               </span>
             ) : (
               <span className="text-xs transition-opacity duration-200 opacity-100 sm:text-base text-primary-600 group-hover:opacity-100">

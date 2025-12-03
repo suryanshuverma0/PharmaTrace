@@ -468,7 +468,7 @@ const AssignedBatches = () => {
                       {batch.products && batch.products.length > 0 && (
                         <div className="mt-6">
                           <div 
-                            className="flex items-center justify-between mb-4 cursor-pointer"
+                            className="flex items-center justify-between p-2 py-3 mb-4 bg-gray-100 rounded-lg shadow cursor-pointer"
                             onClick={() => toggleProductsExpansion(batch._id)}
                           >
                             <h4 className="text-lg font-medium text-gray-900">

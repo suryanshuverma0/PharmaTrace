@@ -28,15 +28,11 @@ const AcknowledgeShipment = () => {
 
   const fetchCurrentUser = async () => {
     try {
-      const userRes = await apiClient.get('/auth/me');
-      const user = userRes.data.user;
-      
       // Get distributor profile for company name
       const profileRes = await apiClient.get('/distributor/profile');
       const companyName = profileRes.data?.distributor?.companyName;
       
       setCurrentUser({ 
-        ...user, 
         companyName 
       });
       
