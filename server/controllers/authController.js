@@ -202,15 +202,15 @@ const registerUser = async (req, res, next) => {
     }
 
     // Send activation email (optional warning if fails)
-    const emailResult = await sendActivationEmail({
-      userId: newUser._id,
-      address: newUser.address,
-      role: newUser.role,
-      name: newUser.name,
-      email: newUser.email,
-    });
-    if (!emailResult.success)
-      console.warn("Activation email failed:", emailResult.error);
+    // const emailResult = await sendActivationEmail({
+    //   userId: newUser._id,
+    //   address: newUser.address,
+    //   role: newUser.role,
+    //   name: newUser.name,
+    //   email: newUser.email,
+    // });
+    // if (!emailResult.success)
+    //   console.warn("Activation email failed:", emailResult.error);
 
     // Standardized Role Enum (must match smart contract)
     const RoleEnum = {
@@ -371,18 +371,18 @@ const loginUser = async (req, res) => {
         // Check if blockchain and database are in sync
         if (!blockchainApproval) {
           console.warn(`⚠️ Blockchain approval mismatch for ${user.address}: DB=${user.isApproved}, Blockchain=${blockchainApproval}`);
-          // return res.status(403).json({
-          //   message: "Account not approved on blockchain. Please contact administrator.",
-          //   blockchain: blockchainData
-          // });
+          return res.status(403).json({
+            message: "Account not approved on blockchain. Please contact administrator.",
+            blockchain: blockchainData
+          });
         }
 
         if (blockchainRoleName !== user.role) {
           console.warn(`⚠️ Role mismatch for ${user.address}: DB=${user.role}, Blockchain=${blockchainRoleName}`);
-          // return res.status(403).json({
-          //   message: "Role verification failed. Please contact administrator.",
-          //   blockchain: blockchainData
-          // });
+          return res.status(403).json({
+            message: "Role verification failed. Please contact administrator.",
+            blockchain: blockchainData
+          });
         }
       } catch (blockchainError) {
         console.error("❌ Blockchain verification failed:", blockchainError.message);
