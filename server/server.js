@@ -50,6 +50,11 @@ app.use("/api/admin/user-map", require("./routes/userMapRoutes"));
 // Admin analytics routes
 app.use("/api/admin", require("./routes/adminAnalyticsRoutes"));
 
+//Adnin blockchain routes
+app.use(
+  "/api/admin",
+  require("./admin/routes/blockchainRoutes")
+);
 // Test route
 app.get("/api/test", (req, res) => {
   res.json({ message: "Server is working!", timestamp: new Date() });

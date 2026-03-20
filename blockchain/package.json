@@ -11,7 +11,8 @@
   "description": "This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.26.3"
+    "hardhat": "^2.26.3",
+    "hardhat-gas-reporter": "^2.3.0"
   },
   "directories": {
     "test": "test"

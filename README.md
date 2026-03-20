@@ -107,4 +107,3 @@ Pull requests are welcome! For major changes, please open an issue first to disc
 [MIT](LICENSE)
 
 ## Links
-- GitHub: [romanhumagain/PharmaTrace](https://github.com/romanhumagain/PharmaTrace)

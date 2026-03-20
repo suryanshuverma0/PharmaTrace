@@ -1,18 +1,19 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  Factory, 
-  Truck, 
-  Package, 
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  LayoutDashboard,
+  Factory,
+  Truck,
+  Package,
   MapPin,
   LogOut,
   User,
   Menu,
-  X
+  X,
+  Layers,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from "../../context/AuthContext";
 import Button from "../../components/UI/Button";
 
 const Sidebar = ({ isCollapsed, onToggle }) => {
@@ -25,49 +26,54 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
       transition: {
         type: "spring",
         stiffness: 300,
-        damping: 30
-      }
+        damping: 30,
+      },
     },
     collapsed: {
       width: "80px",
       transition: {
         type: "spring",
         stiffness: 300,
-        damping: 30
-      }
-    }
+        damping: 30,
+      },
+    },
   };
 
   const sidebarLinks = [
-    { 
-      icon: <LayoutDashboard size={20} />, 
-      label: 'Dashboard', 
-      path: '/admin' 
+    {
+      icon: <LayoutDashboard size={20} />,
+      label: "Dashboard",
+      path: "/admin",
     },
-    { 
-      icon: <Factory size={20} />, 
-      label: 'Manufacturers', 
-      path: '/admin/manufacturers' 
+    {
+      icon: <Factory size={20} />,
+      label: "Manufacturers",
+      path: "/admin/manufacturers",
     },
-    { 
-      icon: <Truck size={20} />, 
-      label: 'Distributors', 
-      path: '/admin/distributors' 
+    {
+      icon: <Truck size={20} />,
+      label: "Distributors",
+      path: "/admin/distributors",
     },
-    { 
-      icon: <Package size={20} />, 
-      label: 'Pharmacists', 
-      path: '/admin/pharmacists' 
+    {
+      icon: <Package size={20} />,
+      label: "Pharmacists",
+      path: "/admin/pharmacists",
     },
-    { 
-      icon: <MapPin size={20} />, 
-      label: 'User Map', 
-      path: '/admin/user-map' 
+    {
+      icon: <MapPin size={20} />,
+      label: "User Map",
+      path: "/admin/user-map",
+    },
+    {
+      icon: <Layers size={20} />,
+      label: "Blockchain Activity",
+      path: "/admin/blockchain-activity",
     },
   ];
 
   return (
-    <motion.div 
+    <motion.div
       className="relative flex flex-col h-full bg-white border-r border-gray-200 shadow-xl"
       initial="expanded"
       animate={isCollapsed ? "collapsed" : "expanded"}
@@ -119,8 +125,12 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
                 exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <h3 className="font-semibold text-gray-900">{user?.name || "Admin"}</h3>
-                <p className="text-sm text-gray-500 capitalize">{user?.role || "Administrator"}</p>
+                <h3 className="font-semibold text-gray-900">
+                  {user?.name || "Admin"}
+                </h3>
+                <p className="text-sm text-gray-500 capitalize">
+                  {user?.role || "Administrator"}
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -136,8 +146,8 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
               to={link.path}
               className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                 location.pathname === link.path
-                  ? 'bg-primary-50 text-primary-600'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  ? "bg-primary-50 text-primary-600"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <div className="flex-shrink-0">{link.icon}</div>
@@ -161,7 +171,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
 
       {/* Bottom Section */}
       <div className="p-4 border-t border-gray-200">
-        <button 
+        <button
           onClick={disconnectWallet}
           className="flex items-center w-full px-4 py-3 space-x-3 text-red-600 transition-all duration-200 rounded-lg hover:bg-red-50"
         >

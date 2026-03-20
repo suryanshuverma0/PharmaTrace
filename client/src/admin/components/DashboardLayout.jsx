@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
-import { Menu } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Sidebar from './Sidebar';
-import Navbar from '../../components/common/Navbar';
-import { useModalZIndexFix } from '../../hooks/useModalZIndex';
+import React, { useState, useEffect } from "react";
+import { Outlet } from "react-router-dom";
+import { Menu } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import Sidebar from "./Sidebar";
+import Navbar from "../../components/common/Navbar";
+import { useModalZIndexFix } from "../../hooks/useModalZIndex";
 
 const DashboardLayout = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -24,8 +24,8 @@ const DashboardLayout = () => {
     };
 
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const toggleSidebar = () => {
@@ -65,7 +65,7 @@ const DashboardLayout = () => {
               exit={isMobileView ? { x: -320 } : false}
               transition={{ type: "spring", bounce: 0.1 }}
               className={`fixed md:sticky top-20 z-30 md:z-0 h-[calc(100vh-5rem)] overflow-auto bg-white ${
-                isMobileView ? 'w-[280px]' : 'w-auto'
+                isMobileView ? "w-[280px]" : "w-auto"
               }`}
             >
               <Sidebar
@@ -77,9 +77,11 @@ const DashboardLayout = () => {
         </AnimatePresence>
 
         {/* Main Content */}
-        <main className={`flex-1 p-4 mt-14 md:p-6 min-h-screen transition-all duration-300 ${
-          !isMobileView && !isSidebarCollapsed ? 'md:ml-0' : 'md:ml-0'
-        }`}>
+        <main
+          className={`flex-1 p-4 md:p-6 min-h-screen transition-all duration-300 ${
+            !isMobileView && !isSidebarCollapsed ? "md:ml-0" : "md:ml-0"
+          }`}
+        >
           {/* Mobile Menu Button */}
           <div className="fixed z-10 top-24 left-4 md:hidden">
             <button

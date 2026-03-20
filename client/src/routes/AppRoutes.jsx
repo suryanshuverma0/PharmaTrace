@@ -11,6 +11,7 @@ import Manufacturers from "../admin/pages/Manufacturers";
 import Distributors from "../admin/pages/Distributors";
 import Pharmacists from "../admin/pages/Pharmacists";
 import UserMap from "../admin/pages/UserMap";
+import BlockchainActivity from "../admin/pages/BlockchainActivity"; 
 
 // Layouts
 import PublicLayout from "../layout/PublicLayout";
@@ -143,6 +144,7 @@ const AppRoutes = () => {
           <Route path="distributors" element={<Distributors />} />
           <Route path="pharmacists" element={<Pharmacists />} />
           <Route path="user-map" element={<UserMap />} />
+          <Route path="blockchain-activity" element={<BlockchainActivity />} />
         </Route>
       </Route>
       {/* Fallback Route */}

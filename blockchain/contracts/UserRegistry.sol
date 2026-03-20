@@ -37,7 +37,7 @@ contract UserRegistry {
         address user,
         bool approved,
         Role role
-    ) external onlyAdmin {
+    ) external onlyAdmin{
         users[user].isApproved = approved;
         users[user].role = role;
         emit UserWhitelisted(user, approved, role);
