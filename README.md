@@ -39,7 +39,7 @@ PharmaTrace/
 
 ### 1. Clone the Repository
 ```sh
-git clone https://github.com/romanhumagain/PharmaTrace.git
+git clone https://github.com/suryanshuverma0/PharmaTrace.git
 cd PharmaTrace
 ```
 

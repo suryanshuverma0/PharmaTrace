@@ -1,16 +1,16 @@
 {
   "network": "sepolia",
   "ProductRegistry": {
-    "address": "0x8B6FdbBE552d35B0DdF8E77A6a9ECe164c0BC333",
+    "address": "0x657Ef981f60eE04Aaf612CE1215244F2A6987592",
     "deployer": "0xB45Bea6B9057C31eBcB5B179955FF4aDE8640AFf"
   },
   "BatchRegistry": {
-    "address": "0xf7F3739C158F36F83707b6aa84b3794dA5c00318",
+    "address": "0x4985A6Eb840f79Bd7eB0c36D60ae578eeB404456",
     "deployer": "0xB45Bea6B9057C31eBcB5B179955FF4aDE8640AFf"
   },
   "UserRegistry": {
-    "address": "0x89A5fF13EDb99D3A6189817dFe3Ac2Ca5Cc559e3",
+    "address": "0x1F6A5C9Bdea5E8B71e0c63A89d6468F8B35993Bc",
     "deployer": "0xB45Bea6B9057C31eBcB5B179955FF4aDE8640AFf"
   },
-  "deploymentTime": "2025-12-02T19:08:41.257Z"
+  "deploymentTime": "2026-03-20T06:26:50.271Z"
 }
